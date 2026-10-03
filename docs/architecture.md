@@ -110,11 +110,11 @@ Steps raise structured errors:
 
 ```python
 class StepError(Exception):
-    code: str                 # e.g. "BET_INPUT_UNREADABLE"
-    message: str              # plain language: what happened
-    probable_cause: str       # why it likely happened
-    suggested_action: str     # what to do next
-    log_path: Path | None     # raw log stays one click away
+    code: str  # e.g. "BET_INPUT_UNREADABLE"
+    message: str  # plain language: what happened
+    probable_cause: str  # why it likely happened
+    suggested_action: str  # what to do next
+    log_path: Path | None  # raw log stays one click away
 ```
 
 All codes are catalogued in `docs/errors.md`. Raw tool output is never the only thing shown.
