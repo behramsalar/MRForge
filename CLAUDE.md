@@ -356,6 +356,8 @@ Lint/format:                 ~/progders/bin/ruff check . && ~/progders/bin/ruff 
 Type check:                  ~/progders/bin/mypy
 Check environment:           zsh -lc '~/progders/bin/python scripts/check_env.py'
 Run CLI:                     mrforge --help
+Import (Stage 2):            mrforge import scan | show [--why] | set | classify | convert | organize | run
+                             mrforge import validate | nifti | bids | list
 Run API (Stage 3):           (set in Stage 3)
 Run frontend (Stage 3):      (set in Stage 3)
 ```
