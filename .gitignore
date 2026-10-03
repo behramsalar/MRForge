@@ -1,0 +1,29 @@
+# Imaging data and workspaces: never committed
+*.nii
+*.nii.gz
+*.dcm
+*.zip
+workspaces/
+sourcedata/
+rawbids/
+derivatives/
+*.sqlite
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Frontend
+node_modules/
+dist/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
