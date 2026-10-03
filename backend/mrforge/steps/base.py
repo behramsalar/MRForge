@@ -2,7 +2,9 @@
 
 Only Step subclasses know command lines. A step declares typed inputs, parameters and
 outputs (pydantic models); paths in specs are relative (inputs: to the workspace root,
-outputs: to the step's output directory).
+outputs: to the step's output directory, a BIDS datatype folder such as
+``derivatives/mrforge/sub-001/anat/``). Provenance and logs of a run live in ``run_dir``
+(``<output_dir>/_runs/<label>/``).
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from typing import ClassVar, Generic, Literal, TypeVar
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from mrforge.bids import bids_name, inherited_entities
 from mrforge.errors import StepError
 from mrforge.models import File
 from mrforge.workspace import Workspace
@@ -66,14 +69,23 @@ class StepContext(Generic[I, P]):
     subject: str  # e.g. "sub-001"
     inputs: I
     params: P
-    output_dir: Path  # absolute; derivatives/<app>/<sub>/[<ses>/]<step>/
+    output_dir: Path  # absolute; derivatives/<app>/<sub>/[<ses>/]<datatype>/ (BIDS-named results)
+    run_dir: Path  # absolute; <output_dir>/_runs/<label>/ (provenance.json and logs/)
+    label: str  # names this run; the step name unless a pipeline gives the step an id
     session: str | None = None
     env: dict[str, str] | None = None  # subprocess environment (FSL etc.); None = inherit
     commands: list[CommandRecord] = field(default_factory=list)
 
     @property
     def log_dir(self) -> Path:
-        return self.output_dir / "logs"
+        return self.run_dir / "logs"
+
+    def bids_name(self, suffix: str, ext: str = ".nii.gz", **entities: str) -> str:
+        """A BIDS file name for a result of this run, e.g. ``sub-001_desc-brain_mask.nii.gz``.
+        sub/ses come from the workspace; acq/run/... are carried over from the first input."""
+        paths = input_relpaths(self.inputs)
+        base = inherited_entities(self.subject, self.session, paths[0] if paths else None)
+        return bids_name({**base, **entities}, suffix, ext)
 
     def input_path(self, relpath: str) -> Path:
         return self.workspace.abspath(relpath)
@@ -137,6 +149,7 @@ class Step(ABC, Generic[I, P, O]):
     OutputSpec: ClassVar[type[BaseModel]]
     depends_on: ClassVar[tuple[str, ...]] = ()  # names of upstream steps
     requires_fsl: ClassVar[bool] = False  # runner supplies the FSL environment when True
+    datatype: ClassVar[str] = "anat"  # BIDS datatype folder the results go in (anat, func, ...)
 
     # -- the contract -------------------------------------------------------
 
@@ -161,6 +174,11 @@ class Step(ABC, Generic[I, P, O]):
             if not _is_nonempty_file(ctx.input_path(rel))
         ]
 
+    def desc(self, ctx: StepContext[I, P], base: str) -> str:
+        """The ``desc-`` value for this run's results: ``base``, plus the run's label when a
+        pipeline gave the step another id, so repeated steps never overwrite each other."""
+        return base if ctx.label == self.name else base + ctx.label
+
     def tool_versions(self, ctx: StepContext[I, P]) -> dict[str, str]:
         """Versions of external tools used (recorded in provenance). Default: none."""
         return {}
@@ -175,6 +193,7 @@ class Step(ABC, Generic[I, P, O]):
 
     def prepare(self, ctx: StepContext[I, P]) -> None:
         ctx.output_dir.mkdir(parents=True, exist_ok=True)
+        ctx.run_dir.mkdir(parents=True, exist_ok=True)
         ctx.log_dir.mkdir(parents=True, exist_ok=True)
 
     def validate_outputs(self, ctx: StepContext[I, P]) -> list[Problem]:

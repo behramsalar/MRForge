@@ -12,7 +12,8 @@
 | 1f FakeStep | done (delivered with 1c; fail-once option with 1e) |
 | 1g BetStep + FSL lookup | done |
 | 1h FslAnatStep | done |
-| Stage-end protocol | done; waiting for user to accept the stage |
+| Amendments after review | subcortical segmentation opt-in; full BIDS derivatives layout (in progress: verifying with real runs) |
+| Stage-end protocol | done once; redone after the amendments |
 
 ## Test status (last run)
 - `pytest -m "not fsl"`: 71 passed
@@ -21,6 +22,8 @@
 - ruff and mypy: clean
 
 ## Known issues / limits
+- The installed BIDS validator (npm `bids-validator` 1.15.0) predates derivatives support and rejects `desc-` files as 'not part of BIDS'. Layout is checked by tests and by eye; validator upgrade is proposed for Stage 2e.
+- One `fsl_anat` per T1 input per subject: two runs with different labels on the same input would share the native `.anat` folder and several result names.
 - One `LocalJobQueue` per workspace at a time (two could start the same queued job).
 - Pipelines run steps sequentially; per-subject parallelism is Stage 6.
 - No QC output yet for `bet`/`fsl_anat` (QC contract exists; real QC arrives in Stage 5).

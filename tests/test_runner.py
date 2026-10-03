@@ -66,7 +66,11 @@ def test_job_completes(ws: Workspace) -> None:
     job = get_job(ws, jid)
     assert job.status == "Completed" and job.return_code == 0
     assert job.started and job.finished and job.pid
-    assert (ws.abspath(job.output_dir or "") / "result.txt").read_text().startswith("hi:")
+    assert (
+        (ws.abspath(job.output_dir or "") / "sub-001_desc-fake_fake.txt")
+        .read_text()
+        .startswith("hi:")
+    )
 
 
 def test_failure_is_recorded_in_plain_language(ws: Workspace) -> None:

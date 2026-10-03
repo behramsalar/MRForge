@@ -11,10 +11,12 @@ from pathlib import Path
 from sqlalchemy import Engine, create_engine, select
 from sqlalchemy.orm import Session
 
+from mrforge import __version__
+from mrforge.bids import init_derivatives
 from mrforge.models import Base, Subject
 from mrforge.models import Workspace as WorkspaceRow
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2  # 2: BIDS derivatives layout (results folder + _runs/<label>/)
 APP_DIRNAME = "mrforge"  # derivatives/<appname>/
 
 SUBDIRS = ("sourcedata/dicom", "rawbids", f"derivatives/{APP_DIRNAME}", "reports")
@@ -53,6 +55,7 @@ class Workspace:
             + "\n"
         )
         ws = cls(root, _engine(root), name)
+        init_derivatives(ws.derivatives_dir, __version__)
         Base.metadata.create_all(ws.engine)
         with ws.session() as s:
             s.add(WorkspaceRow(name=name, schema_version=SCHEMA_VERSION, created=created))
@@ -69,8 +72,9 @@ class Workspace:
         meta = json.loads(meta_path.read_text())
         if meta.get("schema_version") != SCHEMA_VERSION:
             raise WorkspaceError(
-                f"This workspace uses schema version {meta.get('schema_version')}, "
-                f"but this MRForge expects {SCHEMA_VERSION}."
+                f"This workspace uses layout version {meta.get('schema_version')}, "
+                f"but this MRForge expects version {SCHEMA_VERSION}. "
+                "Create a new workspace and run the steps again."
             )
         engine = _engine(root)
         Base.metadata.create_all(engine)  # adds tables introduced later; never drops

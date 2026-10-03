@@ -16,6 +16,7 @@ from types import FrameType
 import psutil
 
 from mrforge import __version__
+from mrforge.bids import record_tool_versions
 from mrforge.errors import StepError
 from mrforge.fsl_env import find_fsl
 from mrforge.hashing import file_sha256
@@ -63,7 +64,7 @@ def run_job(ws: Workspace, job_id: int) -> JobStatus:
         ws, job.step_name, subject, job.session, job.inputs, job.params, job.label
     )
     # A record from an earlier run must never be mistaken for this run's result.
-    remove_provenance(ctx.output_dir)
+    remove_provenance(ctx.run_dir)
     inputs = [
         FileRecord(path=rel, sha256=file_sha256(ws, rel))
         for rel in input_relpaths(ctx.inputs)
@@ -96,7 +97,7 @@ def run_job(ws: Workspace, job_id: int) -> JobStatus:
             FileRecord(path=rel, sha256=file_sha256(ws, rel)) for rel in step.output_relpaths(ctx)
         ]
     write_provenance(
-        ctx.output_dir,
+        ctx.run_dir,
         Provenance(
             step=StepRef(name=step.name, version=step.version),
             job_id=job_id,
@@ -117,6 +118,7 @@ def run_job(ws: Workspace, job_id: int) -> JobStatus:
         ),
     )
     if error is None:
+        record_tool_versions(ws.derivatives_dir, {**versions, **step.tool_versions(ctx)})
         _finish(ws, job_id, status, None, None, return_code=0)
     else:
         _finish(ws, job_id, status, error.code, error.format())

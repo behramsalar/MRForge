@@ -82,8 +82,8 @@ class LocalJobQueue(JobQueue):
 
     def _start(self, job_id: int) -> None:
         job = get_job(self.ws, job_id)
-        assert job.output_dir is not None
-        log_dir = self.ws.abspath(job.output_dir) / "logs"
+        assert job.run_dir is not None
+        log_dir = self.ws.abspath(job.run_dir) / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
         with (log_dir / "worker.log").open("ab") as log:
             proc = subprocess.Popen(

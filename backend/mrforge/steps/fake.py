@@ -42,7 +42,8 @@ class FakeStep(Step[FakeInput, FakeParams, FakeOutput]):
     InputSpec, ParamSpec, OutputSpec = FakeInput, FakeParams, FakeOutput
 
     def expected_outputs(self, ctx: StepContext[FakeInput, FakeParams]) -> FakeOutput:
-        return FakeOutput()
+        # e.g. sub-001_desc-a_fake.txt: the run's label keeps repeated fake steps apart
+        return FakeOutput(result=ctx.bids_name("fake", ".txt", desc=ctx.label))
 
     def _sleep(self, ctx: StepContext[FakeInput, FakeParams], seconds: float) -> None:
         if seconds > 0:
@@ -76,5 +77,7 @@ class FakeStep(Step[FakeInput, FakeParams, FakeOutput]):
         digest = hashlib.sha256()
         for src in ctx.inputs.sources:
             digest.update(ctx.input_path(src).read_bytes())
-        (ctx.output_dir / "result.txt").write_text(f"{p.content}:{digest.hexdigest()[:12]}\n")
+        (ctx.output_dir / self.expected_outputs(ctx).result).write_text(
+            f"{p.content}:{digest.hexdigest()[:12]}\n"
+        )
         return StepResult()

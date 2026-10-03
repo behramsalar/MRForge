@@ -39,15 +39,15 @@ def check_reusable(
     step, inputs_d, params_d = normalise_specs(step_name, inputs, params)
     _, ctx = build_context(ws, step_name, subject, session, inputs_d, params_d, label)
 
-    prov = read_provenance(ctx.output_dir)
+    prov = read_provenance(ctx.run_dir)
     if prov is None:
         return Reuse(False, "it has not been run yet")
     if prov.status != JobStatus.COMPLETED.value:
         return Reuse(False, f"its last run ended as {prov.status}")
 
-    out_rel = ws.relpath(ctx.output_dir)
+    run_rel = ws.relpath(ctx.run_dir)
     with ws.session() as s:
-        latest = s.scalar(select(Job).where(Job.output_dir == out_rel).order_by(Job.id.desc()))
+        latest = s.scalar(select(Job).where(Job.run_dir == run_rel).order_by(Job.id.desc()))
     if latest is None or latest.id != prov.job_id or latest.status != JobStatus.COMPLETED.value:
         return Reuse(False, "its latest run did not complete")
 

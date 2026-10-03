@@ -27,10 +27,14 @@ def param_hash(params: dict[str, Any]) -> str:
     return "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
 
 
-def job_output_dir(ws: Workspace, subject: str, session: str | None, step_name: str) -> str:
-    """Workspace-relative output directory: derivatives/<app>/<sub>/[<ses>/]<step>/"""
-    parts = [subject] + ([session] if session else []) + [step_name]
-    return ws.relpath(ws.derivatives_dir.joinpath(*parts))
+def job_dirs(
+    ws: Workspace, subject: str, session: str | None, datatype: str, label: str
+) -> tuple[str, str]:
+    """Workspace-relative (results folder, run folder) for a job:
+    derivatives/<app>/<sub>/[<ses>/]<datatype>/ and .../<datatype>/_runs/<label>/"""
+    parts = [subject] + ([session] if session else []) + [datatype]
+    results = ws.derivatives_dir.joinpath(*parts)
+    return ws.relpath(results), ws.relpath(results / "_runs" / label)
 
 
 def build_context(
@@ -44,13 +48,17 @@ def build_context(
 ) -> tuple[Step[Any, Any, Any], StepContext[Any, Any]]:
     """The step instance and the context it would run in (used by the worker and resume)."""
     step, inputs, params = normalise_specs(step_name, inputs, params)
+    label = label or step_name
+    output_rel, run_rel = job_dirs(ws, subject, session, step.datatype, label)
     ctx = StepContext(
         workspace=ws,
         subject=subject,
         session=session,
         inputs=step.InputSpec(**inputs),
         params=step.ParamSpec(**params),
-        output_dir=ws.root / job_output_dir(ws, subject, session, label or step_name),
+        output_dir=ws.root / output_rel,
+        run_dir=ws.root / run_rel,
+        label=label,
     )
     return step, ctx
 
@@ -89,6 +97,7 @@ def create_job(
     """Validate inputs/params against the step's specs and queue a job. Returns the job id."""
     step, inputs_dict, params_dict = normalise_specs(step_name, inputs, params)
     subject_id = ws.get_or_create_subject(subject)
+    output_rel, run_rel = job_dirs(ws, subject, session, step.datatype, label or step_name)
     with ws.session() as s:
         job = Job(
             step_name=step_name,
@@ -101,7 +110,8 @@ def create_job(
             param_hash=param_hash(params_dict),
             status=JobStatus.QUEUED.value,
             pipeline_run_id=pipeline_run_id,
-            output_dir=job_output_dir(ws, subject, session, label or step_name),
+            output_dir=output_rel,
+            run_dir=run_rel,
         )
         s.add(job)
         s.flush()

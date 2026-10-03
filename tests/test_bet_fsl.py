@@ -75,25 +75,26 @@ def test_bet_matches_manual_run(
     manual.mkdir()
     fsl_run(fsl, "bet", str(ws.root / T1_REL), str(manual / "brain"), "-f", "0.5", *flags, "-m")
 
-    out = ws.derivatives_dir / "sub-001" / label
-    assert max_abs_difference(fsl, out / "brain.nii.gz", manual / "brain.nii.gz", tmp_path) == 0.0
-    assert (
-        max_abs_difference(fsl, out / "brain_mask.nii.gz", manual / "brain_mask.nii.gz", tmp_path)
-        == 0.0
-    )
+    out = ws.derivatives_dir / "sub-001" / "anat"
+    # results have BIDS names; the run label keeps the two runs apart
+    suffix = "robust" if flags else "default"
+    brain = out / f"sub-001_desc-bet{suffix}_T1w.nii.gz"
+    mask = out / f"sub-001_desc-bet{suffix}_mask.nii.gz"
+    assert max_abs_difference(fsl, brain, manual / "brain.nii.gz", tmp_path) == 0.0
+    assert max_abs_difference(fsl, mask, manual / "brain_mask.nii.gz", tmp_path) == 0.0
 
 
 def test_bet_provenance_and_resume(ws: Workspace, fsl: FslInstall) -> None:
     queue = LocalJobQueue(ws)
     first = run_step(ws, queue, "bet", "sub-001", {"t1": T1_REL})
-    prov = read_provenance(ws.derivatives_dir / "sub-001" / "bet")
+    prov = read_provenance(ws.derivatives_dir / "sub-001" / "anat" / "_runs" / "bet")
     assert prov and prov.status == "Completed"
     assert prov.tool_versions["fsl"] == fsl.version
     argv = prov.commands[0].argv
     assert argv[0] == "bet" and argv[-3:] == ["-f", "0.5", "-m"]
     assert [f.path for f in prov.outputs] == [
-        "derivatives/mrforge/sub-001/bet/brain.nii.gz",
-        "derivatives/mrforge/sub-001/bet/brain_mask.nii.gz",
+        "derivatives/mrforge/sub-001/anat/sub-001_desc-bet_T1w.nii.gz",
+        "derivatives/mrforge/sub-001/anat/sub-001_desc-bet_mask.nii.gz",
     ]
     again = run_step(ws, queue, "bet", "sub-001", {"t1": T1_REL})
     assert again.action == Action.REUSED and again.job_id == first.job_id
@@ -105,8 +106,10 @@ def test_bet_without_mask_registers_only_brain(ws: Workspace) -> None:
     queue = LocalJobQueue(ws)
     outcome = run_step(ws, queue, "bet", "sub-001", {"t1": T1_REL}, {"mask": False})
     assert outcome.action == Action.RAN
-    out = ws.derivatives_dir / "sub-001" / "bet"
-    assert (out / "brain.nii.gz").is_file() and not (out / "brain_mask.nii.gz").exists()
+    out = ws.derivatives_dir / "sub-001" / "anat"
+    assert (out / "sub-001_desc-bet_T1w.nii.gz").is_file()
+    assert not (out / "sub-001_desc-bet_mask.nii.gz").exists()
+    assert not (out / "_runs" / "bet" / "work").exists()  # bet's scratch folder is cleaned up
 
 
 def test_bad_input_gives_plain_language_failure(ws: Workspace) -> None:

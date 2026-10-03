@@ -96,7 +96,9 @@ def make_ctx(
         subject="sub-001",
         inputs=In(source=source),
         params=Params(**params),  # type: ignore[arg-type]
-        output_dir=ws.derivatives_dir / "sub-001" / "copy-test",
+        output_dir=ws.derivatives_dir / "sub-001" / "anat",
+        run_dir=ws.derivatives_dir / "sub-001" / "anat" / "_runs" / "copy-test",
+        label="copy-test",
     )
 
 
@@ -117,7 +119,7 @@ def test_lifecycle_order_and_outputs(ws: Workspace) -> None:
     assert (ctx.log_dir / "stdout.log").read_text().startswith("$ ")
     with ws.session() as s:
         rel = s.scalar(select(File.relpath))
-    assert rel == "derivatives/mrforge/sub-001/copy-test/result.txt"
+    assert rel == "derivatives/mrforge/sub-001/anat/result.txt"
 
 
 def test_missing_input_stops_before_run(ws: Workspace) -> None:

@@ -31,8 +31,14 @@ def queue(ws: Workspace) -> LocalJobQueue:
     return LocalJobQueue(ws)
 
 
-def out_dir(ws: Workspace, label: str = "fake", subject: str = "sub-001") -> Path:
-    return ws.derivatives_dir / subject / label
+def run_dir(ws: Workspace, label: str = "fake", subject: str = "sub-001") -> Path:
+    """Where a run's provenance.json and logs live."""
+    return ws.derivatives_dir / subject / "anat" / "_runs" / label
+
+
+def result_file(ws: Workspace, label: str = "fake", subject: str = "sub-001") -> Path:
+    """The BIDS-named result of a fake step run."""
+    return ws.derivatives_dir / subject / "anat" / f"{subject}_desc-{label}_fake.txt"
 
 
 def chain(c_params: dict[str, object] | None = None, a_params: dict[str, object] | None = None):
@@ -66,25 +72,27 @@ def test_provenance_records_everything(ws: Workspace, queue: LocalJobQueue) -> N
     src.write_text("data")
     o = run_step(ws, queue, "fake", "sub-001", {"sources": ["rawbids/in.txt"]}, {"duration": 0.2})
     assert o.action == Action.RAN
-    prov = read_provenance(out_dir(ws))
+    prov = read_provenance(run_dir(ws))
     assert prov is not None
     assert prov.status == "Completed" and prov.return_code == 0
     assert prov.step.name == "fake" and prov.step.version == "1"
     assert prov.parameters["duration"] == 0.2 and prov.parameter_hash.startswith("sha256:")
     assert [f.path for f in prov.inputs] == ["rawbids/in.txt"]
     assert prov.inputs[0].sha256 == hashing.sha256_of(src)
-    assert [f.path for f in prov.outputs] == ["derivatives/mrforge/sub-001/fake/result.txt"]
+    assert [f.path for f in prov.outputs] == [
+        "derivatives/mrforge/sub-001/anat/sub-001_desc-fake_fake.txt"
+    ]
     assert prov.commands and prov.commands[0].return_code == 0
     assert "mrforge" in prov.tool_versions
     assert prov.started and prov.finished and prov.job_id == o.job_id
-    raw = json.loads((out_dir(ws) / "provenance.json").read_text())
+    raw = json.loads((run_dir(ws) / "provenance.json").read_text())
     assert raw["schema_version"] == 1
 
 
 def test_failed_run_still_has_provenance(ws: Workspace, queue: LocalJobQueue) -> None:
     o = run_step(ws, queue, "fake", "sub-001", params={"fail_at": "command"})
     assert o.action == Action.FAILED
-    prov = read_provenance(out_dir(ws))
+    prov = read_provenance(run_dir(ws))
     assert prov and prov.status == "Failed" and prov.error_code == "COMMAND_FAILED"
     assert prov.commands[-1].return_code == 1 and prov.outputs == []
 
@@ -118,16 +126,16 @@ def test_input_change_reruns(ws: Workspace, queue: LocalJobQueue) -> None:
 
 def test_deleted_output_reruns(ws: Workspace, queue: LocalJobQueue) -> None:
     run_step(ws, queue, "fake", "sub-001")
-    (out_dir(ws) / "result.txt").unlink()
+    result_file(ws).unlink()
     r = check_reusable(ws, "fake", "sub-001")
     assert not r.reusable and "missing or invalid" in r.reason
     assert run_step(ws, queue, "fake", "sub-001").action == Action.RAN
-    assert (out_dir(ws) / "result.txt").is_file()
+    assert result_file(ws).is_file()
 
 
 def test_modified_output_reruns(ws: Workspace, queue: LocalJobQueue) -> None:
     run_step(ws, queue, "fake", "sub-001")
-    (out_dir(ws) / "result.txt").write_text("tampered\n")
+    result_file(ws).write_text("tampered\n")
     r = check_reusable(ws, "fake", "sub-001")
     assert not r.reusable and "modified" in r.reason
 

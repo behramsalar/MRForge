@@ -278,7 +278,7 @@ def log_command(
     typer.echo(f"Job {j.id}: {j.label or j.step_name} - {j.status}")
     if j.error_message:
         typer.echo(f"\n{j.error_message}")
-    log_dir = ws.abspath(j.output_dir or "") / "logs"
+    log_dir = ws.abspath(j.run_dir or "") / "logs"
     names = ["worker.log"] if worker else ["stdout.log", "stderr.log"]
     for name in names:
         path = log_dir / name
