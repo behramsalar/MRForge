@@ -43,7 +43,7 @@ rules:
     min_families: 1
     high_families: 2
     signals:
-      - {family: text, say: "the description says localizer", field: text, regex: "(?i)localizer|scout|survey"}
+      - {family: text, required: true, say: "the description says localizer", field: text, regex: "(?i)localizer|scout|survey"}
       - {family: geometry, say: "it has only a few slices", field: slices, max: 8}
 
   - id: scanner_motion_corrected

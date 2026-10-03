@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mrforge.importing.models import Classification, DicomSeries, ImportManifest
+from mrforge.importing.models import Classification, Conversion, DicomSeries, ImportManifest
 
 
 def _fmt(value: float | None, scale: float = 1.0, digits: int = 1) -> str:
@@ -21,7 +21,14 @@ def describe_plan(c: Classification) -> str:
     return f"import as {c.datatype}/{c.suffix}{labels}"
 
 
-def _row(s: DicomSeries, c: Classification | None) -> list[str]:
+def _converted(s: DicomSeries, conversions: dict[str, Conversion]) -> str:
+    done = conversions.get(s.uid)
+    return "-" if done is None else ("yes" if done.status == "ok" else "FAILED")
+
+
+def _row(
+    s: DicomSeries, c: Classification | None, conversions: dict[str, Conversion] | None = None
+) -> list[str]:
     kind = "/".join(t for t in s.image_type[2:4] if t) or "-"
     row = [
         "?" if s.number is None else str(s.number),
@@ -36,6 +43,8 @@ def _row(s: DicomSeries, c: Classification | None) -> list[str]:
     ]
     if c is not None:
         row += [describe_plan(c), c.confidence + (" (you)" if c.source == "user" else "")]
+    if conversions:
+        row.append(_converted(s, conversions))
     return row
 
 
@@ -47,7 +56,12 @@ def format_series_table(
     manifest: ImportManifest, classes: dict[str, Classification] | None = None
 ) -> str:
     header = HEADER + (CLASS_HEADER if classes is not None else [])
-    rows = [header] + [_row(s, classes.get(s.uid) if classes else None) for s in manifest.series]
+    if manifest.conversions:
+        header = header + ["CONVERTED"]
+    rows = [header] + [
+        _row(s, classes.get(s.uid) if classes else None, manifest.conversions)
+        for s in manifest.series
+    ]
     widths = [max(len(r[i]) for r in rows) for i in range(len(header))]
     lines = ["  ".join(c.ljust(w) for c, w in zip(r, widths, strict=True)).rstrip() for r in rows]
     return "\n".join(lines)

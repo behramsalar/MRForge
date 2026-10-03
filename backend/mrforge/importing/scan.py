@@ -170,6 +170,16 @@ def finalize_volumes(series: DicomSeries) -> DicomSeries:
     return series
 
 
+def index_files(root: Path, workers: int | None = None) -> dict[str, list[Path]]:
+    """Which files belong to which series (by SeriesInstanceUID); non-images are left out."""
+    files = sorted(p for p in root.rglob("*") if p.is_file())
+    grouped: dict[str, list[Path]] = defaultdict(list)
+    for path, header in zip(files, _read_all(files, workers), strict=True):
+        if "skip" not in header:
+            grouped[header["uid"]].append(path)
+    return dict(grouped)
+
+
 def scan_directory(
     root: Path, workers: int | None = None
 ) -> tuple[list[DicomSeries], list[SkippedFile]]:

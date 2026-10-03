@@ -81,6 +81,33 @@ class Override(BaseModel):
     decided: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class ConvertedImage(BaseModel):
+    """One NIfTI image written by dcm2niix, with its companion files (paths relative to the
+    workspace)."""
+
+    suffix: str  # dcm2niix's tag for echoes and phase images: '', 'e1', 'e2_ph', ...
+    nifti: str
+    sidecar: str | None = None  # the .json file
+    bval: str | None = None
+    bvec: str | None = None
+    shape: list[int] = []
+    voxel_size_mm: list[float] = []
+    sha256: dict[str, str] = {}  # file -> hash, to detect later changes
+
+
+class Conversion(BaseModel):
+    """The result of converting one series (the provenance of that step)."""
+
+    series_uid: str
+    status: Literal["ok", "failed"]
+    images: list[ConvertedImage] = []
+    command: CommandRecord | None = None
+    tool_version: str = ""
+    problems: list[str] = []  # why it failed or what does not match the scan
+    warnings: list[str] = []
+    converted: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
 class SkippedFile(BaseModel):
     name: str  # file name only (never the folder path)
     reason: str
@@ -111,6 +138,7 @@ class ImportManifest(BaseModel):
     series: list[DicomSeries] = []
     classifications: dict[str, Classification] = {}  # by series uid (from the rules)
     overrides: dict[str, Override] = {}  # by series uid (from the user)
+    conversions: dict[str, Conversion] = {}  # by series uid (from dcm2niix)
     skipped_files: list[SkippedFile] = []
     tool_versions: dict[str, str] = {}
     commands: list[CommandRecord] = []

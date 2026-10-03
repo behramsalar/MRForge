@@ -145,6 +145,16 @@ def test_disagreeing_clues_make_it_unknown_and_explain_both_sides(rules: RuleSet
     assert "disagree" in text and "T1w" in text and "dwi" in text
 
 
+def test_few_slices_alone_never_make_a_localizer(rules: RuleSet) -> None:
+    tiny = make(5, "t1w", slices=3)  # small image, but named T1w: not a localizer
+    c = classify_series(tiny, [tiny], rules)
+    assert c.kind == "T1w"
+    named = make(1, "AAHScout", slices=3)  # the name decides
+    assert classify_series(named, [named], rules).kind == "localizer"
+    nameless = make(2, "x", slices=3)
+    assert classify_series(nameless, [nameless], rules).kind == "unknown"
+
+
 def test_lone_fieldmap_magnitude_is_medium_confidence(rules: RuleSet) -> None:
     lone = make(4, "fmap")  # no phase image anywhere in the session
     c = classify_series(lone, [lone], rules)

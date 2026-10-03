@@ -141,3 +141,13 @@ Step-specific codes (for example for `bet` and `fsl_anat`) are added as those st
 ### UNKNOWN_KIND / BAD_LABEL / SET_CONFLICT
 - **What happened:** `mrforge import set` was given a type MRForge cannot import, a label with spaces or dashes, or both `--skip` and a type.
 - **Suggested action:** Use one of the listed types, labels of letters and digits only, and either `--skip` or `--type`/`--task`.
+
+## Conversion problems (Stage 2c)
+
+Conversion never stops the whole import for one bad series. Problems are recorded per series (shown by `mrforge import convert` and `mrforge import show`, and stored in the manifest) in plain language:
+
+- **dcm2niix stopped with an error** (exit code N) while converting a series: the last messages are shown, with source paths removed. The full scrubbed log is in `imports/import-NNN/logs/convert-s<number>.log`. *What to do:* fix the cause, then run `mrforge import convert` again; only failed series are converted again.
+- **dcm2niix produced no image:** the series may not be a convertible image. *What to do:* check the log, or skip the series with `mrforge import set <series> --skip`.
+- **The converted image has size X but the scan says Y / has N volumes but the scan found M / should give the images [...]:** the conversion does not match the scan, so the data may be incomplete or damaged. *What to do:* check the series in the scanner export; do not use it until it matches.
+- **The diffusion directions (bval/bvec) are missing, or the number of b-values does not match the volumes:** the series cannot be used for diffusion analysis. *What to do:* re-export the series with its diffusion information.
+- **The JSON sidecar is missing:** BIDS needs it. *What to do:* convert again; if it persists, report it.

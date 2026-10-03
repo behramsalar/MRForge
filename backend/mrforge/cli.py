@@ -20,6 +20,7 @@ from mrforge.importing.classify import (
     load_rules,
     set_override,
 )
+from mrforge.importing.convert import convert_import
 from mrforge.importing.manifest import load_manifest, save_manifest
 from mrforge.importing.report import describe_plan, format_manifest
 from mrforge.importing.scan import scan_source
@@ -222,6 +223,35 @@ def import_set(
     now = set_override(manifest, rules, series, kind, skip, labels)
     save_manifest(ws, manifest)
     typer.echo(f"Series {series}: {describe_plan(now)} ({now.confidence}, {now.source}).")
+
+
+@import_app.command("convert")
+@friendly
+def import_convert(
+    import_id: Annotated[
+        str | None, typer.Argument(help="e.g. import-001 (default: latest).")
+    ] = None,
+    workspace: WorkspaceOption = Path("."),
+    jobs: Annotated[int, typer.Option("--jobs", "-j", help="Series converted at once.")] = 4,
+    force: Annotated[bool, typer.Option(help="Convert again even if already done.")] = False,
+) -> None:
+    """Convert the series that are set to be imported (DICOM to NIfTI with dcm2niix).
+    Series already converted are skipped; one failing series does not stop the others."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    summary = convert_import(ws, manifest, load_rules(ws), jobs, force, typer.echo)
+    typer.echo(
+        f"\n{len(summary.converted)} converted, {len(summary.up_to_date)} already done, "
+        f"{len(summary.failed)} failed."
+    )
+    if summary.failed:
+        typer.echo(
+            "Failed series: "
+            + ", ".join(map(str, summary.failed))
+            + "\nFix the cause (see 'mrforge import show --why'), then run this command again; "
+            "only the failed series are converted again."
+        )
+        raise typer.Exit(1)
 
 
 @import_app.command("classify")
