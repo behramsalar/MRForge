@@ -11,7 +11,7 @@ Last test status: `pytest -m "not fsl"` 82 passed; `pytest -m "fsl and not slow"
 | Sub-step | Status |
 |---|---|
 | 2a Scan + metadata | done |
-| 2b Classification | not started |
+| 2b Classification | done |
 | 2c Conversion (dcm2niix) | not started |
 | 2d BIDS organizer | not started |
 | 2e Validator + plain-language messages | not started |
@@ -32,4 +32,4 @@ Last test status: `pytest -m "not fsl"` 82 passed; `pytest -m "fsl and not slow"
 - Fieldmap handling: your DICOM set contains gradient-echo field maps; types to confirm before Stage 5c.
 
 ## Next action
-Sub-step 2b: classification rules (`classification_rules.yaml`) with confidence levels, tested on `tests/data/siemens_session_series.json`.
+Sub-step 2c: conversion with dcm2niix (verify flags with `--help`), outputs checked against the scan.

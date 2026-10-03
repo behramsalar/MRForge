@@ -14,8 +14,14 @@ from mrforge.config import load_config, save_config
 from mrforge.engine import Action, StepOutcome, latest_pipeline_run, run_pipeline, run_step
 from mrforge.errors import StepError
 from mrforge.fsl_env import find_fsl, looks_like_fsl
-from mrforge.importing.manifest import load_manifest
-from mrforge.importing.report import format_manifest
+from mrforge.importing.classify import (
+    apply_rules,
+    effective_all,
+    load_rules,
+    set_override,
+)
+from mrforge.importing.manifest import load_manifest, save_manifest
+from mrforge.importing.report import describe_plan, format_manifest
 from mrforge.importing.scan import scan_source
 from mrforge.models import JobStatus
 from mrforge.pipeline import PipelineSpec, load_pipeline, parse_pipeline
@@ -175,7 +181,7 @@ def import_scan(
     """Copy a DICOM session into the workspace and list the series found in it."""
     ws = Workspace.open(workspace)
     manifest, is_new = scan_source(ws, source, subject, session)
-    typer.echo(format_manifest(manifest))
+    typer.echo(format_manifest(manifest, effective_all(manifest, load_rules(ws))))
     if not is_new:
         typer.echo(f"\nThis source was already scanned ({manifest.id}); nothing was copied again.")
 
@@ -187,10 +193,56 @@ def import_show(
         str | None, typer.Argument(help="e.g. import-001 (default: latest).")
     ] = None,
     workspace: WorkspaceOption = Path("."),
+    why: Annotated[bool, typer.Option("--why", help="Explain every decision.")] = False,
 ) -> None:
-    """Show the series table of an import."""
+    """Show the series table of an import, with what will happen to each series."""
     ws = Workspace.open(workspace)
-    typer.echo(format_manifest(load_manifest(ws, import_id)))
+    manifest = load_manifest(ws, import_id)
+    typer.echo(format_manifest(manifest, effective_all(manifest, load_rules(ws)), why))
+
+
+@import_app.command("set")
+@friendly
+def import_set(
+    series: Annotated[int, typer.Argument(help="Series number (see 'mrforge import show').")],
+    workspace: WorkspaceOption = Path("."),
+    import_id: Annotated[str | None, typer.Option("--import", help="e.g. import-001.")] = None,
+    kind: Annotated[
+        str | None, typer.Option("--type", help="What it is: T1w, T2w, bold, dwi, fieldmap-...")
+    ] = None,
+    task: Annotated[str | None, typer.Option(help="Task name, e.g. rest.")] = None,
+    acq: Annotated[str | None, typer.Option(help="Acquisition label, e.g. highres.")] = None,
+    skip: Annotated[bool, typer.Option("--skip", help="Do not import this series.")] = False,
+) -> None:
+    """Tell MRForge what a series is (your decision overrides the rules)."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    rules = load_rules(ws)
+    labels = {k: v for k, v in (("task", task), ("acq", acq)) if v is not None}
+    now = set_override(manifest, rules, series, kind, skip, labels)
+    save_manifest(ws, manifest)
+    typer.echo(f"Series {series}: {describe_plan(now)} ({now.confidence}, {now.source}).")
+
+
+@import_app.command("classify")
+@friendly
+def import_classify(
+    import_id: Annotated[
+        str | None, typer.Argument(help="e.g. import-001 (default: latest).")
+    ] = None,
+    workspace: WorkspaceOption = Path("."),
+    rules_file: Annotated[
+        Path | None, typer.Option("--rules", help="Use this rules file instead.")
+    ] = None,
+) -> None:
+    """Run the classification rules again (for example after editing them). Your own
+    decisions are kept."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    rules = load_rules(ws, rules_file)
+    apply_rules(manifest, rules)
+    save_manifest(ws, manifest)
+    typer.echo(format_manifest(manifest, effective_all(manifest, rules)))
 
 
 @app.command("steps")

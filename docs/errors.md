@@ -122,3 +122,22 @@ Step-specific codes (for example for `bet` and `fsl_anat`) are added as those st
 ### NO_IMPORT / UNKNOWN_IMPORT
 - **What happened:** There is nothing imported yet, or the named import does not exist.
 - **Suggested action:** Run `mrforge import scan <folder or zip>`, or `mrforge import show` to list imports.
+
+## Classification codes (Stage 2b)
+
+### RULES_INVALID
+- **What happened:** The classification rules file could not be used (bad YAML, an invalid pattern, an unknown field or predicate, a duplicate rule id, ...).
+- **Probable cause:** A mistake in the rules file; the message names it.
+- **Suggested action:** Correct the file (the comments at its top explain the format), or remove it to use the built-in rules.
+
+### UNKNOWN_SERIES / AMBIGUOUS_SERIES
+- **What happened:** The series number given to `mrforge import set` does not exist, or is used by more than one series in the import.
+- **Suggested action:** Run `mrforge import show` for the numbers; for repeated numbers, import the sessions separately.
+
+### SET_NEEDS_TYPE
+- **What happened:** A series that is skipped or unrecognised was set without saying what it is.
+- **Suggested action:** Add `--type`, for example `mrforge import set 7 --type bold`.
+
+### UNKNOWN_KIND / BAD_LABEL / SET_CONFLICT
+- **What happened:** `mrforge import set` was given a type MRForge cannot import, a label with spaces or dashes, or both `--skip` and a type.
+- **Suggested action:** Use one of the listed types, labels of letters and digits only, and either `--skip` or `--type`/`--task`.

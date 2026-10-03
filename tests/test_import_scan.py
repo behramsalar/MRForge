@@ -304,3 +304,7 @@ def test_real_session(ws: Workspace, monkeypatch: pytest.MonkeyPatch) -> None:
     assert [o.suffix for o in by_number[4].outputs] == ["e1", "e2"]  # magnitude echoes
     assert [o.suffix for o in by_number[5].outputs] == ["e2_ph"]  # phase image
     assert by_number[4].volumes == 1  # the two echoes are not counted as two volumes
+
+    # the rules find the same 8 / 17 / 2 split on the freshly scanned real data
+    plan = [c.action for c in manifest.classifications.values()]
+    assert (plan.count("import"), plan.count("skip"), plan.count("ask")) == (8, 17, 2)

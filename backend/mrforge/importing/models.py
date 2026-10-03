@@ -52,6 +52,35 @@ class DicomSeries(BaseModel):
         return "x".join("?" if d is None else str(d) for d in dims)
 
 
+Confidence = Literal["High", "Medium", "Low"]
+Action = Literal["import", "skip", "ask"]
+
+
+class Classification(BaseModel):
+    """What the rules (or the user) decided a series is, and why."""
+
+    kind: str  # T1w, T2w, bold, dwi, fieldmap-magnitude, fieldmap-phase, localizer, ...
+    action: Action  # import, skip, or ask (needs your input; not imported until decided)
+    confidence: Confidence
+    datatype: str | None = None  # BIDS folder: anat, func, fmap, dwi
+    suffix: str | None = None  # BIDS suffix: T1w, bold, magnitude, ...
+    entities: dict[str, str] = {}  # e.g. {"task": "rest"}
+    needs: list[str] = []  # what is missing before it can be imported, e.g. ["task"]
+    reasons: list[str] = []  # plain-language clues, shown to the user
+    rule_ids: list[str] = []
+    source: Literal["rules", "user"] = "rules"
+
+
+class Override(BaseModel):
+    """A decision the user made for one series (kept separate so re-running the rules never
+    loses it)."""
+
+    kind: str | None = None  # a kind from the rules table; None keeps the rules' kind
+    skip: bool = False
+    entities: dict[str, str] = {}
+    decided: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
 class SkippedFile(BaseModel):
     name: str  # file name only (never the folder path)
     reason: str
@@ -80,6 +109,8 @@ class ImportManifest(BaseModel):
     subject: str  # e.g. "sub-001"
     session: str | None = None
     series: list[DicomSeries] = []
+    classifications: dict[str, Classification] = {}  # by series uid (from the rules)
+    overrides: dict[str, Override] = {}  # by series uid (from the user)
     skipped_files: list[SkippedFile] = []
     tool_versions: dict[str, str] = {}
     commands: list[CommandRecord] = []

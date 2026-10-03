@@ -24,6 +24,7 @@ import pydicom
 from pydicom.errors import InvalidDicomError
 
 from mrforge.errors import StepError
+from mrforge.importing.classify import apply_rules, load_rules
 from mrforge.importing.manifest import (
     list_manifests,
     next_manifest_id,
@@ -410,5 +411,6 @@ def scan_source(
         commands=[command] if command else [],
         warnings=notes,
     )
+    apply_rules(manifest, load_rules(ws))
     save_manifest(ws, manifest)
     return manifest, True
