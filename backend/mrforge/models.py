@@ -75,6 +75,7 @@ class Job(Base):
     step_version: Mapped[str] = mapped_column(String(50))
     subject_id: Mapped[int | None] = mapped_column(ForeignKey("subject.id"), nullable=True)
     session: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    inputs: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
     params: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
     param_hash: Mapped[str] = mapped_column(String(80))
     status: Mapped[str] = mapped_column(String(20), default=JobStatus.QUEUED.value)

@@ -1,0 +1,84 @@
+"""FakeStep: a configurable stand-in step for testing the engine without FSL.
+
+It runs real subprocesses (so killing and failing behave like real tools), can fail at a
+chosen point, and writes a dummy output whose content depends on its inputs, so downstream
+invalidation can be observed.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import sys
+from typing import Literal
+
+from pydantic import BaseModel
+
+from mrforge.errors import StepError
+from mrforge.steps.base import Problem, Step, StepContext, StepResult
+from mrforge.steps.registry import register_step
+
+
+class FakeInput(BaseModel):
+    sources: list[str] = []  # workspace-relative files this step "consumes"
+
+
+class FakeParams(BaseModel):
+    duration: float = 0.0  # seconds of fake work
+    fail_at: Literal["never", "start", "middle", "end", "command"] = "never"
+    content: str = "x"
+
+
+class FakeOutput(BaseModel):
+    result: str = "result.txt"
+
+
+@register_step
+class FakeStep(Step[FakeInput, FakeParams, FakeOutput]):
+    name = "fake"
+    version = "1"
+    InputSpec, ParamSpec, OutputSpec = FakeInput, FakeParams, FakeOutput
+
+    def expected_outputs(self, ctx: StepContext[FakeInput, FakeParams]) -> FakeOutput:
+        return FakeOutput()
+
+    def validate_inputs(self, ctx: StepContext[FakeInput, FakeParams]) -> list[Problem]:
+        return [
+            Problem(
+                code="INPUT_MISSING",
+                message=f"Input file was not found or is empty: {src}",
+                probable_cause="The file was moved, deleted or never created.",
+                suggested_action="Check the file exists, or rerun the step that makes it.",
+            )
+            for src in ctx.inputs.sources
+            if not ctx.input_path(src).is_file() or ctx.input_path(src).stat().st_size == 0
+        ]
+
+    def _sleep(self, ctx: StepContext[FakeInput, FakeParams], seconds: float) -> None:
+        if seconds > 0:
+            ctx.run_command([sys.executable, "-c", f"import time; time.sleep({seconds})"])
+
+    def _fail(self, where: str) -> StepError:
+        return StepError(
+            code="FAKE_FAILURE",
+            message=f"The fake step was told to fail at '{where}'.",
+            probable_cause="This is a test step configured to fail.",
+            suggested_action="Change the 'fail_at' parameter and run again.",
+        )
+
+    def run(self, ctx: StepContext[FakeInput, FakeParams]) -> StepResult:
+        p = ctx.params
+        if p.fail_at == "start":
+            raise self._fail("start")
+        self._sleep(ctx, p.duration / 2)
+        if p.fail_at == "middle":
+            raise self._fail("middle")
+        if p.fail_at == "command":
+            ctx.run_command([sys.executable, "-c", "import sys; sys.exit(1)"])
+        self._sleep(ctx, p.duration / 2)
+        if p.fail_at == "end":
+            raise self._fail("end")
+        digest = hashlib.sha256()
+        for src in ctx.inputs.sources:
+            digest.update(ctx.input_path(src).read_bytes())
+        (ctx.output_dir / "result.txt").write_text(f"{p.content}:{digest.hexdigest()[:12]}\n")
+        return StepResult()

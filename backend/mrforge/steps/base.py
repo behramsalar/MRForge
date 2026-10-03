@@ -108,6 +108,14 @@ class StepContext(Generic[I, P]):
             stderr_log=self.workspace.relpath(err_path),
         )
         self.commands.append(record)
+        if check and proc.returncode < 0:
+            raise StepError(
+                code="COMMAND_KILLED",
+                message=f"'{argv[0]}' was stopped before it finished (signal {-proc.returncode}).",
+                probable_cause="The process was killed, for example by a user or the system.",
+                suggested_action="Resume the pipeline to run this step again.",
+                log_path=err_path,
+            )
         if check and proc.returncode != 0:
             raise StepError(
                 code="COMMAND_FAILED",

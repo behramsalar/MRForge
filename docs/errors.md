@@ -36,4 +36,37 @@ Codes are stable identifiers: add new ones, do not rename existing ones.
 - **Probable cause:** Probably a bug in MRForge, not a problem with your data.
 - **Suggested action:** Open the raw log and report the problem together with the message.
 
+## Job-runner codes (Stage 1c)
+
+### COMMAND_KILLED
+- **What happened:** An external tool was stopped by a signal before it finished. The job is shown as Interrupted, not Failed.
+- **Probable cause:** The process was killed, for example by a user or the system.
+- **Suggested action:** Resume the pipeline to run this step again.
+
+### INTERRUPTED
+- **What happened:** A job was marked Running but its worker process no longer exists.
+- **Probable cause:** The program was killed or the computer restarted.
+- **Suggested action:** Resume to run the step again. Leftover tool processes are cleaned up automatically.
+
+### WORKER_CRASHED
+- **What happened:** The worker process exited without recording a result.
+- **Probable cause:** A bug in MRForge or a broken installation.
+- **Suggested action:** Open the worker log (`logs/worker.log` in the step's output folder) and report it.
+
+### CANCELLED
+- **What happened:** The user cancelled the job.
+- **Suggested action:** None. Run the step again if needed.
+
+### PARAMS_INVALID
+- **What happened:** The settings given for a step are missing, misspelled or out of range. The job is not created.
+- **Suggested action:** Correct the value and run again.
+
+### UNKNOWN_JOB
+- **What happened:** A job number was requested that does not exist.
+- **Suggested action:** Run `mrforge status` to see the existing jobs.
+
+### FAKE_FAILURE
+- **What happened:** The test-only `fake` step was configured to fail.
+- **Suggested action:** Change its `fail_at` parameter. Never occurs with real steps.
+
 Step-specific codes (for example for `bet` and `fsl_anat`) are added as those steps are written.

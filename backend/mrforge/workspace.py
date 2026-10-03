@@ -81,7 +81,7 @@ class Workspace:
     @contextmanager
     def session(self) -> Iterator[Session]:
         """A transaction: commits on success, rolls back on error."""
-        with Session(self.engine) as s, s.begin():
+        with Session(self.engine, expire_on_commit=False) as s, s.begin():
             yield s
 
     @property
@@ -106,4 +106,5 @@ class Workspace:
 
 
 def _engine(root: Path) -> Engine:
-    return create_engine(f"sqlite:///{root / 'db.sqlite'}")
+    # Several worker processes write to this database; wait for locks instead of failing.
+    return create_engine(f"sqlite:///{root / 'db.sqlite'}", connect_args={"timeout": 30})
