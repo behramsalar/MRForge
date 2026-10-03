@@ -34,6 +34,7 @@ Demo workspace with your real session imported: `~/Documents/mrforge-workspaces/
 - Test data is full-size DICOM, possibly with identifying information.
 
 ## Open questions
+- Philips fieldmaps (the "B0 map" series): the user knows a method to use them; implement it when the time comes (import support for that fieldmap form, then Stage 5c). Philips data also has no phase-encoding direction, which must be supplied.
 - Real task names for series 19 and 25 of your session (waiting for `mrforge import set <series> --task <name>`).
 - Privacy list defaults (`sidecar_privacy.yaml`), `IntendedFor` for diffusion runs: your review.
 - Lab members for UX feedback (needed from Stage 3/4).
