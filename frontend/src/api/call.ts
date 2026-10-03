@@ -1,0 +1,35 @@
+import type { ErrorBody } from "./types";
+
+/** An error from the API in plain language (what happened, why, what to do). */
+export class ApiError extends Error {
+  body: ErrorBody;
+  constructor(body: ErrorBody) {
+    super(body.message);
+    this.body = body;
+  }
+}
+
+function toBody(error: unknown): ErrorBody {
+  const e = error as Partial<ErrorBody> | undefined;
+  if (e && typeof e.message === "string") return e as ErrorBody;
+  return {
+    code: "UNEXPECTED",
+    message: "The page could not reach MRForge.",
+    probable_cause: "The MRForge server may have stopped.",
+    suggested_action: "Check that 'mrforge serve' is still running, then reload the page.",
+  };
+}
+
+/** Unwrap an openapi-fetch result: return the data, or throw an ApiError. */
+export async function call<T>(
+  request: Promise<{ data?: T; error?: unknown; response: Response }>,
+): Promise<T> {
+  let result;
+  try {
+    result = await request;
+  } catch {
+    throw new ApiError(toBody(undefined));
+  }
+  if (result.error !== undefined || !result.response.ok) throw new ApiError(toBody(result.error));
+  return result.data as T;
+}

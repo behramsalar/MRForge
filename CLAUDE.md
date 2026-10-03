@@ -358,8 +358,11 @@ Check environment:           zsh -lc '~/progders/bin/python scripts/check_env.py
 Run CLI:                     mrforge --help
 Import (Stage 2):            mrforge import scan | show [--why] | set | classify | convert | organize | run
                              mrforge import validate | nifti | bids | list
-Run API (Stage 3):           (set in Stage 3)
-Run frontend (Stage 3):      (set in Stage 3)
+Run the app (Stage 3):       cd frontend && npm install && npm run build   (once)
+                             ~/progders/bin/mrforge serve   -> http://127.0.0.1:8000
+Develop the frontend:        mrforge serve --port 8000  and, in frontend/:  npm run dev  (port 5173)
+Regenerate typed client:     cd frontend && npm run gen:api   (API must be running on 8000)
+Frontend tests / types:      cd frontend && npm test ; npx tsc --noEmit
 ```
 
 ## 11. Design system (set in Stage 3; refined in Stage 4)

@@ -214,3 +214,41 @@ def test_events_stream_sends_current_state(home: Path) -> None:
     finally:
         server.should_exit = True
         thread.join(timeout=10)
+
+
+def test_cancelling_an_operation_cancels_its_job(client: TestClient, home: Path) -> None:
+    """Cancel is a user action: the running step is recorded as Cancelled (not as a crash)."""
+    from mrforge.operations import start_operation
+    from mrforge.workspace import Workspace
+
+    ws_id = client.post("/api/workspaces", json={"name": "w"}).json()["id"]
+    ws = Workspace.open(home / "workspaces" / ws_id)
+    spec = {
+        "name": "slow",
+        "subject": "sub-001",
+        "steps": [{"id": "a", "step": "fake", "params": {"duration": 60}}],
+    }
+    op_id = start_operation(ws, "pipeline", "slow", {"spec": spec})
+    base = f"/api/workspaces/{ws_id}"
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        jobs = client.get(f"{base}/jobs").json()
+        if jobs and jobs[0]["status"] == "Running":
+            break
+        time.sleep(0.2)
+    assert client.post(f"{base}/operations/{op_id}/cancel").status_code == 204
+    op = wait_operation(client, ws_id, op_id)
+    assert op["status"] in ("Cancelled", "Failed")
+    assert client.get(f"{base}/jobs").json()[0]["status"] == "Cancelled"
+
+
+def test_built_frontend_is_served_from_the_same_address(
+    home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dist = home / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<html>MRForge page</html>")
+    monkeypatch.setenv("MRFORGE_FRONTEND", str(dist))
+    client = TestClient(create_app(home / "workspaces"))
+    assert "MRForge page" in client.get("/").text
+    assert client.get("/api/health").status_code == 200  # the API still wins

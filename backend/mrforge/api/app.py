@@ -9,12 +9,14 @@ import os
 import re
 import shutil
 import signal
+import time
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sse_starlette.sse import EventSourceResponse
 
@@ -42,6 +44,7 @@ from mrforge.runner.jobs import get_job, list_jobs, process_alive, recover_stale
 from mrforge.workspace import Workspace, WorkspaceError
 
 SAFE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+HEARTBEAT_S = 5.0
 SERVED_FOLDERS = ("rawbids", "derivatives", "reports")  # the viewer may read only these
 
 
@@ -604,17 +607,34 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         ws = ws_of(ws_id)
 
         async def stream() -> AsyncIterator[dict[str, str]]:
-            last = ""
+            last, last_sent = "", 0.0
             while not await request.is_disconnected():
                 current = await asyncio.to_thread(lambda: snapshot(ws).model_dump_json())
-                if current != last:
-                    last = current
+                # Also resend an unchanged state every few seconds: it is the heartbeat that
+                # lets the page notice a dead connection (proxies can hide a closed one).
+                if current != last or time.monotonic() - last_sent > HEARTBEAT_S:
+                    last, last_sent = current, time.monotonic()
                     yield {"event": "state", "data": current}
                 await asyncio.sleep(1.0)
 
         return EventSourceResponse(stream(), ping=15)
 
+    _mount_frontend(app)
     return app
+
+
+def frontend_dist() -> Path | None:
+    """The built frontend (``npm run build`` in frontend/), if present."""
+    env = os.environ.get("MRFORGE_FRONTEND")
+    dist = Path(env) if env else Path(__file__).resolve().parents[3] / "frontend" / "dist"
+    return dist if (dist / "index.html").is_file() else None
+
+
+def _mount_frontend(app: FastAPI) -> None:
+    """Serve the web interface from the same address as the API, after all API routes."""
+    dist = frontend_dist()
+    if dist is not None:
+        app.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
 
 
 def _read_text(path: Path, limit: int = 200_000) -> str:

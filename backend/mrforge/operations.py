@@ -13,6 +13,7 @@ import os
 import signal
 import subprocess
 import sys
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -33,7 +34,7 @@ from mrforge.importing.scan import scan_source
 from mrforge.importing.sourcedata import remove_dicom
 from mrforge.models import JobStatus, Operation
 from mrforge.pipeline import parse_pipeline
-from mrforge.runner.jobs import kill_orphans, now, process_alive
+from mrforge.runner.jobs import get_job, kill_orphans, list_jobs, now, process_alive
 from mrforge.runner.local import LocalJobQueue
 from mrforge.steps import builtin  # noqa: F401  (registers built-in steps)
 from mrforge.workspace import Workspace
@@ -196,9 +197,24 @@ def start_operation(ws: Workspace, kind: str, title: str, args: dict[str, Any]) 
 
 
 def cancel_operation(ws: Workspace, op_id: int) -> None:
+    """Stop an operation. Its running jobs are cancelled first (so they are recorded as
+    Cancelled, not as crashed), then the operation's own worker."""
     op = get_operation(ws, op_id)
-    if op.status == JobStatus.RUNNING.value and process_alive(op.pid, op.pid_start_time):
-        assert op.pid is not None
+    if op.status != JobStatus.RUNNING.value or not process_alive(op.pid, op.pid_start_time):
+        return
+    assert op.pid is not None
+    running = [
+        j for j in list_jobs(ws) if j.status == JobStatus.RUNNING.value and j.pid is not None
+    ]
+    for job in running:
+        if process_alive(job.pid, job.pid_start_time):
+            os.kill(job.pid, signal.SIGTERM)  # type: ignore[arg-type]
+    deadline = time.monotonic() + 10
+    while running and time.monotonic() < deadline:
+        if all(get_job(ws, j.id).status != JobStatus.RUNNING.value for j in running):
+            break
+        time.sleep(0.2)
+    if process_alive(op.pid, op.pid_start_time):
         os.kill(op.pid, signal.SIGTERM)
 
 
