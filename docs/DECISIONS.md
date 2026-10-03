@@ -81,3 +81,5 @@ layout, so Tailwind (CLAUDE.md section 3) was not installed, to avoid two stylin
 user's approval to update section 3 accordingly. Viewer default layout: three slices in a row, 3D optional
 (user decision).
 
+## 2026-10-04: Tailwind confirmed not used
+User approved skipping Tailwind; CLAUDE.md section 3 updated. Revisit only if Radix layout props prove insufficient.

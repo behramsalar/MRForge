@@ -1,6 +1,6 @@
 # Progress
 
-**Current stage:** Stage 3 (first vertical slice) built on branch `stage-3-api-ui`; waiting for the user's manual test and "stage accepted". Stages 0, 1 and 2 accepted (tags `stage0-accepted`, `stage1-accepted`, `stage2-accepted`).
+**Current stage:** Stage 3 (first vertical slice) built on branch `stage-3-api-ui`; accepted by the user (tag `stage3-accepted`). Stages 0, 1 and 2 accepted (tags `stage0-accepted`, `stage1-accepted`, `stage2-accepted`).
 
 ## Stage 3 (API + first real UI)
 | Sub-step | Status |
@@ -62,4 +62,4 @@ Demo workspace with your real session imported: `~/Documents/mrforge-workspaces/
 - Fieldmap handling: your DICOM set contains gradient-echo field maps; types to confirm before Stage 5c.
 
 ## Next action
-The user runs the Stage 3 manual checklist and answers: Tailwind (CLAUDE.md section 3 says it, not installed), then confirms "stage accepted". Then merge to main, tag `stage3-accepted`, and plan Stage 4/5 (Stage 4 needs a lab member).
+Plan Stage 4/5 in plan mode (Stage 4 needs a lab member to test the Stage 3 flow; Stage 5 is functional preprocessing).
