@@ -541,6 +541,27 @@ def config_bids_validator(
     typer.echo(f"BIDS validator: {find_validator()}")
 
 
+@app.command("serve")
+def serve_command(
+    host: Annotated[str, typer.Option(help="Address to listen on.")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(help="Port to listen on.")] = 8000,
+    workspaces: Annotated[
+        Path | None, typer.Option(help="Folder that holds the workspaces.")
+    ] = None,
+) -> None:
+    """Start the web interface (API plus the built frontend, if present)."""
+    import uvicorn
+
+    from mrforge.api.app import create_app
+
+    if host not in ("127.0.0.1", "localhost", "::1"):
+        typer.echo(
+            "Warning: MRForge has no login. Anyone who can reach this address can see and "
+            "change your data. Use it only on a network you trust."
+        )
+    uvicorn.run(create_app(workspaces), host=host, port=port, log_level="info")
+
+
 @app.command("steps")
 def steps_command() -> None:
     """List the available steps."""

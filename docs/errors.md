@@ -111,6 +111,11 @@ Step-specific codes (for example for `bet` and `fsl_anat`) are added as those st
 - **Probable cause:** The archive is damaged or was built to write elsewhere.
 - **Suggested action:** Do not import this file; export the scan again.
 
+### NO_DICOM_FOUND
+- **What happened:** The chosen folder or ZIP holds no readable DICOM images. Nothing was copied.
+- **Probable cause:** Wrong folder, or the files are not DICOM.
+- **Suggested action:** Choose the folder with the scanner's DICOM files (subfolders are searched), or a ZIP of it.
+
 ### IMPORT_ALREADY_SCANNED
 - **What happened:** The same data was already scanned under another subject or session label.
 - **Suggested action:** Use the existing import, or choose a different source.
@@ -232,3 +237,32 @@ BIDS validator problems are shown by `mrforge import validate` in plain language
 ### DICOM_REMOVED
 - **What happened:** Some series still need converting, but the workspace's DICOM copy was removed.
 - **Suggested action:** Scan the original source again with the same subject (`mrforge import scan <original> --subject sub-001`); the copy is restored.
+
+## API and operation codes (Stage 3a)
+
+Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `suggested_action`.
+
+### UNKNOWN_WORKSPACE / UNKNOWN_OPERATION / UNKNOWN_FILE / UNKNOWN_SUBJECT
+- **What happened:** The page asked for something that does not exist (HTTP 404).
+- **Suggested action:** Go back to the list and pick again; reload the page.
+
+### OPERATION_BUSY
+- **What happened:** An import or pipeline is already running in this workspace (HTTP 409).
+- **Probable cause:** These actions change the same data, so they run one at a time.
+- **Suggested action:** Wait for it to finish or cancel it.
+
+### JOBS_RUNNING
+- **What happened:** A processing step is still running, so a pipeline cannot be started or resumed yet (HTTP 409).
+- **Suggested action:** Wait for it to finish or cancel it.
+
+### OUTSIDE_HOME / NOT_ALLOWED / SOURCE_NOT_FOUND
+- **What happened:** The folder browser only opens locations inside your home folder, or the chosen source no longer exists.
+- **Suggested action:** Copy the scanner files into your home folder, or pick the source again.
+
+### CONVERSION_FAILED
+- **What happened:** One or more series could not be converted to NIfTI; nothing was written to `rawbids/`.
+- **Suggested action:** Leave those series out (skip) and import again; converted series are kept.
+
+### PIPELINE_STEP_FAILED
+- **What happened:** A step of the pipeline did not finish. The step's own error holds the details.
+- **Suggested action:** Fix the cause, then resume; finished steps are not repeated.
