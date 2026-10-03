@@ -73,6 +73,9 @@ class Job(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     step_name: Mapped[str] = mapped_column(String(100))
     step_version: Mapped[str] = mapped_column(String(50))
+    # Name of the output folder; defaults to the step name. Pipelines use the step id so the
+    # same step can appear twice for one subject.
+    label: Mapped[str | None] = mapped_column(String(100), nullable=True)
     subject_id: Mapped[int | None] = mapped_column(ForeignKey("subject.id"), nullable=True)
     session: Mapped[str | None] = mapped_column(String(100), nullable=True)
     inputs: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
@@ -93,3 +96,14 @@ class Job(Base):
     error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     output_dir: Mapped[str | None] = mapped_column(String(1000), nullable=True)  # relative
+
+
+class PipelineRun(Base):
+    """One execution of a pipeline spec. ``resume`` creates a new run from the same spec."""
+
+    __tablename__ = "pipeline_run"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(200))
+    spec: Mapped[dict[str, object]] = mapped_column(JSON)
+    created: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

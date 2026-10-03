@@ -148,19 +148,29 @@ class Step(ABC, Generic[I, P, O]):
         """Build and execute commands. Raise StepError on failure."""
 
     def validate_inputs(self, ctx: StepContext[I, P]) -> list[Problem]:
-        """Default: every path field of the input spec must exist as a non-empty file."""
-        problems: list[Problem] = []
-        for field_name, value in ctx.inputs:
-            if isinstance(value, str) and not _is_nonempty_file(ctx.input_path(value)):
-                problems.append(
-                    Problem(
-                        code="INPUT_MISSING",
-                        message=f"Input '{field_name}' was not found or is empty: {value}",
-                        probable_cause="The file was moved, deleted or never created.",
-                        suggested_action="Check the file exists, or rerun the step that makes it.",
-                    )
-                )
-        return problems
+        """Default: every input path must exist as a non-empty file."""
+        return [
+            Problem(
+                code="INPUT_MISSING",
+                message=f"Input file was not found or is empty: {rel}",
+                probable_cause="The file was moved, deleted or never created.",
+                suggested_action="Check the file exists, or rerun the step that makes it.",
+            )
+            for rel in input_relpaths(ctx.inputs)
+            if not _is_nonempty_file(ctx.input_path(rel))
+        ]
+
+    def tool_versions(self, ctx: StepContext[I, P]) -> dict[str, str]:
+        """Versions of external tools used (recorded in provenance). Default: none."""
+        return {}
+
+    def output_relpaths(self, ctx: StepContext[I, P]) -> list[str]:
+        """Workspace-relative paths of the expected outputs."""
+        return [
+            ctx.workspace.relpath(ctx.output_dir / value)
+            for _, value in self.expected_outputs(ctx)
+            if isinstance(value, str)
+        ]
 
     def prepare(self, ctx: StepContext[I, P]) -> None:
         ctx.output_dir.mkdir(parents=True, exist_ok=True)
@@ -198,6 +208,18 @@ class Step(ABC, Generic[I, P, O]):
                 else:
                     # File changed: drop the cached hash.
                     existing.sha256 = existing.size = existing.mtime_ns = None
+
+
+def input_relpaths(inputs: BaseModel) -> list[str]:
+    """Input specs are file paths: every ``str`` or ``list[str]`` field is a workspace-relative
+    path. (Non-path settings belong in the parameter spec.)"""
+    paths: list[str] = []
+    for _, value in inputs:
+        if isinstance(value, str):
+            paths.append(value)
+        elif isinstance(value, list):
+            paths.extend(v for v in value if isinstance(v, str))
+    return paths
 
 
 def _is_nonempty_file(path: Path) -> bool:

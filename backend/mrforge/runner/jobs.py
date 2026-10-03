@@ -15,6 +15,7 @@ from sqlalchemy import select
 
 from mrforge.errors import StepError
 from mrforge.models import Job, JobStatus
+from mrforge.steps.base import Step, StepContext
 from mrforge.steps.registry import get_step
 from mrforge.workspace import Workspace
 
@@ -32,16 +33,32 @@ def job_output_dir(ws: Workspace, subject: str, session: str | None, step_name: 
     return ws.relpath(ws.derivatives_dir.joinpath(*parts))
 
 
-def create_job(
+def build_context(
     ws: Workspace,
     step_name: str,
     subject: str,
-    inputs: dict[str, Any] | None = None,
-    params: dict[str, Any] | None = None,
-    session: str | None = None,
-    pipeline_run_id: int | None = None,
-) -> int:
-    """Validate inputs/params against the step's specs and queue a job. Returns the job id."""
+    session: str | None,
+    inputs: dict[str, Any],
+    params: dict[str, Any],
+    label: str | None = None,
+) -> tuple[Step[Any, Any, Any], StepContext[Any, Any]]:
+    """The step instance and the context it would run in (used by the worker and resume)."""
+    step, inputs, params = normalise_specs(step_name, inputs, params)
+    ctx = StepContext(
+        workspace=ws,
+        subject=subject,
+        session=session,
+        inputs=step.InputSpec(**inputs),
+        params=step.ParamSpec(**params),
+        output_dir=ws.root / job_output_dir(ws, subject, session, label or step_name),
+    )
+    return step, ctx
+
+
+def normalise_specs(
+    step_name: str, inputs: dict[str, Any] | None, params: dict[str, Any] | None
+) -> tuple[Step[Any, Any, Any], dict[str, Any], dict[str, Any]]:
+    """Validate inputs/params against the step's specs; return them with defaults filled in."""
     step = get_step(step_name)
     try:
         inputs_model = step.InputSpec(**(inputs or {}))
@@ -56,20 +73,35 @@ def create_job(
             probable_cause="A value is missing, misspelled or outside the allowed range.",
             suggested_action="Correct the value and run again.",
         ) from exc
+    return step, inputs_model.model_dump(mode="json"), params_model.model_dump(mode="json")
+
+
+def create_job(
+    ws: Workspace,
+    step_name: str,
+    subject: str,
+    inputs: dict[str, Any] | None = None,
+    params: dict[str, Any] | None = None,
+    session: str | None = None,
+    pipeline_run_id: int | None = None,
+    label: str | None = None,
+) -> int:
+    """Validate inputs/params against the step's specs and queue a job. Returns the job id."""
+    step, inputs_dict, params_dict = normalise_specs(step_name, inputs, params)
     subject_id = ws.get_or_create_subject(subject)
-    params_dict = params_model.model_dump(mode="json")
     with ws.session() as s:
         job = Job(
             step_name=step_name,
             step_version=step.version,
+            label=label,
             subject_id=subject_id,
             session=session,
-            inputs=inputs_model.model_dump(mode="json"),
+            inputs=inputs_dict,
             params=params_dict,
             param_hash=param_hash(params_dict),
             status=JobStatus.QUEUED.value,
             pipeline_run_id=pipeline_run_id,
-            output_dir=job_output_dir(ws, subject, session, step_name),
+            output_dir=job_output_dir(ws, subject, session, label or step_name),
         )
         s.add(job)
         s.flush()

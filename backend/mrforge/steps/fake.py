@@ -14,7 +14,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from mrforge.errors import StepError
-from mrforge.steps.base import Problem, Step, StepContext, StepResult
+from mrforge.steps.base import Step, StepContext, StepResult
 from mrforge.steps.registry import register_step
 
 
@@ -40,18 +40,6 @@ class FakeStep(Step[FakeInput, FakeParams, FakeOutput]):
 
     def expected_outputs(self, ctx: StepContext[FakeInput, FakeParams]) -> FakeOutput:
         return FakeOutput()
-
-    def validate_inputs(self, ctx: StepContext[FakeInput, FakeParams]) -> list[Problem]:
-        return [
-            Problem(
-                code="INPUT_MISSING",
-                message=f"Input file was not found or is empty: {src}",
-                probable_cause="The file was moved, deleted or never created.",
-                suggested_action="Check the file exists, or rerun the step that makes it.",
-            )
-            for src in ctx.inputs.sources
-            if not ctx.input_path(src).is_file() or ctx.input_path(src).stat().st_size == 0
-        ]
 
     def _sleep(self, ctx: StepContext[FakeInput, FakeParams], seconds: float) -> None:
         if seconds > 0:

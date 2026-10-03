@@ -17,3 +17,9 @@ Format: date, decision, reason.
 | 2026-10-03 | `fsl_anat` is one step; an interrupted run restarts from the beginning. | Simple and safe. |
 | 2026-10-03 | The app must work both with and without fieldmap data. Fieldmap correction is offered only when fieldmaps exist (CLAUDE.md principle 9). | User requirement. |
 | 2026-10-03 | No user accounts or login system. | Out of scope per CLAUDE.md section 9. |
+| 2026-10-03 | Each step run writes `provenance.json` (including failed, interrupted and cancelled runs). The worker deletes the old record before running, so a stale "Completed" record can never be trusted after a crash. | Principle 4 (provenance for every run) and principle 5 (resume must be safe). |
+| 2026-10-03 | A previous run is reusable only if its provenance says Completed, it is the latest job for that output folder, version and parameter hash match, input hashes match, outputs exist, pass `validate_outputs` and still match their recorded hashes. | Architecture section 7, plus a tamper check on outputs. |
+| 2026-10-03 | Downstream invalidation is two-layered: input hashes (automatic) and, inside a pipeline, any step that reruns forces all steps that use its outputs to rerun, even if the new output is byte-identical. | CLAUDE.md: "if an upstream step changes, downstream steps are invalidated". |
+| 2026-10-03 | Output folders are named by a `label` (default: the step name; pipelines use the step id) so one step can appear twice for the same subject. | Needed for pipelines and tests with repeated steps. |
+| 2026-10-03 | Pipelines are YAML files with `${stepid.outputfield}` references; they run sequentially and stop at the first failure. Resume = run the same spec again. | Smallest design that supports "fail at step 3, then resume". |
+| 2026-10-03 | Only one `LocalJobQueue` should drive a workspace at a time. | Two queues could start the same queued job twice; sufficient for one CLI or API process. |

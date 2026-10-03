@@ -15,12 +15,20 @@ from types import FrameType
 
 import psutil
 
+from mrforge import __version__
 from mrforge.errors import StepError
+from mrforge.hashing import file_sha256
 from mrforge.models import JobStatus, Subject
-from mrforge.runner.jobs import get_job, now, update_job
+from mrforge.provenance import (
+    FileRecord,
+    Provenance,
+    StepRef,
+    remove_provenance,
+    write_provenance,
+)
+from mrforge.runner.jobs import build_context, get_job, now, update_job
 from mrforge.steps import builtin  # noqa: F401  (registers built-in steps)
-from mrforge.steps.base import StepContext, execute_step
-from mrforge.steps.registry import get_step
+from mrforge.steps.base import execute_step, input_relpaths
 from mrforge.workspace import Workspace
 
 
@@ -48,30 +56,61 @@ def run_job(ws: Workspace, job_id: int) -> JobStatus:
         pid_start_time=me.create_time(),
         started=now(),
     )
-    step = get_step(job.step_name)
-    assert job.output_dir is not None
     with ws.session() as sess:
         subject = sess.get(Subject, job.subject_id).label  # type: ignore[union-attr]
-    ctx = StepContext(
-        workspace=ws,
-        subject=subject,
-        session=job.session,
-        inputs=step.InputSpec(**job.inputs),
-        params=step.ParamSpec(**job.params),
-        output_dir=ws.abspath(job.output_dir),
+    step, ctx = build_context(
+        ws, job.step_name, subject, job.session, job.inputs, job.params, job.label
     )
+    # A record from an earlier run must never be mistaken for this run's result.
+    remove_provenance(ctx.output_dir)
+    inputs = [
+        FileRecord(path=rel, sha256=file_sha256(ws, rel))
+        for rel in input_relpaths(ctx.inputs)
+        if ws.abspath(rel).is_file()
+    ]
+    error: StepError | None = None
+    status = JobStatus.COMPLETED
     try:
         execute_step(step, ctx)
     except Cancelled:
-        _finish(ws, job_id, JobStatus.CANCELLED, "CANCELLED", "The step was cancelled.")
-        return JobStatus.CANCELLED
+        status = JobStatus.CANCELLED
+        error = StepError("CANCELLED", "The step was cancelled.")
     except StepError as err:
         # A tool killed by a signal means the run was interrupted, not that the data is bad.
         status = JobStatus.INTERRUPTED if err.code == "COMMAND_KILLED" else JobStatus.FAILED
-        _finish(ws, job_id, status, err.code, err.format())
-        return status
-    _finish(ws, job_id, JobStatus.COMPLETED, None, None, return_code=0)
-    return JobStatus.COMPLETED
+        error = err
+    finished = now()
+    outputs: list[FileRecord] = []
+    if status == JobStatus.COMPLETED:
+        outputs = [
+            FileRecord(path=rel, sha256=file_sha256(ws, rel)) for rel in step.output_relpaths(ctx)
+        ]
+    write_provenance(
+        ctx.output_dir,
+        Provenance(
+            step=StepRef(name=step.name, version=step.version),
+            job_id=job_id,
+            subject=subject,
+            session=job.session,
+            parameters=job.params,
+            parameter_hash=job.param_hash,
+            inputs=inputs,
+            outputs=outputs,
+            commands=ctx.commands,
+            tool_versions={"mrforge": __version__, **step.tool_versions(ctx)},
+            started=get_job(ws, job_id).started,
+            finished=finished,
+            status=status.value,
+            return_code=0 if error is None else 1,
+            error_code=error.code if error else None,
+            error_message=error.format() if error else None,
+        ),
+    )
+    if error is None:
+        _finish(ws, job_id, status, None, None, return_code=0)
+    else:
+        _finish(ws, job_id, status, error.code, error.format())
+    return status
 
 
 def _finish(
