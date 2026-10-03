@@ -116,6 +116,12 @@ def format_manifest(
                 lines.append(f"  series {s.number} ({s.label}):")
                 lines += [f"    - {r}" for r in classes[s.uid].reasons]
     notes = [f"series {s.number}: {w}" for s in manifest.series for w in s.warnings]
+    if manifest.dicom_removed is not None:
+        notes.append(
+            f"The workspace's copy of the DICOM files was removed on "
+            f"{manifest.dicom_removed.strftime('%Y-%m-%d')}; "
+            "scan the original source again to restore it."
+        )
     notes += manifest.warnings
     if manifest.skipped_files:
         counts2: dict[str, int] = {}

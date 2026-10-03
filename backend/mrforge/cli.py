@@ -20,6 +20,7 @@ from mrforge.importing.bids_validate import (
     validate_dataset,
 )
 from mrforge.importing.classify import (
+    RuleSet,
     apply_rules,
     effective_all,
     load_rules,
@@ -27,11 +28,12 @@ from mrforge.importing.classify import (
 )
 from mrforge.importing.convert import convert_import
 from mrforge.importing.existing import format_bids_import, import_bids, import_nifti
-from mrforge.importing.manifest import load_manifest, save_manifest
+from mrforge.importing.manifest import list_manifests, load_manifest, save_manifest
 from mrforge.importing.models import ImportManifest
 from mrforge.importing.organize import OrganizeSummary, build_plan, organize
 from mrforge.importing.report import describe_plan, format_manifest
 from mrforge.importing.scan import scan_source
+from mrforge.importing.sourcedata import removal_plan, remove_dicom
 from mrforge.models import JobStatus
 from mrforge.pipeline import PipelineSpec, load_pipeline, parse_pipeline
 from mrforge.runner.jobs import get_job, list_jobs, recover_stale_jobs
@@ -189,9 +191,15 @@ def import_scan(
 ) -> None:
     """Copy a DICOM session into the workspace and list the series found in it."""
     ws = Workspace.open(workspace)
+    removed_before = {m.id for m in list_manifests(ws) if m.dicom_removed is not None}
     manifest, is_new = scan_source(ws, source, subject, session)
     typer.echo(format_manifest(manifest, effective_all(manifest, load_rules(ws))))
-    if not is_new:
+    if manifest.id in removed_before and manifest.dicom_removed is None:
+        typer.echo(
+            f"\nThis source was already scanned ({manifest.id}). Its removed DICOM copy was "
+            "restored from the original."
+        )
+    elif not is_new:
         typer.echo(f"\nThis source was already scanned ({manifest.id}); nothing was copied again.")
 
 
@@ -319,6 +327,15 @@ def import_run(
     ] = None,
     workspace: WorkspaceOption = Path("."),
     jobs: Annotated[int, typer.Option("--jobs", "-j", help="Series converted at once.")] = 4,
+    remove_dicom_after: Annotated[
+        bool,
+        typer.Option(
+            "--remove-dicom",
+            help="Afterwards delete the workspace's copy of the original DICOM files "
+            "(only if you keep the originals elsewhere).",
+        ),
+    ] = False,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Do not ask for confirmation.")] = False,
 ) -> None:
     """Convert the series that are set to import, then write them into rawbids/."""
     ws = Workspace.open(workspace)
@@ -346,6 +363,8 @@ def import_run(
             f"\n{len(pending)} series still need your input and were not imported "
             "(see 'mrforge import show')."
         )
+    if remove_dicom_after:
+        _remove_dicom_flow(ws, manifest, rules, yes)
 
 
 def _bids_check(ws: Workspace) -> None:
@@ -410,8 +429,6 @@ def import_bids_command(
 @friendly
 def import_list(workspace: WorkspaceOption = Path(".")) -> None:
     """List the imports in this workspace."""
-    from mrforge.importing.manifest import list_manifests
-
     ws = Workspace.open(workspace)
     manifests = list_manifests(ws)
     if not manifests:
@@ -421,6 +438,49 @@ def import_list(workspace: WorkspaceOption = Path(".")) -> None:
         who = m.subject or "(whole dataset)"
         count = f"{len(m.series)} series" if m.series else f"{m.source.n_files} files"
         typer.echo(f"{m.id}  {what[m.source.kind]:<13} {who:<18} {count}")
+
+
+def _human(size: int) -> str:
+    return f"{size / 1e9:.1f} GB" if size >= 1e9 else f"{size / 1e6:.0f} MB"
+
+
+def _remove_dicom_flow(ws: Workspace, manifest: ImportManifest, rules: RuleSet, yes: bool) -> None:
+    plan = removal_plan(ws, manifest, rules)
+    typer.echo(
+        f"\nRemoving the DICOM copy of {manifest.id}: {plan.path}/ ({_human(plan.size_bytes)})."
+    )
+    if plan.only_in_dicom:
+        more = " ..." if len(plan.only_in_dicom) > 3 else ""
+        typer.echo(
+            f"{len(plan.only_in_dicom)} series were skipped or are undecided "
+            f"({', '.join(x[:38] for x in plan.only_in_dicom[:3])}{more}); they exist only "
+            "in these DICOM files. To import one later you would scan the original source again."
+        )
+    typer.echo("Everything that was imported is already in rawbids/ and stays.")
+    question = "Delete the DICOM copy? Your original files elsewhere are untouched"
+    if not yes and not typer.confirm(question):
+        typer.echo("Nothing was deleted.")
+        raise typer.Exit(1)
+    remove_dicom(ws, manifest, rules)
+    typer.echo(f"Deleted. {_human(plan.size_bytes)} freed.")
+
+
+@import_app.command("remove-dicom")
+@friendly
+def import_remove_dicom(
+    import_id: Annotated[
+        str | None, typer.Argument(help="e.g. import-001 (default: latest).")
+    ] = None,
+    workspace: WorkspaceOption = Path("."),
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Do not ask for confirmation.")] = False,
+) -> None:
+    """Delete the workspace's copy of the original DICOM files (to save space).
+
+    Use this only if you keep the originals elsewhere. It is refused unless everything that is
+    set to be imported is already safely in rawbids/."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    _remove_dicom_flow(ws, manifest, load_rules(ws), yes)
 
 
 @import_app.command("validate")

@@ -155,6 +155,7 @@ class ImportManifest(BaseModel):
     overrides: dict[str, Override] = {}  # by series uid (from the user)
     conversions: dict[str, Conversion] = {}  # by series uid (from dcm2niix)
     organized: dict[str, OrganizedSeries] = {}  # by series uid (what is in rawbids/)
+    dicom_removed: datetime | None = None  # when the DICOM copy in sourcedata/ was removed
     organize_notes: list[str] = []  # things the organizer left out, and why
     skipped_files: list[SkippedFile] = []
     tool_versions: dict[str, str] = {}

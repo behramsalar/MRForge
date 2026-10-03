@@ -417,7 +417,9 @@ def _find_existing(ws: Workspace, info: SourceInfo) -> ImportManifest | None:
         same = manifest.source.fingerprint == info.fingerprint
         if manifest.source.kind in ("nifti", "bids"):
             continue  # those imports are found by their own commands
-        if same and (ws.root / manifest.dicom_dir).is_dir():
+        # an import whose DICOM copy was removed is still "the same import": scanning the
+        # original again restores the copy
+        if same and ((ws.root / manifest.dicom_dir).is_dir() or manifest.dicom_removed):
             return manifest
     return None
 
@@ -448,6 +450,10 @@ def scan_source(
                 probable_cause="The same data cannot be imported twice under another label.",
                 suggested_action="Use the existing import, or choose a different source.",
             )
+        if existing.dicom_removed is not None:  # bring the removed DICOM copy back
+            copy_source(src, ws.root / existing.dicom_dir, info)
+            existing.dicom_removed = None
+            save_manifest(ws, existing)
         return existing, False
     manifest_id = next_manifest_id(ws)
     dest = ws.root / "sourcedata" / "dicom" / manifest_id

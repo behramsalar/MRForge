@@ -308,6 +308,15 @@ def convert_import(
             todo.append(s)
     if not todo:
         return summary
+    if manifest.dicom_removed is not None or not (ws.root / manifest.dicom_dir).is_dir():
+        raise StepError(
+            code="DICOM_REMOVED",
+            message="These series still need converting, but the DICOM files of this import "
+            "were removed: " + ", ".join(str(s.number) for s in todo) + ".",
+            probable_cause="The copy in sourcedata/ was deleted (mrforge import remove-dicom).",
+            suggested_action="Restore it by scanning the original source again with the same "
+            f"subject: mrforge import scan <original folder or zip> --subject {manifest.subject}",
+        )
     say(f"Converting {len(todo)} series with dcm2niix ({len(summary.up_to_date)} already done)...")
     by_series = index_files(ws.root / manifest.dicom_dir)
     workers = max(1, min(jobs or 4, os.cpu_count() or 1, len(todo)))

@@ -218,3 +218,17 @@ BIDS validator problems are shown by `mrforge import validate` in plain language
 ### NO_FILES
 - **What happened:** No NIfTI files were given to `mrforge import nifti`.
 - **Suggested action:** Give one or more `.nii`/`.nii.gz` files.
+
+## Removing the DICOM copy
+
+### DICOM_REMOVE_NOT_SAFE
+- **What happened:** `mrforge import remove-dicom` was refused because some series that are set to be imported are not safely in `rawbids/` yet (not converted, not organised, or a file is missing or changed). Nothing was deleted.
+- **Suggested action:** Run `mrforge import run` first, then try again.
+
+### DICOM_ALREADY_REMOVED / DICOM_NOT_APPLICABLE
+- **What happened:** The DICOM copy of this import was already removed, or the import did not come from DICOM files (NIfTI and BIDS imports have no copy).
+- **Suggested action:** Nothing to do.
+
+### DICOM_REMOVED
+- **What happened:** Some series still need converting, but the workspace's DICOM copy was removed.
+- **Suggested action:** Scan the original source again with the same subject (`mrforge import scan <original> --subject sub-001`); the copy is restored.
