@@ -29,6 +29,7 @@ UI (React)  ->  API (FastAPI)  ->  Services  ->  Step objects  ->  Job runner  -
             sub-XXX_T1w.anat/       # native fsl_anat folder, named after the input image
             _runs/<label>/          # one folder per step run: provenance.json, logs/stdout.log, stderr.log
         sub-XXX/[ses-YY/]func/      # (later stages)
+    imports/import-NNN/manifest.json   # scan results, user decisions, conversion provenance
     reports/
 ```
 
@@ -162,3 +163,22 @@ Questions 1-7 (source of truth, hash caching, crash detection, FSL lookup, relat
 
 1. **Fieldmap types** the lab's scanner produces (needed before Stage 5c). The app must work with and without fieldmaps.
 2. **Lab members for UX feedback** (CLAUDE.md section 0; needed from Stage 3/4 only).
+
+## 13. Import (Stage 2)
+
+```text
+DICOM folder/zip --scan--> sourcedata/dicom/import-NNN/ (copy) + imports/import-NNN/manifest.json
+                  --classify (rules + your decisions: import set)--> what each series is, with confidence
+                  --convert (dcm2niix, one series at a time)--> imports/import-NNN/converted/s<series>/
+                  --organize--> rawbids/ (BIDS names, privacy-filtered sidecars, read-only)
+                  --validate--> imports/bids-validation.json (BIDS validator, plain-language messages)
+NIfTI files  ------ import nifti (copy, checks) ----------------^ (same organize step)
+BIDS dataset ------ import bids (copy, no conversion) ----------> rawbids/
+```
+
+- **Manifest** (`imports/import-NNN/manifest.json`): the scan result (series table, no patient information), the rules' classification, the user's overrides, the conversion records (command, tool version, file hashes) and what was written to `rawbids/`. It is the provenance of an import and can change; `rawbids/` itself never does.
+- **Rules** (`classification_rules.yaml`): plain-text clues grouped in families (name, image type, geometry, relation to other series); confidence counts how many families agree. Unknown or conflicting series are never imported until the user decides.
+- **Immutability of rawbids/**: files are read-only; nothing is overwritten or renamed; all checks run before the first file is written. Only exception: a fieldmap sidecar may gain `IntendedFor` entries when a run is added later.
+- **Privacy**: only acquisition tags are read from DICOM; source folder and file names are never stored; JSON sidecars lose site, device and study-description fields (`sidecar_privacy.yaml`).
+- **External files are copied, never linked**; files inside the workspace (converted to rawbids) are hard-linked, so there is no second copy on disk.
+

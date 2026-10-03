@@ -1,0 +1,1025 @@
+{
+"validator": "bids-validator 1.15.0",
+"issues": [
+{
+"code": 0,
+"key": "INTERNAL ERROR",
+"severity": "error"
+},
+{
+"code": 1,
+"key": "NOT_INCLUDED",
+"severity": "error"
+},
+{
+"code": 2,
+"key": "REPETITION_TIME_GREATER_THAN",
+"severity": "warning"
+},
+{
+"code": 3,
+"key": "ECHO_TIME_GREATER_THAN",
+"severity": "warning"
+},
+{
+"code": 4,
+"key": "ECHO_TIME_DIFFERENCE_GREATER_THAN",
+"severity": "warning"
+},
+{
+"code": 5,
+"key": "TOTAL_READOUT_TIME_GREATER_THAN",
+"severity": "warning"
+},
+{
+"code": 6,
+"key": "ECHO_TIME_NOT_DEFINED",
+"severity": "warning"
+},
+{
+"code": 7,
+"key": "PHASE_ENCODING_DIRECTION_NOT_DEFINED",
+"severity": "warning"
+},
+{
+"code": 8,
+"key": "EFFECTIVE_ECHO_SPACING_NOT_DEFINED",
+"severity": "warning"
+},
+{
+"code": 9,
+"key": "TOTAL_READOUT_TIME_NOT_DEFINED",
+"severity": "warning"
+},
+{
+"code": 10,
+"key": "REPETITION_TIME_MUST_DEFINE",
+"severity": "error"
+},
+{
+"code": 11,
+"key": "REPETITION_TIME_UNITS",
+"severity": "error"
+},
+{
+"code": 12,
+"key": "REPETITION_TIME_MISMATCH",
+"severity": "error"
+},
+{
+"code": 13,
+"key": "SLICE_TIMING_NOT_DEFINED",
+"severity": "warning"
+},
+{
+"code": 15,
+"key": "ECHO_TIME1-2_NOT_DEFINED",
+"severity": "error"
+},
+{
+"code": 16,
+"key": "ECHO_TIME_MUST_DEFINE",
+"severity": "error"
+},
+{
+"code": 17,
+"key": "UNITS_MUST_DEFINE",
+"severity": "error"
+},
+{
+"code": 18,
+"key": "PHASE_ENCODING_DIRECTION_MUST_DEFINE",
+"severity": "error"
+},
+{
+"code": 19,
+"key": "TOTAL_READOUT_TIME_MUST_DEFINE",
+"severity": "error"
+},
+{
+"code": 20,
+"key": "EVENTS_COLUMN_ONSET",
+"severity": "error"
+},
+{
+"code": 21,
+"key": "EVENTS_COLUMN_DURATION",
+"severity": "error"
+},
+{
+"code": 22,
+"key": "TSV_EQUAL_ROWS",
+"severity": "error"
+},
+{
+"code": 23,
+"key": "TSV_EMPTY_CELL",
+"severity": "error"
+},
+{
+"code": 24,
+"key": "TSV_IMPROPER_NA",
+"severity": "warning"
+},
+{
+"code": 25,
+"key": "EVENTS_TSV_MISSING",
+"severity": "warning"
+},
+{
+"code": 26,
+"key": "NIFTI_HEADER_UNREADABLE",
+"severity": "error"
+},
+{
+"code": 27,
+"key": "JSON_INVALID",
+"severity": "error"
+},
+{
+"code": 28,
+"key": "GZ_NOT_GZIPPED",
+"severity": "error"
+},
+{
+"code": 29,
+"key": "VOLUME_COUNT_MISMATCH",
+"severity": "error"
+},
+{
+"code": 30,
+"key": "BVAL_MULTIPLE_ROWS",
+"severity": "error"
+},
+{
+"code": 31,
+"key": "BVEC_NUMBER_ROWS",
+"severity": "error"
+},
+{
+"code": 32,
+"key": "DWI_MISSING_BVEC",
+"severity": "error"
+},
+{
+"code": 33,
+"key": "DWI_MISSING_BVAL",
+"severity": "error"
+},
+{
+"code": 36,
+"key": "NIFTI_TOO_SMALL",
+"severity": "error"
+},
+{
+"code": 37,
+"key": "INTENDED_FOR",
+"severity": "error"
+},
+{
+"code": 38,
+"key": "INCONSISTENT_SUBJECTS",
+"severity": "warning"
+},
+{
+"code": 39,
+"key": "INCONSISTENT_PARAMETERS",
+"severity": "warning"
+},
+{
+"code": 40,
+"key": "NIFTI_DIMENSION",
+"severity": "warning"
+},
+{
+"code": 41,
+"key": "NIFTI_UNIT",
+"severity": "warning"
+},
+{
+"code": 42,
+"key": "NIFTI_PIXDIM",
+"severity": "warning"
+},
+{
+"code": 43,
+"key": "ORPHANED_SYMLINK",
+"severity": "error"
+},
+{
+"code": 44,
+"key": "FILE_READ",
+"severity": "error"
+},
+{
+"code": 45,
+"key": "SUBJECT_FOLDERS",
+"severity": "error"
+},
+{
+"code": 46,
+"key": "BVEC_ROW_LENGTH",
+"severity": "error"
+},
+{
+"code": 47,
+"key": "B_FILE",
+"severity": "error"
+},
+{
+"code": 48,
+"key": "PARTICIPANT_ID_COLUMN",
+"severity": "error"
+},
+{
+"code": 49,
+"key": "PARTICIPANT_ID_MISMATCH",
+"severity": "error"
+},
+{
+"code": 50,
+"key": "TASK_NAME_MUST_DEFINE",
+"severity": "error"
+},
+{
+"code": 51,
+"key": "PHENOTYPE_SUBJECTS_MISSING",
+"severity": "error"
+},
+{
+"code": 52,
+"key": "STIMULUS_FILE_MISSING",
+"severity": "error"
+},
+{
+"code": 53,
+"key": "NO_T1W",
+"severity": "ignore"
+},
+{
+"code": 54,
+"key": "BOLD_NOT_4D",
+"severity": "error"
+},
+{
+"code": 55,
+"key": "JSON_SCHEMA_VALIDATION_ERROR",
+"severity": "error"
+},
+{
+"code": 56,
+"key": "Participants age 89 or higher",
+"severity": "warning"
+},
+{
+"code": 57,
+"key": "DATASET_DESCRIPTION_JSON_MISSING",
+"severity": "error"
+},
+{
+"code": 58,
+"key": "TASK_NAME_CONTAIN_ILLEGAL_CHARACTER",
+"severity": "error"
+},
+{
+"code": 59,
+"key": "ACQ_NAME_CONTAIN_ILLEGAL_CHARACTER",
+"severity": "error"
+},
+{
+"code": 60,
+"key": "SFORM_AND_QFORM_IN_IMAGE_HEADER_ARE_ZERO",
+"severity": "error"
+},
+{
+"code": 61,
+"key": "QUICK_VALIDATION_FAILED",
+"severity": "error"
+},
+{
+"code": 62,
+"key": "SUBJECT_VALUE_CONTAINS_ILLEGAL_CHARACTER",
+"severity": "error"
+},
+{
+"code": 63,
+"key": "SESSION_VALUE_CONTAINS_ILLEGAL_CHARACTER",
+"severity": "error"
+},
+{
+"code": 64,
+"key": "SUBJECT_LABEL_IN_FILENAME_DOESNOT_MATCH_DIRECTORY",
+"severity": "error"
+},
+{
+"code": 65,
+"key": "SESSION_LABEL_IN_FILENAME_DOESNOT_MATCH_DIRECTORY",
+"severity": "error"
+},
+{
+"code": 66,
+"key": "SLICETIMING_VALUES_GREATOR_THAN_REPETITION_TIME",
+"severity": "error"
+},
+{
+"code": 67,
+"key": "NO_VALID_DATA_FOUND_FOR_SUBJECT",
+"severity": "error"
+},
+{
+"code": 68,
+"key": "FILENAME_COLUMN",
+"severity": "error"
+},
+{
+"code": 70,
+"key": "WRONG_NEW_LINE",
+"severity": "error"
+},
+{
+"code": 71,
+"key": "MISSING_TSV_COLUMN_CHANNELS",
+"severity": "error"
+},
+{
+"code": 72,
+"key": "MISSING_TSV_COLUMN_IEEG_CHANNELS",
+"severity": "error"
+},
+{
+"code": 73,
+"key": "MISSING_TSV_COLUMN_IEEG_ELECTRODES",
+"severity": "error"
+},
+{
+"code": 74,
+"key": "DUPLICATE_NIFTI_FILES",
+"severity": "error"
+},
+{
+"code": 75,
+"key": "NIFTI_PIXDIM4",
+"severity": "error"
+},
+{
+"code": 76,
+"key": "EFFECTIVEECHOSPACING_TOO_LARGE",
+"severity": "error"
+},
+{
+"code": 77,
+"key": "UNUSED_STIMULUS",
+"severity": "warning"
+},
+{
+"code": 78,
+"key": "CHANNELS_COLUMN_SFREQ",
+"severity": "error"
+},
+{
+"code": 79,
+"key": "CHANNELS_COLUMN_LOWCUT",
+"severity": "error"
+},
+{
+"code": 80,
+"key": "CHANNELS_COLUMN_HIGHCUT",
+"severity": "error"
+},
+{
+"code": 81,
+"key": "CHANNELS_COLUMN_NOTCH",
+"severity": "error"
+},
+{
+"code": 82,
+"key": "CUSTOM_COLUMN_WITHOUT_DESCRIPTION",
+"severity": "warning"
+},
+{
+"code": 83,
+"key": "ECHOTIME1_2_DIFFERENCE_UNREASONABLE",
+"severity": "error"
+},
+{
+"code": 84,
+"key": "ACQTIME_FMT",
+"severity": "error"
+},
+{
+"code": 85,
+"key": "SUSPICIOUSLY_LONG_EVENT_DESIGN",
+"severity": "warning"
+},
+{
+"code": 86,
+"key": "SUSPICIOUSLY_SHORT_EVENT_DESIGN",
+"severity": "warning"
+},
+{
+"code": 87,
+"key": "SLICETIMING_ELEMENTS",
+"severity": "warning"
+},
+{
+"code": 88,
+"key": "MALFORMED_BVEC",
+"severity": "error"
+},
+{
+"code": 89,
+"key": "MALFORMED_BVAL",
+"severity": "error"
+},
+{
+"code": 90,
+"key": "SIDECAR_WITHOUT_DATAFILE",
+"severity": "error"
+},
+{
+"code": 91,
+"key": "_FIELDMAP_WITHOUT_MAGNITUDE_FILE",
+"severity": "error"
+},
+{
+"code": 92,
+"key": "MISSING_MAGNITUDE1_FILE",
+"severity": "warning"
+},
+{
+"code": 93,
+"key": "EFFECTIVEECHOSPACING_LARGER_THAN_TOTALREADOUTTIME",
+"severity": "error"
+},
+{
+"code": 94,
+"key": "MAGNITUDE_FILE_WITH_TOO_MANY_DIMENSIONS",
+"severity": "error"
+},
+{
+"code": 95,
+"key": "T1W_FILE_WITH_TOO_MANY_DIMENSIONS",
+"severity": "error"
+},
+{
+"code": 96,
+"key": "MISSING_TSV_COLUMN_EEG_ELECTRODES",
+"severity": "error"
+},
+{
+"code": 97,
+"key": "MISSING_SESSION",
+"severity": "warning"
+},
+{
+"code": 98,
+"key": "INACCESSIBLE_REMOTE_FILE",
+"severity": "error"
+},
+{
+"code": 99,
+"key": "EMPTY_FILE",
+"severity": "error"
+},
+{
+"code": 100,
+"key": "BRAINVISION_LINKS_BROKEN",
+"severity": "error"
+},
+{
+"code": 101,
+"key": "README_FILE_MISSING",
+"severity": "warning"
+},
+{
+"code": 102,
+"key": "TOO_FEW_AUTHORS",
+"severity": "warning"
+},
+{
+"code": 103,
+"key": "MULTIPLE_COMMAS_IN_AUTHOR_FIELD",
+"severity": "error"
+},
+{
+"code": 104,
+"key": "HED_ERROR",
+"severity": "error"
+},
+{
+"code": 105,
+"key": "HED_WARNING",
+"severity": "warning"
+},
+{
+"code": 106,
+"key": "HED_INTERNAL_ERROR",
+"severity": "error"
+},
+{
+"code": 107,
+"key": "HED_INTERNAL_WARNING",
+"severity": "warning"
+},
+{
+"code": 108,
+"key": "HED_MISSING_VALUE_IN_SIDECAR",
+"severity": "warning"
+},
+{
+"code": 109,
+"key": "HED_VERSION_NOT_DEFINED",
+"severity": "warning"
+},
+{
+"code": 113,
+"key": "NO_AUTHORS",
+"severity": "warning"
+},
+{
+"code": 114,
+"key": "INCOMPLETE_DATASET",
+"severity": "error"
+},
+{
+"code": 115,
+"key": "EMPTY_DATASET_NAME",
+"severity": "warning"
+},
+{
+"code": 123,
+"key": "INVALID JSON ENCODING",
+"severity": "error"
+},
+{
+"code": 124,
+"key": "INVALID_TSV_UNITS",
+"severity": "error"
+},
+{
+"code": 125,
+"key": "CHANNELS_COLUMN_STATUS",
+"severity": "error"
+},
+{
+"code": 126,
+"key": "MISSING_TSV_COLUMN_TIME",
+"severity": "error"
+},
+{
+"code": 127,
+"key": "NOT_IN_USE",
+"severity": "error"
+},
+{
+"code": 128,
+"key": "NO_GENETIC_DATABASE",
+"severity": "error"
+},
+{
+"code": 129,
+"key": "SCANS_FILENAME_NOT_MATCH_DATASET",
+"severity": "error"
+},
+{
+"code": 130,
+"key": "CHANNELS_COLUMN_TYPE_UPPER_CASE",
+"severity": "error"
+},
+{
+"code": 131,
+"key": "CHANNELS_COLUMN_TYPE",
+"severity": "error"
+},
+{
+"code": 133,
+"key": "LABELING_TYPE_MUST_DEFINE",
+"severity": "error"
+},
+{
+"code": 134,
+"key": "LABELING_DURATION_MUST_DEFINE",
+"severity": "error"
+},
+{
+"code": 135,
+"key": "POST_LABELING_DELAY_MUST_DEFINE",
+"severity": "error"
+},
+{
+"code": 136,
+"key": "BACKGROUND_SUPPRESSION_MUST_DEFINE",
+"severity": "error"
+},
+{
+"code": 137,
+"key": "VASCULAR_CRUSHING_MUST_DEFINE",
+"severity": "warning"
+},
+{
+"code": 138,
+"key": "PULSE_SEQUENCE_DETAILS_MISSING",
+"severity": "warning"
+},
+{
+"code": 139,
+"key": "BLACKLISTED_MODALITY",
+"severity": "error"
+},
+{
+"code": 140,
+"key": "140_EMPTY",
+"severity": "warning"
+},
+{
+"code": 141,
+"key": "141_EMPTY",
+"severity": "warning"
+},
+{
+"code": 142,
+"key": "LABELING_SLAB_THICKNESS_MISSING",
+"severity": "warning"
+},
+{
+"code": 143,
+"key": "ACQUISITION_VOXELSIZE_MISSING",
+"severity": "warning"
+},
+{
+"code": 144,
+"key": "BACKGROUND_SUPPRESSION_PULSE_TIME_MISSING",
+"severity": "warning"
+},
+{
+"code": 145,
+"key": "VASCULAR_CRUCHING_VENC_MISSING",
+"severity": "warning"
+},
+{
+"code": 147,
+"key": "PASL_BOLUS_CUT_OFF_FLAG",
+"severity": "error"
+},
+{
+"code": 149,
+"key": "PASL_BOLUS_CUT_OFF_DELAY_TIME",
+"severity": "error"
+},
+{
+"code": 150,
+"key": "PASL_BOLUS_CUT_OFF_TECHNIQUE",
+"severity": "error"
+},
+{
+"code": 153,
+"key": "M0Type_NOT_SET",
+"severity": "error"
+},
+{
+"code": 154,
+"key": "M0Type_SET_INCORRECTLY",
+"severity": "error"
+},
+{
+"code": 155,
+"key": "MRACQUISITIONTYPE_MUST_DEFINE",
+"severity": "error"
+},
+{
+"code": 156,
+"key": "ACQUISITION_VOXELSIZE_WRONG",
+"severity": "warning"
+},
+{
+"code": 157,
+"key": "LABELLING_DURATION_LENGTH_NOT_MATCHING_NIFTI",
+"severity": "error"
+},
+{
+"code": 164,
+"key": "ASL_MANUFACTURER_MISSING",
+"severity": "warning"
+},
+{
+"code": 165,
+"key": "ASLCONTEXT_TSV_NOT_CONSISTENT",
+"severity": "error"
+},
+{
+"code": 166,
+"key": "LOOK_LOCKER_FLIP_ANGLE_MISSING",
+"severity": "error"
+},
+{
+"code": 167,
+"key": "FLIP_ANGLE_MISSING",
+"severity": "warning"
+},
+{
+"code": 168,
+"key": "FLIP_ANGLE_NOT_MATCHING_NIFTI",
+"severity": "error"
+},
+{
+"code": 169,
+"key": "LABELING_DURATION_PASL_INCONSISTENT",
+"severity": "error"
+},
+{
+"code": 170,
+"key": "CONTINOUS_RECORDING_MISSING_JSON",
+"severity": "error"
+},
+{
+"code": 171,
+"key": "VOLUME_TIMING_MISSING_ACQUISITION_DURATION",
+"severity": "error"
+},
+{
+"code": 172,
+"key": "FLIP_ANGLE_NOT_MATCHING_ASLCONTEXT_TSV",
+"severity": "error"
+},
+{
+"code": 173,
+"key": "POST_LABELING_DELAY_NOT_MATCHING_NIFTI",
+"severity": "error"
+},
+{
+"code": 174,
+"key": "POST_LABELING_DELAY_NOT_MATCHING_ASLCONTEXT_TSV",
+"severity": "error"
+},
+{
+"code": 175,
+"key": "LABELLING_DURATION_NOT_MATCHING_ASLCONTEXT_TSV",
+"severity": "error"
+},
+{
+"code": 176,
+"key": "ASLCONTEXT_TSV_INCONSISTENT",
+"severity": "error"
+},
+{
+"code": 177,
+"key": "REPETITIONTIMEPREPARATION_NOT_MATCHING_ASLCONTEXT_TSV",
+"severity": "error"
+},
+{
+"code": 178,
+"key": "VOLUME_TIMING_AND_REPETITION_TIME_MUTUALLY_EXCLUSIVE",
+"severity": "error"
+},
+{
+"code": 179,
+"key": "BACKGROUND_SUPPRESSION_PULSE_NUMBER_MISSING",
+"severity": "warning"
+},
+{
+"code": 180,
+"key": "BACKGROUND_SUPPRESSION_PULSE_NUMBER_NOT_CONSISTENT",
+"severity": "warning"
+},
+{
+"code": 181,
+"key": "TOTAL_ACQUIRED_VOLUMES_NOT_CONSISTENT",
+"severity": "warning"
+},
+{
+"code": 182,
+"key": "MAGNETIC_FIELD_STRENGTH_MISSING",
+"severity": "error"
+},
+{
+"code": 183,
+"key": "SLICE_TIMING_NOT_DEFINED_2D_ASL",
+"severity": "error"
+},
+{
+"code": 184,
+"key": "POST_LABELING_DELAY_GREATER",
+"severity": "warning"
+},
+{
+"code": 186,
+"key": "BOLUS_CUT_OFF_DELAY_TIME_GREATER",
+"severity": "warning"
+},
+{
+"code": 187,
+"key": "LABELING_DURATION_GREATER",
+"severity": "warning"
+},
+{
+"code": 188,
+"key": "VOLUME_TIMING_NOT_MONOTONICALLY_INCREASING",
+"severity": "error"
+},
+{
+"code": 189,
+"key": "CASL_PCASL_NOT_ALLOWED_FIELDS",
+"severity": "error"
+},
+{
+"code": 190,
+"key": "PASL_NOT_ALLOWED_FIELDS",
+"severity": "error"
+},
+{
+"code": 191,
+"key": "PCASL_CASL_LABELING_TYPE_NOT_ALLOWED",
+"severity": "error"
+},
+{
+"code": 192,
+"key": "BOLUS_CUT_OFF_DELAY_TIME_NOT_MONOTONICALLY_INCREASING",
+"severity": "error"
+},
+{
+"code": 193,
+"key": "ECHO_TIME_NOT_DEFINED",
+"severity": "error"
+},
+{
+"code": 194,
+"key": "MRACQUISITIONTYPE_MISSING",
+"severity": "warning"
+},
+{
+"code": 195,
+"key": "M0ESTIMATE_NOT_DEFINED",
+"severity": "error"
+},
+{
+"code": 196,
+"key": "ECHO_TIME_NOT_CONSISTENT",
+"severity": "warning"
+},
+{
+"code": 197,
+"key": "ECHO_TIME_ELEMENTS",
+"severity": "warning"
+},
+{
+"code": 198,
+"key": "M0Type_SET_INCORRECTLY_TO_ABSENT",
+"severity": "error"
+},
+{
+"code": 199,
+"key": "M0Type_SET_INCORRECTLY_TO_ABSENT_IN_ASLCONTEXT",
+"severity": "error"
+},
+{
+"code": 200,
+"key": "REPETITION_TIME_PREPARATION_MISSING",
+"severity": "error"
+},
+{
+"code": 201,
+"key": "REPETITIONTIME_PREPARATION_NOT_CONSISTENT",
+"severity": "error"
+},
+{
+"code": 202,
+"key": "M0Type_SET_INCORRECTLY",
+"severity": "error"
+},
+{
+"code": 211,
+"key": "TSV_MISSING_REQUIRED_COLUMN",
+"severity": "error"
+},
+{
+"code": 212,
+"key": "PARTICIPANT_ID_PATTERN",
+"severity": "error"
+},
+{
+"code": 213,
+"key": "README_FILE_SMALL",
+"severity": "warning"
+},
+{
+"code": 214,
+"key": "SAMPLES_TSV_MISSING",
+"severity": "error"
+},
+{
+"code": 215,
+"key": "SAMPLE_ID_PATTERN",
+"severity": "error"
+},
+{
+"code": 216,
+"key": "SAMPLE_ID_COLUMN",
+"severity": "error"
+},
+{
+"code": 217,
+"key": "PARTICIPANT_ID_COLUMN",
+"severity": "error"
+},
+{
+"code": 218,
+"key": "SAMPLE_TYPE_COLUMN",
+"severity": "error"
+},
+{
+"code": 219,
+"key": "SAMPLE_TYPE_VALUE",
+"severity": "error"
+},
+{
+"code": 220,
+"key": "SAMPLE_ID_DUPLICATE",
+"severity": "error"
+},
+{
+"code": 221,
+"key": "PIXEL_SIZE_INCONSISTENT",
+"severity": "error"
+},
+{
+"code": 222,
+"key": "INVALID_PIXEL_SIZE_UNIT",
+"severity": "warning"
+},
+{
+"code": 223,
+"key": "CHUNK_TRANSFORMATION_MATRIX_MISSING",
+"severity": "warning"
+},
+{
+"code": 224,
+"key": "OPTIONAL_FIELD_INCONSISTENT",
+"severity": "error"
+},
+{
+"code": 225,
+"key": "NO_VALID_JSON",
+"severity": "error"
+},
+{
+"code": 226,
+"key": "UNSUPPORTED_BIG_TIFF",
+"severity": "warning"
+},
+{
+"code": 227,
+"key": "INCONSISTENT_TIFF_EXTENSION",
+"severity": "error"
+},
+{
+"code": 228,
+"key": "MULTIPLE_README_FILES",
+"severity": "error"
+},
+{
+"code": 229,
+"key": "INCORRECT_ORDER_TSV_COLUMN_CHANNELS_IEEG",
+"severity": "error"
+},
+{
+"code": 230,
+"key": "INCORRECT_ORDER_TSV_COLUMN_CHANNELS_EEG",
+"severity": "error"
+},
+{
+"code": 231,
+"key": "TSV_COLUMN_HEADER_DUPLICATE",
+"severity": "error"
+},
+{
+"code": 232,
+"key": "TSV_COLUMN_HEADER_NA",
+"severity": "error"
+},
+{
+"code": 233,
+"key": "MISSING_TSV_COLUMN_NIRS_OPTODES",
+"severity": "error"
+},
+{
+"code": 234,
+"key": "MISSING_TSV_COLUMN_NIRS_CHANNELS",
+"severity": "error"
+},
+{
+"code": 235,
+"key": "MOTION_COMPONENT_IN_WRONG_COLUMN",
+"severity": "error"
+},
+{
+"code": 236,
+"key": "MOTION_COMPONENT_INVLAID_VALUE",
+"severity": "error"
+},
+{
+"code": 237,
+"key": "PET_JSON_KEY_REQUIRED",
+"severity": "error"
+}
+]
+}

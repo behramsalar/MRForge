@@ -1,0 +1,622 @@
+{
+ "description": "A second Philips session (13 series; FLAIR, B0 map, 2-volume DWI, reformats). No patient information.",
+ "series": [
+  {
+   "uid": "series-0-0",
+   "number": 0,
+   "description": "DWI_og",
+   "protocol": "DWI_og",
+   "sequence_name": null,
+   "modality": "PR",
+   "image_type": [],
+   "multiframe": false,
+   "rows": null,
+   "columns": null,
+   "slices": null,
+   "volumes": null,
+   "n_files": 1,
+   "repetition_time_s": null,
+   "echo_time_s": null,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": null,
+   "outputs": [],
+   "warnings": []
+  },
+  {
+   "uid": "series-0-1",
+   "number": 0,
+   "description": "",
+   "protocol": "ExamCard",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [],
+   "multiframe": false,
+   "rows": null,
+   "columns": null,
+   "slices": null,
+   "volumes": null,
+   "n_files": 1,
+   "repetition_time_s": null,
+   "echo_time_s": null,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": null,
+   "outputs": [],
+   "warnings": []
+  },
+  {
+   "uid": "series-101-2",
+   "number": 101,
+   "description": "Survey",
+   "protocol": "Survey",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_FFE",
+    "M",
+    "FFE"
+   ],
+   "multiframe": false,
+   "rows": 320,
+   "columns": 320,
+   "slices": 9,
+   "volumes": null,
+   "n_files": 9,
+   "repetition_time_s": 0.011,
+   "echo_time_s": 0.004601,
+   "flip_angle_deg": 15.0,
+   "slice_thickness_mm": 10.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "i00001",
+     "echo_number": null,
+     "echo_time_s": 0.004601,
+     "repetition_time_s": 0.011,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "FFE",
+      "M",
+      "FFE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    },
+    {
+     "suffix": "i00004",
+     "echo_number": null,
+     "echo_time_s": 0.004601,
+     "repetition_time_s": 0.011,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "FFE",
+      "M",
+      "FFE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    },
+    {
+     "suffix": "i00007",
+     "echo_number": null,
+     "echo_time_s": 0.004601,
+     "repetition_time_s": 0.011,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "FFE",
+      "M",
+      "FFE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored.",
+    "The number of volumes could not be worked out from the file count."
+   ]
+  },
+  {
+   "uid": "series-201-3",
+   "number": 201,
+   "description": "T1W_3D_TFE_ref",
+   "protocol": "T1W_3D_TFE_ref",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_FFE",
+    "M",
+    "FFE"
+   ],
+   "multiframe": false,
+   "rows": 288,
+   "columns": 288,
+   "slices": 200,
+   "volumes": 1,
+   "n_files": 200,
+   "repetition_time_s": 0.00813440036773681,
+   "echo_time_s": 0.0037170000000000003,
+   "flip_angle_deg": 8.0,
+   "slice_thickness_mm": 1.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.003717,
+     "repetition_time_s": 0.0081344,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "FFE",
+      "M",
+      "FFE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored."
+   ]
+  },
+  {
+   "uid": "series-301-4",
+   "number": 301,
+   "description": "T1W_3D_TFE_ref",
+   "protocol": "T1W_3D_TFE_ref",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_FFE",
+    "M",
+    "FFE"
+   ],
+   "multiframe": false,
+   "rows": 288,
+   "columns": 288,
+   "slices": 190,
+   "volumes": 1,
+   "n_files": 190,
+   "repetition_time_s": 0.008123000144958491,
+   "echo_time_s": 0.003714,
+   "flip_angle_deg": 8.0,
+   "slice_thickness_mm": 1.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.003714,
+     "repetition_time_s": 0.008123,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "FFE",
+      "M",
+      "FFE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored."
+   ]
+  },
+  {
+   "uid": "series-401-5",
+   "number": 401,
+   "description": "FE_EPI",
+   "protocol": "FE_EPI",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_FFE",
+    "M",
+    "FFE"
+   ],
+   "multiframe": false,
+   "rows": 128,
+   "columns": 128,
+   "slices": 32,
+   "volumes": 220,
+   "n_files": 7040,
+   "repetition_time_s": 2.0563935546875,
+   "echo_time_s": 0.04,
+   "flip_angle_deg": 75.0,
+   "slice_thickness_mm": 4.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.04,
+     "repetition_time_s": 2.05639,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "FFE",
+      "M",
+      "FFE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored."
+   ]
+  },
+  {
+   "uid": "series-501-6",
+   "number": 501,
+   "description": "T2W_TSE",
+   "protocol": "T2W_TSE",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_SE",
+    "M",
+    "SE"
+   ],
+   "multiframe": false,
+   "rows": 576,
+   "columns": 576,
+   "slices": 28,
+   "volumes": 1,
+   "n_files": 28,
+   "repetition_time_s": 2.99999975585937,
+   "echo_time_s": 0.08,
+   "flip_angle_deg": 90.0,
+   "slice_thickness_mm": 4.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.08,
+     "repetition_time_s": 3.0,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "SE",
+      "M",
+      "SE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored."
+   ]
+  },
+  {
+   "uid": "series-601-7",
+   "number": 601,
+   "description": "B0 map",
+   "protocol": "B0 map",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_FFE",
+    "M",
+    "FFE"
+   ],
+   "multiframe": false,
+   "rows": 64,
+   "columns": 64,
+   "slices": 30,
+   "volumes": 1,
+   "n_files": 30,
+   "repetition_time_s": 0.6500009765625,
+   "echo_time_s": 0.007,
+   "flip_angle_deg": 80.0,
+   "slice_thickness_mm": 4.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.007,
+     "repetition_time_s": 0.650001,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "FFE",
+      "M",
+      "FFE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored."
+   ]
+  },
+  {
+   "uid": "series-701-8",
+   "number": 701,
+   "description": "3D_Brain_VIEW_T2_32chSHC",
+   "protocol": "3D_Brain_VIEW_T2_32chSHC",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_SE",
+    "M",
+    "SE"
+   ],
+   "multiframe": false,
+   "rows": 400,
+   "columns": 400,
+   "slices": 189,
+   "volumes": 1,
+   "n_files": 189,
+   "repetition_time_s": 2.5,
+   "echo_time_s": 0.33,
+   "flip_angle_deg": 90.0,
+   "slice_thickness_mm": 1.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.33,
+     "repetition_time_s": 2.5,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "SE",
+      "M",
+      "SE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored."
+   ]
+  },
+  {
+   "uid": "series-801-9",
+   "number": 801,
+   "description": "3D_Brain_VIEW_FLAIR_SHC",
+   "protocol": "3D_Brain_VIEW_FLAIR_SHC",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_IR",
+    "M",
+    "IR"
+   ],
+   "multiframe": false,
+   "rows": 352,
+   "columns": 352,
+   "slices": 381,
+   "volumes": 1,
+   "n_files": 381,
+   "repetition_time_s": 4.8,
+   "echo_time_s": 0.34,
+   "flip_angle_deg": 90.0,
+   "slice_thickness_mm": 1.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.34,
+     "repetition_time_s": 4.8,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "IR",
+      "M",
+      "IR",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored."
+   ]
+  },
+  {
+   "uid": "series-901-10",
+   "number": 901,
+   "description": "DWI_og",
+   "protocol": "DWI_og",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_SE",
+    "M",
+    "SE"
+   ],
+   "multiframe": false,
+   "rows": 192,
+   "columns": 192,
+   "slices": 24,
+   "volumes": 2,
+   "n_files": 48,
+   "repetition_time_s": 2.8481953125,
+   "echo_time_s": 0.07693000000000001,
+   "flip_angle_deg": 90.0,
+   "slice_thickness_mm": 5.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.07693,
+     "repetition_time_s": 2.8482,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "SE",
+      "M",
+      "SE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored."
+   ]
+  },
+  {
+   "uid": "series-902-11",
+   "number": 902,
+   "description": "dADC DWI_og",
+   "protocol": "dADC DWI_og",
+   "sequence_name": "",
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "ADC_UNSPECIFIED",
+    "ADC",
+    "UNSPECIFIED"
+   ],
+   "multiframe": false,
+   "rows": 192,
+   "columns": 192,
+   "slices": 24,
+   "volumes": 1,
+   "n_files": 24,
+   "repetition_time_s": 2.8481953125,
+   "echo_time_s": 0.07693000000000001,
+   "flip_angle_deg": 90.0,
+   "slice_thickness_mm": 5.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.07693,
+     "repetition_time_s": 2.8482,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "ADC",
+      "UNSPECIFIED",
+      "ADC",
+      "UNSPECIFIED"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-1001-12",
+   "number": 1001,
+   "description": "T2W_MV_XD",
+   "protocol": "T2W_MV_XD",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_SE",
+    "M",
+    "SE"
+   ],
+   "multiframe": false,
+   "rows": 512,
+   "columns": 512,
+   "slices": 29,
+   "volumes": 1,
+   "n_files": 29,
+   "repetition_time_s": 4.00000048828125,
+   "echo_time_s": 0.122386,
+   "flip_angle_deg": 90.0,
+   "slice_thickness_mm": 4.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.122386,
+     "repetition_time_s": 4.0,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "SE",
+      "M",
+      "SE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored."
+   ]
+  }
+ ]
+}

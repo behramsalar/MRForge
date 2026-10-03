@@ -1,0 +1,393 @@
+# Plain-language versions of BIDS validator messages (bids-validator 1.15.x).
+#
+# The validator reports each problem with a number. For every number listed here the user sees
+#   what  = what happened
+#   why   = why it probably happened
+#   action = what to do next
+# instead of the validator's technical text. Numbers that are not listed still get shown, with
+# the validator's own wording and a note that no plain-language version exists yet (so gaps are
+# visible). To add one, copy an entry and use the number from the validator's output.
+#
+# `key` is the validator's own name for the number; a test checks that numbers and keys match the
+# validator's list, so typos are caught.
+messages:
+  1:
+    key: NOT_INCLUDED
+    what: "A file has a name that BIDS does not recognise."
+    why: "The name contains a typo, or it is a kind of file that BIDS does not cover (for example a processed result placed among the raw data)."
+    action: "Rename it following BIDS, move it out of rawbids/ (processed results belong in derivatives/), or list it in a .bidsignore file. MRForge never creates names like this itself."
+  2:
+    key: REPETITION_TIME_GREATER_THAN
+    what: "The repetition time (TR) is larger than 100."
+    why: "BIDS wants seconds. A value like 2000 usually means milliseconds."
+    action: "Check the unit of RepetitionTime in the JSON sidecar; it must be in seconds."
+  3:
+    key: ECHO_TIME_GREATER_THAN
+    what: "The echo time (TE) is larger than 1."
+    why: "BIDS wants seconds. A value like 30 usually means milliseconds."
+    action: "Check the unit of EchoTime in the JSON sidecar; it must be in seconds."
+  4:
+    key: ECHO_TIME_DIFFERENCE_GREATER_THAN
+    what: "The two echo times of a fieldmap differ by more than 0.1 seconds."
+    why: "The echo times may be in milliseconds, or the wrong images were paired."
+    action: "Check EchoTime1 and EchoTime2 in the phase-difference sidecar and which images belong together."
+  5:
+    key: TOTAL_READOUT_TIME_GREATER_THAN
+    what: "The total readout time is larger than 10."
+    why: "BIDS wants seconds; the value may be in milliseconds."
+    action: "Check the unit of TotalReadoutTime in the JSON sidecar."
+  6:
+    key: ECHO_TIME_NOT_DEFINED
+    what: "A scan has no echo time (EchoTime) in its sidecar."
+    why: "The scanner export did not include it."
+    action: "It is optional for most scans; check it only if you need echo times."
+  7:
+    key: PHASE_ENCODING_DIRECTION_NOT_DEFINED
+    what: "A functional run has no phase-encoding direction in its sidecar."
+    why: "The DICOM files did not state it, or the conversion could not read it."
+    action: "Distortion (fieldmap) correction needs it. Ask whoever acquired the data, or convert again from the original DICOM files."
+  8:
+    key: EFFECTIVE_ECHO_SPACING_NOT_DEFINED
+    what: "A functional run has no effective echo spacing in its sidecar."
+    why: "The scanner export did not include it."
+    action: "Only needed for some distortion corrections; ignore it if you do not use them."
+  9:
+    key: TOTAL_READOUT_TIME_NOT_DEFINED
+    what: "A functional run has no total readout time in its sidecar."
+    why: "The scanner export did not include it."
+    action: "Only needed for some distortion corrections; ignore it if you do not use them."
+  10:
+    key: REPETITION_TIME_MUST_DEFINE
+    what: "A functional run has no repetition time (TR) in its sidecar."
+    why: "The conversion did not find it in the DICOM files."
+    action: "Convert the series again; if it is still missing, ask whoever acquired the data for the TR."
+  11:
+    key: REPETITION_TIME_UNITS
+    what: "The repetition time has the wrong unit."
+    why: "BIDS wants seconds."
+    action: "Check RepetitionTime in the JSON sidecar."
+  12:
+    key: REPETITION_TIME_MISMATCH
+    what: "The repetition time in the sidecar does not match the one in the image file."
+    why: "One of the two is wrong, or the image was changed after conversion."
+    action: "Check the series with 'mrforge import show'; convert it again from the original DICOM files."
+  13:
+    key: SLICE_TIMING_NOT_DEFINED
+    what: "A functional run has no slice timing in its sidecar."
+    why: "The scanner export did not include it (common for some sequences)."
+    action: "Only needed if you want slice-timing correction; ignore it otherwise."
+  15:
+    key: ECHO_TIME1-2_NOT_DEFINED
+    what: "A fieldmap phase image is missing EchoTime1 or EchoTime2."
+    why: "The magnitude images that give the two echo times were not found."
+    action: "Check that both magnitude echoes of the fieldmap were imported (mrforge import show)."
+  16:
+    key: ECHO_TIME_MUST_DEFINE
+    what: "A fieldmap image is missing its echo time."
+    why: "The conversion did not find it in the DICOM files."
+    action: "Convert the series again; if it is still missing, ask whoever acquired the data."
+  17:
+    key: UNITS_MUST_DEFINE
+    what: "A fieldmap sidecar does not say which unit its values use."
+    why: "BIDS requires a Units field for fieldmap images."
+    action: "Add Units to the sidecar (for example rad/s), or ask for help; MRForge does not use this field yet."
+  18:
+    key: PHASE_ENCODING_DIRECTION_MUST_DEFINE
+    what: "An EPI or diffusion image has no phase-encoding direction."
+    why: "The DICOM files did not state it, or the conversion could not read it."
+    action: "Distortion correction needs it. Ask whoever acquired the data, or convert again from the original DICOM files."
+  19:
+    key: TOTAL_READOUT_TIME_MUST_DEFINE
+    what: "A diffusion or fieldmap-corrected image has no total readout time."
+    why: "The scanner export did not include it."
+    action: "Needed for some distortion corrections. Ask whoever acquired the data."
+  22:
+    key: TSV_EQUAL_ROWS
+    what: "A table file (.tsv) has rows with different numbers of columns."
+    why: "The file was edited by hand or damaged."
+    action: "Open the .tsv file and make every row the same length."
+  23:
+    key: TSV_EMPTY_CELL
+    what: "A table file (.tsv) has an empty cell."
+    why: "Missing values must be written as n/a in BIDS."
+    action: "Replace empty cells with n/a."
+  25:
+    key: EVENTS_TSV_MISSING
+    what: "A task scan has no events table (an events.tsv file)."
+    why: "BIDS expects a table of when stimuli or responses happened for task scans. Resting-state scans do not need one."
+    action: "If it is a resting-state scan, name the task with the word 'rest' (for example --task rest). Otherwise add an events.tsv file next to the scan; MRForge does not create task event tables."
+  26:
+    key: NIFTI_HEADER_UNREADABLE
+    what: "An image file cannot be read."
+    why: "The file is damaged or incomplete."
+    action: "Convert the series again from the original DICOM files (mrforge import convert --force)."
+  27:
+    key: JSON_INVALID
+    what: "A JSON sidecar file is not valid JSON."
+    why: "It was edited by hand, or damaged."
+    action: "Open the file and fix the typo (a missing comma or bracket); or write it again from the original DICOM files."
+  28:
+    key: GZ_NOT_GZIPPED
+    what: "A file ending in .gz is not actually compressed."
+    why: "The file was renamed rather than compressed."
+    action: "Compress it with gzip, or remove the .gz ending."
+  29:
+    key: VOLUME_COUNT_MISMATCH
+    what: "A diffusion image has a different number of volumes than its b-value and b-vector files."
+    why: "The image and the direction files come from different conversions, or one is incomplete."
+    action: "Convert the diffusion series again from the original DICOM files."
+  30:
+    key: BVAL_MULTIPLE_ROWS
+    what: "The b-value file has more than one row."
+    why: "A b-value file must hold one row of numbers."
+    action: "Convert the diffusion series again from the original DICOM files."
+  31:
+    key: BVEC_NUMBER_ROWS
+    what: "The b-vector file does not have exactly three rows."
+    why: "A b-vector file needs one row each for x, y and z."
+    action: "Convert the diffusion series again from the original DICOM files."
+  32:
+    key: DWI_MISSING_BVEC
+    what: "A diffusion image has no b-vector (.bvec) file."
+    why: "The directions were not exported with the series."
+    action: "Convert the series again; if it is still missing, the scanner export does not contain the gradient directions."
+  33:
+    key: DWI_MISSING_BVAL
+    what: "A diffusion image has no b-value (.bval) file."
+    why: "The b-values were not exported with the series."
+    action: "Convert the series again; if it is still missing, the scanner export does not contain the b-values."
+  36:
+    key: NIFTI_TOO_SMALL
+    what: "An image file is too small to be a valid image."
+    why: "The file is damaged or incomplete."
+    action: "Convert the series again from the original DICOM files."
+  37:
+    key: INTENDED_FOR
+    what: "A fieldmap says it corrects a file that does not exist."
+    why: "The list of runs a fieldmap is meant for (IntendedFor) contains a path that is wrong, or the run was not imported."
+    action: "Check which runs were imported (mrforge import show) and set the fieldmap with 'mrforge import set <run> --fieldmap <number>'."
+  38:
+    key: INCONSISTENT_SUBJECTS
+    what: "Not every subject has the same set of files."
+    why: "Some subjects have scans that others lack."
+    action: "This is normal if subjects were scanned differently; otherwise check that every session was imported completely."
+  39:
+    key: INCONSISTENT_PARAMETERS
+    what: "Scans of the same kind have different image sizes or parameters."
+    why: "Different protocols or different scanner settings were used."
+    action: "Check that these scans really belong together before analysing them as one group."
+  40:
+    key: NIFTI_DIMENSION
+    what: "An image has an unusual number of dimensions."
+    why: "It is not a normal 3D or 4D image."
+    action: "Check the series with 'mrforge import show'."
+  41:
+    key: NIFTI_UNIT
+    what: "An image does not state its measurement units."
+    why: "The image header has no unit information."
+    action: "Usually harmless; check the voxel size in an image viewer if in doubt."
+  42:
+    key: NIFTI_PIXDIM
+    what: "An image has a voxel size of zero or an unusual voxel size."
+    why: "The image header is incomplete."
+    action: "Convert the series again from the original DICOM files."
+  45:
+    key: SUBJECT_FOLDERS
+    what: "There are no subject folders (sub-...) in the dataset."
+    why: "Nothing has been imported into rawbids/ yet, or the folders are misnamed."
+    action: "Run 'mrforge import run' to import and organise the scans."
+  48:
+    key: PARTICIPANT_ID_COLUMN
+    what: "The file participants.tsv does not start with a participant_id column."
+    why: "The file was edited by hand."
+    action: "Make the first column participant_id, with values like sub-001."
+  49:
+    key: PARTICIPANT_ID_MISMATCH
+    what: "The file participants.tsv and the subject folders do not list the same subjects."
+    why: "A subject was added or removed by hand."
+    action: "Make participants.tsv list exactly the sub-... folders that exist."
+  50:
+    key: TASK_NAME_MUST_DEFINE
+    what: "A functional run has no TaskName in its sidecar."
+    why: "BIDS requires the task name."
+    action: "Set the task with 'mrforge import set <series> --task <name>' and import again in a new workspace, or add TaskName to the sidecar."
+  54:
+    key: BOLD_NOT_4D
+    what: "A functional (BOLD) image is not a 4D time series."
+    why: "It has only one volume, so it may not be a functional run."
+    action: "Check the series with 'mrforge import show'; set it to another type or skip it."
+  55:
+    key: JSON_SCHEMA_VALIDATION_ERROR
+    what: "A field in a JSON sidecar has the wrong type or an impossible value."
+    why: "The field was edited by hand or written by a tool that did not follow BIDS."
+    action: "Open the sidecar named below and correct the field named in the details."
+  57:
+    key: DATASET_DESCRIPTION_JSON_MISSING
+    what: "The file dataset_description.json is missing."
+    why: "It was deleted, or the dataset was not created by MRForge."
+    action: "Create it with at least a Name and a BIDSVersion, or import the data again in a new workspace."
+  58:
+    key: TASK_NAME_CONTAIN_ILLEGAL_CHARACTER
+    what: "A task name contains characters that BIDS does not allow."
+    why: "Task names may only use letters and digits (no spaces, dashes or underscores)."
+    action: "Use a simpler task name, for example 'restingstate' instead of 'resting-state'."
+  59:
+    key: ACQ_NAME_CONTAIN_ILLEGAL_CHARACTER
+    what: "An acquisition label contains characters that BIDS does not allow."
+    why: "Labels may only use letters and digits."
+    action: "Use a simpler label."
+  62:
+    key: SUBJECT_VALUE_CONTAINS_ILLEGAL_CHARACTER
+    what: "A subject label contains characters that BIDS does not allow."
+    why: "Subject labels may only use letters and digits after 'sub-'."
+    action: "Use a label such as sub-001."
+  63:
+    key: SESSION_VALUE_CONTAINS_ILLEGAL_CHARACTER
+    what: "A session label contains characters that BIDS does not allow."
+    why: "Session labels may only use letters and digits after 'ses-'."
+    action: "Use a label such as ses-01."
+  64:
+    key: SUBJECT_LABEL_IN_FILENAME_DOESNOT_MATCH_DIRECTORY
+    what: "A file's name says a different subject than the folder it is in."
+    why: "A file was moved or renamed by hand."
+    action: "Move the file to the matching subject folder, or rename it."
+  65:
+    key: SESSION_LABEL_IN_FILENAME_DOESNOT_MATCH_DIRECTORY
+    what: "A file's name says a different session than the folder it is in."
+    why: "A file was moved or renamed by hand."
+    action: "Move the file to the matching session folder, or rename it."
+  66:
+    key: SLICETIMING_VALUES_GREATOR_THAN_REPETITION_TIME
+    what: "Slice timing values are larger than the repetition time."
+    why: "The slice times may be in milliseconds."
+    action: "Check the unit of SliceTiming in the sidecar (it must be in seconds)."
+  67:
+    key: NO_VALID_DATA_FOUND_FOR_SUBJECT
+    what: "A subject has no files that BIDS recognises."
+    why: "All of the subject's files have unrecognised names, or the folder is empty."
+    action: "Look at the other problems in this list (especially file names); fix those first."
+  74:
+    key: DUPLICATE_NIFTI_FILES
+    what: "The same image exists twice, as .nii and as .nii.gz."
+    why: "A file was added by hand."
+    action: "Remove one of the two."
+  75:
+    key: NIFTI_PIXDIM4
+    what: "The time step stored in an image does not match its repetition time."
+    why: "The image header and the sidecar disagree."
+    action: "Convert the series again from the original DICOM files."
+  83:
+    key: ECHOTIME1_2_DIFFERENCE_UNREASONABLE
+    what: "The two echo times of a fieldmap are implausible (too close or too far apart)."
+    why: "The wrong images were paired, or the echo times are wrong."
+    action: "Check that the fieldmap magnitude and phase series belong together (mrforge import show --why)."
+  87:
+    key: SLICETIMING_ELEMENTS
+    what: "The number of slice timing values does not match the number of slices."
+    why: "The sidecar and the image come from different conversions, or one is wrong."
+    action: "Convert the series again from the original DICOM files."
+  88:
+    key: MALFORMED_BVEC
+    what: "The b-vector file is not a valid table of numbers."
+    why: "The file is damaged or was edited by hand."
+    action: "Convert the diffusion series again from the original DICOM files."
+  89:
+    key: MALFORMED_BVAL
+    what: "The b-value file is not a valid list of numbers."
+    why: "The file is damaged or was edited by hand."
+    action: "Convert the diffusion series again from the original DICOM files."
+  90:
+    key: SIDECAR_WITHOUT_DATAFILE
+    what: "A JSON sidecar has no image file next to it."
+    why: "The image was deleted or renamed."
+    action: "Restore the image, or remove the sidecar."
+  91:
+    key: _FIELDMAP_WITHOUT_MAGNITUDE_FILE
+    what: "A fieldmap phase image has no magnitude image."
+    why: "The magnitude images were not imported or were deleted."
+    action: "Import the magnitude series too (mrforge import show), or do not use this fieldmap."
+  92:
+    key: MISSING_MAGNITUDE1_FILE
+    what: "A fieldmap has no first magnitude image (magnitude1)."
+    why: "The magnitude images were not imported."
+    action: "Import the magnitude series too (mrforge import show)."
+  93:
+    key: EFFECTIVEECHOSPACING_LARGER_THAN_TOTALREADOUTTIME
+    what: "The effective echo spacing is larger than the total readout time."
+    why: "One of the two values is wrong."
+    action: "Check both values in the sidecar."
+  94:
+    key: MAGNITUDE_FILE_WITH_TOO_MANY_DIMENSIONS
+    what: "A fieldmap magnitude image has more than three dimensions."
+    why: "It holds several volumes or echoes in one file."
+    action: "Check how the fieldmap series was imported (mrforge import show)."
+  95:
+    key: T1W_FILE_WITH_TOO_MANY_DIMENSIONS
+    what: "A T1-weighted image has more than three dimensions."
+    why: "It holds several volumes in one file, so it may not be a normal anatomical scan."
+    action: "Check the series with 'mrforge import show'."
+  97:
+    key: MISSING_SESSION
+    what: "Some subjects have sessions and others do not."
+    why: "The subjects were imported differently."
+    action: "Use the same session labels for every subject when you import."
+  99:
+    key: EMPTY_FILE
+    what: "A file is empty."
+    why: "A conversion or copy was interrupted."
+    action: "Convert and organise the series again in a new workspace."
+  101:
+    key: README_FILE_MISSING
+    what: "The dataset has no README file."
+    why: "BIDS recommends a short description of the data."
+    action: "Add a README text file to rawbids/ (MRForge creates one for you when you import)."
+  102:
+    key: TOO_FEW_AUTHORS
+    what: "The dataset description lists only one author."
+    why: "BIDS recommends listing everyone who should be credited."
+    action: "Optional. Add authors to dataset_description.json if you plan to share the data."
+  103:
+    key: MULTIPLE_COMMAS_IN_AUTHOR_FIELD
+    what: "An author entry in dataset_description.json contains several commas."
+    why: "Each author must be a separate list entry."
+    action: "Write one author per entry in the Authors list."
+  113:
+    key: NO_AUTHORS
+    what: "The dataset description does not list any authors."
+    why: "BIDS recommends listing the authors so the data can be cited."
+    action: "Optional. Add an Authors list to rawbids/dataset_description.json if you plan to share or publish the data. MRForge keeps your edit."
+  114:
+    key: INCOMPLETE_DATASET
+    what: "The dataset looks incomplete."
+    why: "Some required files are missing."
+    action: "Look at the other problems in this list; fix those first."
+  115:
+    key: EMPTY_DATASET_NAME
+    what: "The dataset has no name."
+    why: "The Name field in dataset_description.json is empty."
+    action: "Add a Name to rawbids/dataset_description.json."
+  194:
+    key: MRACQUISITIONTYPE_MISSING
+    what: "A scan does not say whether it is 2D or 3D (MRAcquisitionType)."
+    why: "The scanner export did not include it."
+    action: "Optional; ignore it unless you need it."
+  211:
+    key: TSV_MISSING_REQUIRED_COLUMN
+    what: "A table file (.tsv) is missing a required column."
+    why: "The file was edited by hand."
+    action: "Open the .tsv file and add the missing column named in the details."
+  212:
+    key: PARTICIPANT_ID_PATTERN
+    what: "A participant id in participants.tsv is not written like 'sub-001'."
+    why: "The ids must start with 'sub-'."
+    action: "Correct the ids in participants.tsv."
+  213:
+    key: README_FILE_SMALL
+    what: "The README file is very short."
+    why: "BIDS recommends a useful description of the data."
+    action: "Optional. Add a few sentences about the study to rawbids/README."
+  228:
+    key: MULTIPLE_README_FILES
+    what: "The dataset has more than one README file."
+    why: "A README.md and a README (or similar) both exist."
+    action: "Keep only one README."

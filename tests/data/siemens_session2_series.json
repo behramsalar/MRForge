@@ -1,0 +1,256 @@
+{
+ "description": "A second Siemens session from a different protocol (7 series), as read by mrforge.importing.scan. No patient information.",
+ "series": [
+  {
+   "uid": "series-1-0",
+   "number": 1,
+   "description": "localizer",
+   "protocol": "localizer",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M",
+    "NONE"
+   ],
+   "multiframe": true,
+   "rows": 512,
+   "columns": 512,
+   "slices": 9,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": null,
+   "echo_time_s": null,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": null,
+   "outputs": [],
+   "warnings": []
+  },
+  {
+   "uid": "series-3-1",
+   "number": 3,
+   "description": "resolve_4scan_trace_tra_p2_s2_224_TRACEW",
+   "protocol": "resolve_4scan_trace_tra_p2_s2_224",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "DIFFUSION",
+    "TRACEW"
+   ],
+   "multiframe": true,
+   "rows": 320,
+   "columns": 320,
+   "slices": 32,
+   "volumes": 2,
+   "n_files": 2,
+   "repetition_time_s": 2.89,
+   "echo_time_s": 0.05718,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.05718,
+     "repetition_time_s": 2.89,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "DIFFUSION",
+      "TRACEW",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0287102,
+     "effective_echo_spacing_s": 9.00006e-05
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-4-2",
+   "number": 4,
+   "description": "resolve_4scan_trace_tra_p2_s2_224_ADC",
+   "protocol": "resolve_4scan_trace_tra_p2_s2_224",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "DIFFUSION",
+    "ADC"
+   ],
+   "multiframe": true,
+   "rows": 320,
+   "columns": 320,
+   "slices": 32,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 2.89,
+   "echo_time_s": 0.05718,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.05718,
+     "repetition_time_s": 2.89,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "DIFFUSION",
+      "ADC",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0287102,
+     "effective_echo_spacing_s": 9.00006e-05
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-8-3",
+   "number": 8,
+   "description": "t1_mprage_sag_p2_iso",
+   "protocol": "t1_mprage_sag_p2_iso",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M",
+    "NONE"
+   ],
+   "multiframe": true,
+   "rows": 320,
+   "columns": 320,
+   "slices": 192,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 2.0,
+   "echo_time_s": 0.00237,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.00237,
+     "repetition_time_s": 2.0,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "NONE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-9-4",
+   "number": 9,
+   "description": "t1_mprage_sag_p2_iso_MPR_tra",
+   "protocol": "t1_mprage_sag_p2_iso",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "M",
+    "NONE",
+    "PARALLEL"
+   ],
+   "multiframe": true,
+   "rows": 296,
+   "columns": 294,
+   "slices": 184,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 2.0,
+   "echo_time_s": 0.00237,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.00237,
+     "repetition_time_s": 2.0,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "M",
+      "NONE",
+      "PARALLEL",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-10-5",
+   "number": 10,
+   "description": "t1_mprage_sag_p2_iso_MPR_cor",
+   "protocol": "t1_mprage_sag_p2_iso",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "M",
+    "NONE",
+    "PARALLEL"
+   ],
+   "multiframe": true,
+   "rows": 295,
+   "columns": 265,
+   "slices": 248,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 2.0,
+   "echo_time_s": 0.00237,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.00237,
+     "repetition_time_s": 2.0,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "M",
+      "NONE",
+      "PARALLEL",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": []
+  }
+ ]
+}

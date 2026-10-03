@@ -1,0 +1,1198 @@
+{
+ "description": "Series metadata of one Siemens MR session (27 series), as read by mrforge.importing.scan. No patient information; used to test series classification.",
+ "series": [
+  {
+   "uid": "series-1",
+   "number": 1,
+   "description": "localizer",
+   "protocol": "localizer",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M",
+    "NONE"
+   ],
+   "multiframe": true,
+   "rows": 512,
+   "columns": 512,
+   "slices": 6,
+   "volumes": 2,
+   "n_files": 2,
+   "repetition_time_s": 0.0075,
+   "echo_time_s": 0.00369,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.00369,
+     "repetition_time_s": 0.0075,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "NONE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "The files of this series hold different numbers of slices."
+   ]
+  },
+  {
+   "uid": "series-2",
+   "number": 2,
+   "description": "t1w",
+   "protocol": "t1w",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M",
+    "NONE"
+   ],
+   "multiframe": true,
+   "rows": 256,
+   "columns": 256,
+   "slices": 192,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 0.7,
+   "echo_time_s": 0.011,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.011,
+     "repetition_time_s": 0.7,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "NONE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-3",
+   "number": 3,
+   "description": "t2w",
+   "protocol": "t2w",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M",
+    "NONE"
+   ],
+   "multiframe": true,
+   "rows": 512,
+   "columns": 512,
+   "slices": 192,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 3.2,
+   "echo_time_s": 0.408,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.408,
+     "repetition_time_s": 3.2,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "NONE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-4",
+   "number": 4,
+   "description": "fmap",
+   "protocol": "fmap",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M",
+    "NONE"
+   ],
+   "multiframe": true,
+   "rows": 74,
+   "columns": 74,
+   "slices": 62,
+   "volumes": 1,
+   "n_files": 2,
+   "repetition_time_s": 0.603,
+   "echo_time_s": 0.00492,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "i",
+   "outputs": [
+    {
+     "suffix": "e1",
+     "echo_number": 1,
+     "echo_time_s": 0.00492,
+     "repetition_time_s": 0.603,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "NONE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "i",
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    },
+    {
+     "suffix": "e2",
+     "echo_number": 2,
+     "echo_time_s": 0.00738,
+     "repetition_time_s": 0.603,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "NONE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "i",
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-5",
+   "number": 5,
+   "description": "fmap",
+   "protocol": "fmap",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "P",
+    "NONE"
+   ],
+   "multiframe": true,
+   "rows": 74,
+   "columns": 74,
+   "slices": 62,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 0.603,
+   "echo_time_s": 0.00738,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "i",
+   "outputs": [
+    {
+     "suffix": "e2_ph",
+     "echo_number": 2,
+     "echo_time_s": 0.00738,
+     "repetition_time_s": 0.603,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "P",
+      "NONE",
+      "PHASE"
+     ],
+     "phase_encoding_direction": "i",
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-6",
+   "number": 6,
+   "description": "resting",
+   "protocol": "resting",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "FMRI",
+    "NONE"
+   ],
+   "multiframe": true,
+   "rows": 74,
+   "columns": 74,
+   "slices": 62,
+   "volumes": 360,
+   "n_files": 360,
+   "repetition_time_s": 2.0,
+   "echo_time_s": 0.03,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.03,
+     "repetition_time_s": 2.0,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "FMRI",
+      "NONE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0219,
+     "effective_echo_spacing_s": 0.0003
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-7",
+   "number": 7,
+   "description": "MoCoSeries",
+   "protocol": "resting",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "FMRI",
+    "NONE"
+   ],
+   "multiframe": true,
+   "rows": 74,
+   "columns": 74,
+   "slices": 62,
+   "volumes": 360,
+   "n_files": 360,
+   "repetition_time_s": 2.0,
+   "echo_time_s": 0.03,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.03,
+     "repetition_time_s": 2.0,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "FMRI",
+      "NONE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0219,
+     "effective_echo_spacing_s": 0.0003
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-9",
+   "number": 9,
+   "description": "dti",
+   "protocol": "dti",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "DIFFUSION",
+    "NONE"
+   ],
+   "multiframe": true,
+   "rows": 112,
+   "columns": 112,
+   "slices": 56,
+   "volumes": 65,
+   "n_files": 65,
+   "repetition_time_s": 6.6,
+   "echo_time_s": 0.075,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.075,
+     "repetition_time_s": 6.6,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "DIFFUSION",
+      "NONE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0371856,
+     "effective_echo_spacing_s": 0.000335006
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-11",
+   "number": 11,
+   "description": "dti_ADC",
+   "protocol": "dti",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "DIFFUSION",
+    "ADC"
+   ],
+   "multiframe": true,
+   "rows": 112,
+   "columns": 112,
+   "slices": 56,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 6.6,
+   "echo_time_s": 0.075,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.075,
+     "repetition_time_s": 6.6,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "DIFFUSION",
+      "ADC",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0371856,
+     "effective_echo_spacing_s": 0.000335006
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-12",
+   "number": 12,
+   "description": "dti_TRACEW",
+   "protocol": "dti",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "DIFFUSION",
+    "TRACEW"
+   ],
+   "multiframe": true,
+   "rows": 112,
+   "columns": 112,
+   "slices": 56,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 6.6,
+   "echo_time_s": 0.075,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.075,
+     "repetition_time_s": 6.6,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "DIFFUSION",
+      "TRACEW",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0371856,
+     "effective_echo_spacing_s": 0.000335006
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-13",
+   "number": 13,
+   "description": "dti_FA",
+   "protocol": "dti",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "DIFFUSION",
+    "FA"
+   ],
+   "multiframe": true,
+   "rows": 112,
+   "columns": 112,
+   "slices": 56,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 6.6,
+   "echo_time_s": 0.075,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.075,
+     "repetition_time_s": 6.6,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "DIFFUSION",
+      "FA",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0371856,
+     "effective_echo_spacing_s": 0.000335006
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-14",
+   "number": 14,
+   "description": "dti_ColFA",
+   "protocol": "dti",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "DIFFUSION",
+    "FA"
+   ],
+   "multiframe": true,
+   "rows": 112,
+   "columns": 112,
+   "slices": 56,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 6.6,
+   "echo_time_s": 0.075,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.075,
+     "repetition_time_s": 6.6,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "DIFFUSION",
+      "FA",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0371856,
+     "effective_echo_spacing_s": 0.000335006
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-15",
+   "number": 15,
+   "description": "dti_TENSOR",
+   "protocol": "dti",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "DIFFUSION",
+    "TENSOR"
+   ],
+   "multiframe": false,
+   "rows": null,
+   "columns": null,
+   "slices": null,
+   "volumes": null,
+   "n_files": 1,
+   "repetition_time_s": 6.6,
+   "echo_time_s": 0.075,
+   "flip_angle_deg": 90.0,
+   "slice_thickness_mm": 2.0,
+   "phase_encoding_direction": null,
+   "outputs": [],
+   "warnings": []
+  },
+  {
+   "uid": "series-16",
+   "number": 16,
+   "description": "dti_TENSOR_B0",
+   "protocol": "dti",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "DIFFUSION",
+    "TENSOR_B0"
+   ],
+   "multiframe": true,
+   "rows": 112,
+   "columns": 112,
+   "slices": 56,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 6.6,
+   "echo_time_s": 0.075,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.075,
+     "repetition_time_s": 6.6,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "DIFFUSION",
+      "TENSOR",
+      "B0",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0371856,
+     "effective_echo_spacing_s": 0.000335006
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-17",
+   "number": 17,
+   "description": "gre_field_mapping",
+   "protocol": "gre_field_mapping",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M",
+    "NONE"
+   ],
+   "multiframe": true,
+   "rows": 64,
+   "columns": 64,
+   "slices": 41,
+   "volumes": 1,
+   "n_files": 2,
+   "repetition_time_s": 0.4,
+   "echo_time_s": 0.00492,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "i",
+   "outputs": [
+    {
+     "suffix": "e1",
+     "echo_number": 1,
+     "echo_time_s": 0.00492,
+     "repetition_time_s": 0.4,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "NONE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "i",
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    },
+    {
+     "suffix": "e2",
+     "echo_number": 2,
+     "echo_time_s": 0.00738,
+     "repetition_time_s": 0.4,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "NONE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "i",
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-18",
+   "number": 18,
+   "description": "gre_field_mapping",
+   "protocol": "gre_field_mapping",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "P",
+    "NONE"
+   ],
+   "multiframe": true,
+   "rows": 64,
+   "columns": 64,
+   "slices": 41,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 0.4,
+   "echo_time_s": 0.00738,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "i",
+   "outputs": [
+    {
+     "suffix": "e2_ph",
+     "echo_number": 2,
+     "echo_time_s": 0.00738,
+     "repetition_time_s": 0.4,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "P",
+      "NONE",
+      "PHASE"
+     ],
+     "phase_encoding_direction": "i",
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-19",
+   "number": 19,
+   "description": "ep2d_bold_moco_p2",
+   "protocol": "ep2d_bold_moco_p2",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "FMRI",
+    "NONE"
+   ],
+   "multiframe": true,
+   "rows": 114,
+   "columns": 94,
+   "slices": 39,
+   "volumes": 60,
+   "n_files": 60,
+   "repetition_time_s": 3.0,
+   "echo_time_s": 0.033,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.033,
+     "repetition_time_s": 3.0,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "FMRI",
+      "NONE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0542396,
+     "effective_echo_spacing_s": 0.000479996
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-20",
+   "number": 20,
+   "description": "MoCoSeries",
+   "protocol": "ep2d_bold_moco_p2",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "FMRI",
+    "RESAMPLED"
+   ],
+   "multiframe": true,
+   "rows": 114,
+   "columns": 94,
+   "slices": 39,
+   "volumes": 60,
+   "n_files": 60,
+   "repetition_time_s": 3.0,
+   "echo_time_s": 0.033,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.033,
+     "repetition_time_s": 3.0,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "FMRI",
+      "RESAMPLED",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0542396,
+     "effective_echo_spacing_s": 0.000479996
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-22",
+   "number": 22,
+   "description": "Design",
+   "protocol": "ep2d_bold_moco_p2",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "FMRI",
+    "DESIGN"
+   ],
+   "multiframe": false,
+   "rows": 64,
+   "columns": 160,
+   "slices": null,
+   "volumes": null,
+   "n_files": 1,
+   "repetition_time_s": null,
+   "echo_time_s": null,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": null,
+     "repetition_time_s": null,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "FMRI",
+      "DESIGN"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "The number of volumes could not be worked out from the file count."
+   ]
+  },
+  {
+   "uid": "series-23",
+   "number": 23,
+   "description": "EvaSeries_GLM",
+   "protocol": "ep2d_bold_moco_p2",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "FMRI",
+    "T_TEST"
+   ],
+   "multiframe": true,
+   "rows": 114,
+   "columns": 94,
+   "slices": 39,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 3.0,
+   "echo_time_s": 0.033,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.033,
+     "repetition_time_s": 3.0,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "FMRI",
+      "T",
+      "TEST",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0542396,
+     "effective_echo_spacing_s": 0.000479996
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-24",
+   "number": 24,
+   "description": "Mean_&_t-Maps",
+   "protocol": "ep2d_bold_moco_p2",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "FMRI",
+    "MEAN"
+   ],
+   "multiframe": true,
+   "rows": 114,
+   "columns": 94,
+   "slices": 39,
+   "volumes": 3,
+   "n_files": 3,
+   "repetition_time_s": 3.0,
+   "echo_time_s": 0.033,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.033,
+     "repetition_time_s": 3.0,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "FMRI",
+      "MEAN",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0542396,
+     "effective_echo_spacing_s": 0.000479996
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-25",
+   "number": 25,
+   "description": "ep2d_bold_moco_p2_gorsel",
+   "protocol": "ep2d_bold_moco_p2_gorsel",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "FMRI",
+    "NONE"
+   ],
+   "multiframe": true,
+   "rows": 114,
+   "columns": 94,
+   "slices": 39,
+   "volumes": 60,
+   "n_files": 60,
+   "repetition_time_s": 3.0,
+   "echo_time_s": 0.033,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.033,
+     "repetition_time_s": 3.0,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "FMRI",
+      "NONE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0542396,
+     "effective_echo_spacing_s": 0.000479996
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-26",
+   "number": 26,
+   "description": "MoCoSeries",
+   "protocol": "ep2d_bold_moco_p2_gorsel",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "FMRI",
+    "RESAMPLED"
+   ],
+   "multiframe": true,
+   "rows": 114,
+   "columns": 94,
+   "slices": 39,
+   "volumes": 60,
+   "n_files": 60,
+   "repetition_time_s": 3.0,
+   "echo_time_s": 0.033,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.033,
+     "repetition_time_s": 3.0,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "FMRI",
+      "RESAMPLED",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0542396,
+     "effective_echo_spacing_s": 0.000479996
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-28",
+   "number": 28,
+   "description": "Design",
+   "protocol": "ep2d_bold_moco_p2_gorsel",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "FMRI",
+    "DESIGN"
+   ],
+   "multiframe": false,
+   "rows": 64,
+   "columns": 160,
+   "slices": null,
+   "volumes": null,
+   "n_files": 1,
+   "repetition_time_s": null,
+   "echo_time_s": null,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": null,
+     "repetition_time_s": null,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "FMRI",
+      "DESIGN"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "The number of volumes could not be worked out from the file count."
+   ]
+  },
+  {
+   "uid": "series-29",
+   "number": 29,
+   "description": "EvaSeries_GLM",
+   "protocol": "ep2d_bold_moco_p2_gorsel",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "FMRI",
+    "T_TEST"
+   ],
+   "multiframe": true,
+   "rows": 114,
+   "columns": 94,
+   "slices": 39,
+   "volumes": 1,
+   "n_files": 1,
+   "repetition_time_s": 3.0,
+   "echo_time_s": 0.033,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.033,
+     "repetition_time_s": 3.0,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "FMRI",
+      "T",
+      "TEST",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0542396,
+     "effective_echo_spacing_s": 0.000479996
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-30",
+   "number": 30,
+   "description": "Mean_&_t-Maps",
+   "protocol": "ep2d_bold_moco_p2_gorsel",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [
+    "DERIVED",
+    "PRIMARY",
+    "FMRI",
+    "MEAN"
+   ],
+   "multiframe": true,
+   "rows": 114,
+   "columns": 94,
+   "slices": 39,
+   "volumes": 3,
+   "n_files": 3,
+   "repetition_time_s": 3.0,
+   "echo_time_s": 0.033,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": "j-",
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.033,
+     "repetition_time_s": 3.0,
+     "image_type": [
+      "DERIVED",
+      "PRIMARY",
+      "FMRI",
+      "MEAN",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": "j-",
+     "total_readout_time_s": 0.0542396,
+     "effective_echo_spacing_s": 0.000479996
+    }
+   ],
+   "warnings": []
+  },
+  {
+   "uid": "series-99",
+   "number": 99,
+   "description": "PhoenixZIPReport",
+   "protocol": "Phoenix Document",
+   "sequence_name": null,
+   "modality": "SR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "OTHER",
+    "CSA REPORT"
+   ],
+   "multiframe": false,
+   "rows": null,
+   "columns": null,
+   "slices": null,
+   "volumes": null,
+   "n_files": 12,
+   "repetition_time_s": null,
+   "echo_time_s": null,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": null,
+   "outputs": [],
+   "warnings": []
+  }
+ ]
+}

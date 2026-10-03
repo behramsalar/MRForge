@@ -1,0 +1,207 @@
+# Rules that decide what a DICOM series is. Plain text: edit or add rules without touching code.
+#
+# How a rule works
+#   * Each rule lists "signals" (clues). A signal belongs to a family: text (names), imagetype
+#     (the DICOM ImageType), geometry (matrix, slices, volumes) or relation (how the series
+#     relates to others in the session).
+#   * Confidence counts how many DIFFERENT families agree:
+#       High    = at least `high_families` families agree
+#       Medium  = at least `min_families` (but fewer than `high_families`)
+#       no match = fewer than `min_families`
+#   * A signal marked `required: true` must hold, or the rule does not apply at all (use it for
+#     weak clues that must never decide alone, such as a relation to another series).
+#   * action: import (convert into BIDS), skip (listed but not imported).
+#   * A series that matches nothing, or whose matches disagree, is "unknown": it is NOT
+#     imported until you decide (mrforge import set ...).
+#   * `overrides` lists rules that must be ignored when this rule matches (for example a
+#     scanner-made copy of a BOLD run also looks like BOLD, but it is not).
+#
+# Signal fields: description, protocol, sequence_name, text (all three joined), image_type
+# (a list), modality, rows, columns, slices, volumes, n_files, repetition_time_s, echo_time_s.
+# Tests: regex, contains_any (list fields, case-insensitive), min, max, equals, is_null, or
+# `predicate` (a named relation checked against the other series of the session).
+
+version: 1
+
+rules:
+  # ---- things that are never analysis data (listed, not imported) ---------------------------
+  - id: scanner_report
+    kind: scanner-report
+    action: skip
+    reason: "A report written by the scanner, not an image"
+    min_families: 2
+    high_families: 2
+    overrides: [non_image_object]
+    signals:
+      - {family: text, say: "the description looks like a scanner report", field: description, regex: "(?i)report|phoenix"}
+      - {family: imagetype, say: "the image type says it is a report", field: image_type, contains_any: ["CSA REPORT", "REPORT"]}
+      - {family: geometry, say: "it holds no image data", field: rows, is_null: true}
+
+  - id: non_image_object
+    kind: scanner-generated
+    action: skip
+    reason: "Not an image: scanner information such as an exam card or a presentation state"
+    min_families: 1
+    high_families: 2
+    signals:
+      - {family: geometry, say: "it holds no image data", field: rows, is_null: true}
+      - {family: modality, say: "its type is not an MR image (presentation state, report or similar)", field: modality, regex: "^(PR|SR|KO|DOC|RAW|REG|OT)$"}
+
+  - id: scanner_reformat
+    kind: scanner-generated
+    action: skip
+    reason: "A reformatted copy of another scan made by the scanner (for example MPR or MIP), not raw data"
+    min_families: 1
+    high_families: 2
+    overrides: [t1w, t2w, flair, bold]
+    signals:
+      - {family: text, required: true, say: "the name contains MPR, MIP or reformat", field: text, regex: "(?i)(^|[^a-z0-9])(MPR|MIP|MinIP|reformat(ted)?)([^a-z0-9]|$)"}
+      - {family: imagetype, say: "the image type says DERIVED", field: image_type, contains_any: [DERIVED]}
+
+  - id: localizer
+    kind: localizer
+    action: skip
+    reason: "A localizer (scout) used to plan the scan, not data to analyse"
+    min_families: 1
+    high_families: 2
+    signals:
+      - {family: text, required: true, say: "the description says localizer", field: text, regex: "(?i)localizer|scout|survey"}
+      - {family: geometry, say: "it has only a few slices", field: slices, max: 15}
+
+  - id: scanner_motion_corrected
+    kind: scanner-generated
+    action: skip
+    reason: "A motion-corrected copy made by the scanner; the original run is imported instead"
+    min_families: 1
+    high_families: 2
+    overrides: [bold]
+    signals:
+      - {family: text, required: true, say: "it is named MoCoSeries (the scanner's motion-correction output)", field: description, regex: "(?i)^MoCoSeries$"}
+      - {family: imagetype, say: "the image type says it was resampled", field: image_type, contains_any: [RESAMPLED]}
+      - {family: relation, say: "an earlier series has the same protocol and size", predicate: duplicates_raw_sibling}
+
+  - id: scanner_statistics
+    kind: scanner-generated
+    action: skip
+    reason: "Statistical maps or a design file made by the scanner, not raw data"
+    min_families: 1
+    high_families: 2
+    overrides: [bold]
+    signals:
+      - {family: text, say: "the name is one of the scanner's analysis outputs", field: description, regex: "(?i)^(EvaSeries.*|Mean_?&_?t-?Maps|Design|.*GLM)$"}
+      - {family: imagetype, say: "the image type says it is a map or design", field: image_type, contains_any: [T_TEST, MEAN, DESIGN, TTEST]}
+
+  - id: scanner_diffusion_maps
+    kind: scanner-generated
+    action: skip
+    reason: "A diffusion map calculated by the scanner (ADC, FA, trace, tensor), not raw data"
+    min_families: 1
+    high_families: 2
+    overrides: [dwi]
+    signals:
+      - {family: text, say: "the name ends in a scanner map name (ADC, FA, TRACEW, TENSOR)", field: description, regex: "(?i)(_(ADC|TRACEW|FA|COLFA|TENSOR|TENSOR_B0)$|(^|[^a-z0-9])d?ADC([^a-z0-9]|$))"}
+      - {family: imagetype, say: "the image type is a diffusion map", field: image_type, contains_any: [ADC, TRACEW, FA, TENSOR, TENSOR_B0]}
+
+  - id: scanner_derived_generic
+    kind: scanner-generated
+    action: skip
+    reason: "The scanner marked this series as DERIVED (calculated from other images)"
+    min_families: 1
+    high_families: 2
+    signals:
+      - {family: imagetype, say: "the image type says DERIVED", field: image_type, contains_any: [DERIVED]}
+
+  # ---- data that is imported ---------------------------------------------------------------
+  - id: t1w
+    kind: T1w
+    action: import
+    datatype: anat
+    suffix: T1w
+    reason: "A T1-weighted anatomical image"
+    min_families: 2
+    high_families: 2
+    signals:
+      - {family: text, say: "the name says T1 / MPRAGE", field: text, regex: "(?i)(^|[^a-z0-9])s?(t1w?|mprage|spgr|bravo|tfl3d)([^a-z0-9]|$)"}
+      - {family: geometry, say: "it is a single 3D volume", field: volumes, equals: 1}
+      - {family: geometry, say: "it has many slices (3D)", field: slices, min: 60}
+
+  - id: t2w
+    kind: T2w
+    action: import
+    datatype: anat
+    suffix: T2w
+    reason: "A T2-weighted anatomical image"
+    min_families: 2
+    high_families: 2
+    signals:
+      - {family: text, say: "the name says T2", field: text, regex: "(?i)(^|[^a-z0-9])s?(t2w?|space|cube)([^a-z0-9*]|$)"}
+      - {family: geometry, say: "it is a single 3D volume", field: volumes, equals: 1}
+      - {family: geometry, say: "it has many slices (3D)", field: slices, min: 60}
+
+  - id: flair
+    kind: FLAIR
+    action: import
+    datatype: anat
+    suffix: FLAIR
+    reason: "A FLAIR anatomical image"
+    min_families: 2
+    high_families: 2
+    signals:
+      - {family: text, say: "the name says FLAIR", field: text, regex: "(?i)flair"}
+      - {family: geometry, say: "it is a single volume", field: volumes, equals: 1}
+      - {family: geometry, say: "it has many slices", field: slices, min: 20}
+
+  - id: bold
+    kind: bold
+    action: import
+    datatype: func
+    suffix: bold
+    reason: "A functional (BOLD) run"
+    min_families: 2
+    high_families: 3
+    needs: [task]
+    task_from_text:
+      - {regex: "(?i)rest|rstng", task: rest}  # REVIEW(domain): "RSTNG" is a Philips-style abbreviation of resting state
+    signals:
+      - {family: text, say: "the name looks like a functional sequence", field: text, regex: "(?i)(bold|epi|ep2d|func|fmri|rest(ing)?|rstng)"}
+      - {family: imagetype, say: "the image type says FMRI", field: image_type, contains_any: [FMRI]}
+      - {family: geometry, say: "it has many time points", field: volumes, min: 5}
+
+  - id: dwi
+    kind: dwi
+    action: import
+    datatype: dwi
+    suffix: dwi
+    reason: "A diffusion-weighted run"
+    min_families: 2
+    high_families: 3
+    signals:
+      - {family: text, say: "the name says DTI / diffusion", field: text, regex: "(?i)(dti|dwi|diffusion)"}
+      - {family: imagetype, say: "the image type says DIFFUSION", field: image_type, contains_any: [DIFFUSION]}
+      - {family: geometry, say: "it has several volumes (b=0 plus at least one direction)", field: volumes, min: 2}
+
+  - id: fieldmap_magnitude
+    kind: fieldmap-magnitude
+    action: import
+    datatype: fmap
+    suffix: magnitude
+    reason: "The magnitude image(s) of a fieldmap"
+    min_families: 2
+    high_families: 3
+    signals:
+      - {family: text, say: "the name says field map", field: text, regex: "(?i)(field_?map|fmap|gre_field)"}
+      - {family: imagetype, say: "the image type is magnitude (M)", field: image_type, contains_any: [M]}
+      - {family: relation, say: "a matching phase image follows it", predicate: has_phase_partner}
+
+  - id: fieldmap_phase
+    kind: fieldmap-phase
+    action: import
+    datatype: fmap
+    suffix: phasediff
+    reason: "The phase image of a fieldmap"
+    min_families: 2
+    high_families: 3
+    signals:
+      - {family: text, say: "the name says field map", field: text, regex: "(?i)(field_?map|fmap|gre_field)"}
+      - {family: imagetype, say: "the image type is phase (P)", field: image_type, contains_any: [P]}
+      - {family: relation, say: "a matching magnitude image precedes it", predicate: has_magnitude_partner}

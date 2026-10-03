@@ -1,0 +1,298 @@
+{
+ "description": "A Philips session (8 series; empty series descriptions, one non-image object per series, one acquisition stopped early). No patient information.",
+ "series": [
+  {
+   "uid": "series-0-0",
+   "number": 0,
+   "description": "",
+   "protocol": "sT1W_3D_TFE_v2 SENSE",
+   "sequence_name": null,
+   "modality": "PR",
+   "image_type": [],
+   "multiframe": false,
+   "rows": null,
+   "columns": null,
+   "slices": null,
+   "volumes": null,
+   "n_files": 1,
+   "repetition_time_s": null,
+   "echo_time_s": null,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": null,
+   "outputs": [],
+   "warnings": []
+  },
+  {
+   "uid": "series-0-1",
+   "number": 0,
+   "description": "",
+   "protocol": "ExamCard",
+   "sequence_name": null,
+   "modality": "MR",
+   "image_type": [],
+   "multiframe": false,
+   "rows": null,
+   "columns": null,
+   "slices": null,
+   "volumes": null,
+   "n_files": 1,
+   "repetition_time_s": null,
+   "echo_time_s": null,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": null,
+   "outputs": [],
+   "warnings": []
+  },
+  {
+   "uid": "series-0-2",
+   "number": 0,
+   "description": "",
+   "protocol": "DTI_medium_iso SENSE",
+   "sequence_name": null,
+   "modality": "PR",
+   "image_type": [],
+   "multiframe": false,
+   "rows": null,
+   "columns": null,
+   "slices": null,
+   "volumes": null,
+   "n_files": 1,
+   "repetition_time_s": null,
+   "echo_time_s": null,
+   "flip_angle_deg": null,
+   "slice_thickness_mm": null,
+   "phase_encoding_direction": null,
+   "outputs": [],
+   "warnings": []
+  },
+  {
+   "uid": "series-401-3",
+   "number": 401,
+   "description": "",
+   "protocol": "sT1W_3D_TFE_v2 SENSE",
+   "sequence_name": "",
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_FFE",
+    "M",
+    "FFE"
+   ],
+   "multiframe": false,
+   "rows": 256,
+   "columns": 256,
+   "slices": 190,
+   "volumes": 1,
+   "n_files": 190,
+   "repetition_time_s": 0.00826340007781982,
+   "echo_time_s": 0.003843,
+   "flip_angle_deg": 8.0,
+   "slice_thickness_mm": 1.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.003843,
+     "repetition_time_s": 0.0082634,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "FFE",
+      "M",
+      "FFE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored."
+   ]
+  },
+  {
+   "uid": "series-501-4",
+   "number": 501,
+   "description": "",
+   "protocol": "RSTNG_FE_EPI1 SENSE",
+   "sequence_name": "",
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_FFE",
+    "M",
+    "FFE"
+   ],
+   "multiframe": false,
+   "rows": 128,
+   "columns": 128,
+   "slices": 40,
+   "volumes": 87,
+   "n_files": 3508,
+   "repetition_time_s": 2.00000012207031,
+   "echo_time_s": 0.03,
+   "flip_angle_deg": 90.0,
+   "slice_thickness_mm": 3.0,
+   "phase_encoding_direction": null,
+   "outputs": [],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored.",
+    "The files do not fill whole volumes: 28 extra slice(s) after 87 complete volume(s). The acquisition may have been stopped early; check this series before using it."
+   ]
+  },
+  {
+   "uid": "series-601-5",
+   "number": 601,
+   "description": "",
+   "protocol": "RSTNG_FE_EPI2 SENSE",
+   "sequence_name": "",
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_FFE",
+    "M",
+    "FFE"
+   ],
+   "multiframe": false,
+   "rows": 128,
+   "columns": 128,
+   "slices": 40,
+   "volumes": 180,
+   "n_files": 7200,
+   "repetition_time_s": 2.00000012207031,
+   "echo_time_s": 0.030001,
+   "flip_angle_deg": 90.0,
+   "slice_thickness_mm": 3.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.030001,
+     "repetition_time_s": 2.0,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "FFE",
+      "M",
+      "FFE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored."
+   ]
+  },
+  {
+   "uid": "series-701-6",
+   "number": 701,
+   "description": "",
+   "protocol": "RSTNG_FE_EPI1 SENSE",
+   "sequence_name": "",
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_FFE",
+    "M",
+    "FFE"
+   ],
+   "multiframe": false,
+   "rows": 128,
+   "columns": 128,
+   "slices": 40,
+   "volumes": 180,
+   "n_files": 7200,
+   "repetition_time_s": 2.00000012207031,
+   "echo_time_s": 0.030001,
+   "flip_angle_deg": 90.0,
+   "slice_thickness_mm": 3.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.030001,
+     "repetition_time_s": 2.0,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "FFE",
+      "M",
+      "FFE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored."
+   ]
+  },
+  {
+   "uid": "series-801-7",
+   "number": 801,
+   "description": "",
+   "protocol": "DTI_medium_iso SENSE",
+   "sequence_name": "",
+   "modality": "MR",
+   "image_type": [
+    "ORIGINAL",
+    "PRIMARY",
+    "M_SE",
+    "M",
+    "SE"
+   ],
+   "multiframe": false,
+   "rows": 128,
+   "columns": 128,
+   "slices": 60,
+   "volumes": 17,
+   "n_files": 1020,
+   "repetition_time_s": 6.46351220703125,
+   "echo_time_s": 0.072039,
+   "flip_angle_deg": 90.0,
+   "slice_thickness_mm": 2.0,
+   "phase_encoding_direction": null,
+   "outputs": [
+    {
+     "suffix": "",
+     "echo_number": null,
+     "echo_time_s": 0.072039,
+     "repetition_time_s": 6.46351,
+     "image_type": [
+      "ORIGINAL",
+      "PRIMARY",
+      "M",
+      "SE",
+      "M",
+      "SE",
+      "MAGNITUDE"
+     ],
+     "phase_encoding_direction": null,
+     "total_readout_time_s": null,
+     "effective_echo_spacing_s": null
+    }
+   ],
+   "warnings": [
+    "1 file(s) without an image (scanner information) were ignored."
+   ]
+  }
+ ]
+}

@@ -3,10 +3,10 @@ name = "mrforge"
 version = "0.0.0"
 description = "Guided, reliable MRI/fMRI analysis on top of FSL"
 requires-python = ">=3.11"
-dependencies = ["pydantic>=2", "sqlalchemy>=2", "typer", "psutil", "pyyaml"]
+dependencies = ["pydantic>=2", "sqlalchemy>=2", "typer", "psutil", "pyyaml", "pydicom>=3", "nibabel"]
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff", "mypy", "types-psutil", "types-PyYAML"]
+dev = ["pytest", "ruff", "mypy", "types-psutil", "types-PyYAML", "numpy"]
 
 [project.scripts]
 mrforge = "mrforge.cli:app"
@@ -24,6 +24,8 @@ pythonpath = ["backend", "scripts"]
 markers = [
     "fsl: integration tests that need a working FSL installation",
     "slow: tests that take many minutes (fsl_anat); run with -m \"fsl and slow\"",
+    "realdata: tests that need the real DICOM test session (skipped when it is missing)",
+    "bidsvalidator: tests that run the real BIDS validator (skipped when it is not installed)",
 ]
 
 [tool.ruff]
@@ -33,6 +35,9 @@ extend-exclude = ["frontend"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]  # the formatter still wraps code; long comment banners and strings are fine
 
 [tool.ruff.lint.isort]
 known-first-party = ["mrforge"]

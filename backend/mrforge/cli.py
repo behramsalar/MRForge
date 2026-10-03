@@ -14,6 +14,26 @@ from mrforge.config import load_config, save_config
 from mrforge.engine import Action, StepOutcome, latest_pipeline_run, run_pipeline, run_step
 from mrforge.errors import StepError
 from mrforge.fsl_env import find_fsl, looks_like_fsl
+from mrforge.importing.bids_validate import (
+    find_validator,
+    format_report,
+    validate_dataset,
+)
+from mrforge.importing.classify import (
+    RuleSet,
+    apply_rules,
+    effective_all,
+    load_rules,
+    set_override,
+)
+from mrforge.importing.convert import convert_import
+from mrforge.importing.existing import format_bids_import, import_bids, import_nifti
+from mrforge.importing.manifest import list_manifests, load_manifest, save_manifest
+from mrforge.importing.models import ImportManifest
+from mrforge.importing.organize import OrganizeSummary, build_plan, organize
+from mrforge.importing.report import describe_plan, format_manifest
+from mrforge.importing.scan import scan_source
+from mrforge.importing.sourcedata import removal_plan, remove_dicom
 from mrforge.models import JobStatus
 from mrforge.pipeline import PipelineSpec, load_pipeline, parse_pipeline
 from mrforge.runner.jobs import get_job, list_jobs, recover_stale_jobs
@@ -28,7 +48,9 @@ pipeline_app = typer.Typer(help="Run pipelines of several steps.", no_args_is_he
 app.add_typer(workspace_app, name="workspace")
 config_app = typer.Typer(help="App settings.", no_args_is_help=True)
 app.add_typer(pipeline_app, name="pipeline")
+import_app = typer.Typer(help="Bring scans into a workspace.", no_args_is_help=True)
 app.add_typer(config_app, name="config")
+app.add_typer(import_app, name="import")
 
 WorkspaceOption = Annotated[
     Path,
@@ -155,6 +177,368 @@ def config_fsl(
         return
     fsl = find_fsl()
     typer.echo(f"FSL {fsl.version} in {fsl.fsldir} (found via {fsl.source})")
+
+
+@import_app.command("scan")
+@friendly
+def import_scan(
+    source: Annotated[Path, typer.Argument(help="Folder or .zip file with the DICOM files.")],
+    workspace: WorkspaceOption = Path("."),
+    subject: Annotated[
+        str | None, typer.Option("--subject", "-s", help="Subject label (default: next free).")
+    ] = None,
+    session: Annotated[str | None, typer.Option(help="Session label, e.g. ses-01.")] = None,
+) -> None:
+    """Copy a DICOM session into the workspace and list the series found in it."""
+    ws = Workspace.open(workspace)
+    removed_before = {m.id for m in list_manifests(ws) if m.dicom_removed is not None}
+    manifest, is_new = scan_source(ws, source, subject, session)
+    typer.echo(format_manifest(manifest, effective_all(manifest, load_rules(ws))))
+    if manifest.id in removed_before and manifest.dicom_removed is None:
+        typer.echo(
+            f"\nThis source was already scanned ({manifest.id}). Its removed DICOM copy was "
+            "restored from the original."
+        )
+    elif not is_new:
+        typer.echo(f"\nThis source was already scanned ({manifest.id}); nothing was copied again.")
+
+
+@import_app.command("show")
+@friendly
+def import_show(
+    import_id: Annotated[
+        str | None, typer.Argument(help="e.g. import-001 (default: latest).")
+    ] = None,
+    workspace: WorkspaceOption = Path("."),
+    why: Annotated[bool, typer.Option("--why", help="Explain every decision.")] = False,
+) -> None:
+    """Show the series table of an import, with what will happen to each series."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    typer.echo(format_manifest(manifest, effective_all(manifest, load_rules(ws)), why))
+
+
+@import_app.command("set")
+@friendly
+def import_set(
+    series: Annotated[int, typer.Argument(help="Series number (see 'mrforge import show').")],
+    workspace: WorkspaceOption = Path("."),
+    import_id: Annotated[str | None, typer.Option("--import", help="e.g. import-001.")] = None,
+    kind: Annotated[
+        str | None, typer.Option("--type", help="What it is: T1w, T2w, bold, dwi, fieldmap-...")
+    ] = None,
+    task: Annotated[str | None, typer.Option(help="Task name, e.g. rest.")] = None,
+    acq: Annotated[str | None, typer.Option(help="Acquisition label, e.g. highres.")] = None,
+    skip: Annotated[bool, typer.Option("--skip", help="Do not import this series.")] = False,
+    fieldmap: Annotated[
+        str | None,
+        typer.Option(help="Fieldmap for a BOLD/diffusion run: a series number, or none."),
+    ] = None,
+) -> None:
+    """Tell MRForge what a series is (your decision overrides the rules)."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    rules = load_rules(ws)
+    labels = {k: v for k, v in (("task", task), ("acq", acq)) if v is not None}
+    now = set_override(manifest, rules, series, kind, skip, labels, fieldmap)
+    save_manifest(ws, manifest)
+    typer.echo(f"Series {series}: {describe_plan(now)} ({now.confidence}, {now.source}).")
+    if fieldmap is not None:
+        typer.echo(f"Series {series} will use fieldmap: {fieldmap}.")
+
+
+@import_app.command("convert")
+@friendly
+def import_convert(
+    import_id: Annotated[
+        str | None, typer.Argument(help="e.g. import-001 (default: latest).")
+    ] = None,
+    workspace: WorkspaceOption = Path("."),
+    jobs: Annotated[int, typer.Option("--jobs", "-j", help="Series converted at once.")] = 4,
+    force: Annotated[bool, typer.Option(help="Convert again even if already done.")] = False,
+) -> None:
+    """Convert the series that are set to be imported (DICOM to NIfTI with dcm2niix).
+    Series already converted are skipped; one failing series does not stop the others."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    summary = convert_import(ws, manifest, load_rules(ws), jobs, force, typer.echo)
+    typer.echo(
+        f"\n{len(summary.converted)} converted, {len(summary.up_to_date)} already done, "
+        f"{len(summary.failed)} failed."
+    )
+    if summary.failed:
+        typer.echo(
+            "Failed series: "
+            + ", ".join(map(str, summary.failed))
+            + "\nFix the cause (see 'mrforge import show --why'), then run this command again; "
+            "only the failed series are converted again. To leave a series out instead: "
+            "mrforge import set <series> --skip"
+        )
+        raise typer.Exit(1)
+
+
+def _print_organized(
+    ws: Workspace, manifest: ImportManifest, summary: OrganizeSummary, uses: dict[str, list[str]]
+) -> None:
+    for uid, done in manifest.organized.items():
+        series = next((s for s in manifest.series if s.uid == uid), None)
+        images = sorted(p for p in done.files if p.endswith(".nii.gz"))
+        for path in images:
+            label = f"series {series.number} ({series.label})" if series else uid
+            typer.echo(f"  {label} -> {path}")
+    for label, runs in uses.items():
+        pair = label.replace("/", " + ")
+        typer.echo(f"  fieldmap series {pair} is used by: {', '.join(runs) if runs else 'no run'}")
+    typer.echo(
+        f"\nrawbids/: {len(summary.written)} file(s) written, "
+        f"{len(summary.in_place)} already in place."
+    )
+    if summary.updated:
+        typer.echo(
+            f"  {len(summary.updated)} fieldmap sidecar(s) were updated: only their IntendedFor "
+            "list changed, because a run was added."
+        )
+    for note in summary.notes:
+        typer.echo(f"  Note: {note}")
+
+
+@import_app.command("organize")
+@friendly
+def import_organize(
+    import_id: Annotated[
+        str | None, typer.Argument(help="e.g. import-001 (default: latest).")
+    ] = None,
+    workspace: WorkspaceOption = Path("."),
+) -> None:
+    """Write the converted series into rawbids/ as a BIDS dataset (never overwrites)."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    rules = load_rules(ws)
+    uses = build_plan(ws, manifest, rules).uses
+    summary = organize(ws, manifest, rules)
+    _print_organized(ws, manifest, summary, uses)
+
+
+@import_app.command("run")
+@friendly
+def import_run(
+    import_id: Annotated[
+        str | None, typer.Argument(help="e.g. import-001 (default: latest).")
+    ] = None,
+    workspace: WorkspaceOption = Path("."),
+    jobs: Annotated[int, typer.Option("--jobs", "-j", help="Series converted at once.")] = 4,
+    remove_dicom_after: Annotated[
+        bool,
+        typer.Option(
+            "--remove-dicom",
+            help="Afterwards delete the workspace's copy of the original DICOM files "
+            "(only if you keep the originals elsewhere).",
+        ),
+    ] = False,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Do not ask for confirmation.")] = False,
+) -> None:
+    """Convert the series that are set to import, then write them into rawbids/."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    rules = load_rules(ws)
+    pending = [
+        s for s, c in zip(manifest.series, effective_all(manifest, rules).values(), strict=True)
+        if c.action == "ask"
+    ]  # fmt: skip
+    summary = convert_import(ws, manifest, rules, jobs, False, typer.echo)
+    if summary.failed:
+        typer.echo(f"\nConversion failed for series {', '.join(map(str, summary.failed))}.")
+        typer.echo("Nothing was written to rawbids/. Fix the cause and run this again.")
+        raise typer.Exit(1)
+    uses = build_plan(ws, manifest, rules).uses
+    written = organize(ws, manifest, rules)
+    _print_organized(ws, manifest, written, uses)
+    typer.echo("")
+    try:
+        typer.echo(format_report(validate_dataset(ws)))
+    except StepError as err:  # the check is a bonus here: its absence must not undo the import
+        typer.echo(f"BIDS check skipped: {err.message}\n{err.suggested_action}")
+    if pending:
+        typer.echo(
+            f"\n{len(pending)} series still need your input and were not imported "
+            "(see 'mrforge import show')."
+        )
+    if remove_dicom_after:
+        _remove_dicom_flow(ws, manifest, rules, yes)
+
+
+def _bids_check(ws: Workspace) -> None:
+    """Show the BIDS check of rawbids/; a missing validator is a note, not a failure."""
+    typer.echo("")
+    try:
+        typer.echo(format_report(validate_dataset(ws)))
+    except StepError as err:
+        typer.echo(f"BIDS check skipped: {err.message}\n{err.suggested_action}")
+
+
+@import_app.command("nifti")
+@friendly
+def import_nifti_command(
+    files: Annotated[list[Path], typer.Argument(help="One or more .nii / .nii.gz files.")],
+    kind: Annotated[str, typer.Option("--type", help="What they are: T1w, T2w, bold or dwi.")],
+    workspace: WorkspaceOption = Path("."),
+    subject: Annotated[
+        str | None, typer.Option("--subject", "-s", help="Subject label (default: next free).")
+    ] = None,
+    session: Annotated[str | None, typer.Option(help="Session label, e.g. ses-01.")] = None,
+    task: Annotated[str | None, typer.Option(help="Task name (required for bold).")] = None,
+    acq: Annotated[str | None, typer.Option(help="Acquisition label, e.g. highres.")] = None,
+    tr: Annotated[float | None, typer.Option(help="Repetition time in seconds (bold).")] = None,
+) -> None:
+    """Import NIfTI files that already exist (no conversion). The files are copied, never moved."""
+    ws = Workspace.open(workspace)
+    rules = load_rules(ws)
+    result = import_nifti(ws, files, kind, rules, subject, session, task, acq, tr)
+    manifest = result.manifest
+    where = manifest.subject + (f"/{manifest.session}" if manifest.session else "")
+    typer.echo(f"{manifest.id}: {len(files)} NIfTI file(s) as {kind}, {where}.")
+    for index, path in enumerate(files, start=1):  # file names are shown here, never stored
+        typer.echo(f"  file {index} ({path.name})")
+    if not result.is_new:
+        typer.echo("These files were already imported; nothing was copied again.")
+    _print_organized(ws, manifest, result.summary, {})
+    for note in result.notes:
+        typer.echo(f"  Note: {note}")
+    _bids_check(ws)
+
+
+@import_app.command("bids")
+@friendly
+def import_bids_command(
+    source: Annotated[Path, typer.Argument(help="Top folder of an existing BIDS dataset.")],
+    workspace: WorkspaceOption = Path("."),
+    allow_errors: Annotated[
+        bool, typer.Option(help="Import even if the dataset has BIDS errors.")
+    ] = False,
+) -> None:
+    """Import an existing BIDS dataset into rawbids/ (copied, no conversion)."""
+    ws = Workspace.open(workspace)
+    result = import_bids(ws, source, allow_errors)
+    typer.echo(format_bids_import(result))
+    if not result.is_new:
+        typer.echo("This dataset was already imported; nothing was changed.")
+    _bids_check(ws)
+
+
+@import_app.command("list")
+@friendly
+def import_list(workspace: WorkspaceOption = Path(".")) -> None:
+    """List the imports in this workspace."""
+    ws = Workspace.open(workspace)
+    manifests = list_manifests(ws)
+    if not manifests:
+        typer.echo("Nothing has been imported yet.")
+    for m in manifests:
+        what = {"folder": "DICOM folder", "zip": "DICOM zip", "nifti": "NIfTI", "bids": "BIDS"}
+        who = m.subject or "(whole dataset)"
+        count = f"{len(m.series)} series" if m.series else f"{m.source.n_files} files"
+        typer.echo(f"{m.id}  {what[m.source.kind]:<13} {who:<18} {count}")
+
+
+def _human(size: int) -> str:
+    return f"{size / 1e9:.1f} GB" if size >= 1e9 else f"{size / 1e6:.0f} MB"
+
+
+def _remove_dicom_flow(ws: Workspace, manifest: ImportManifest, rules: RuleSet, yes: bool) -> None:
+    plan = removal_plan(ws, manifest, rules)
+    typer.echo(
+        f"\nRemoving the DICOM copy of {manifest.id}: {plan.path}/ ({_human(plan.size_bytes)})."
+    )
+    if plan.only_in_dicom:
+        more = " ..." if len(plan.only_in_dicom) > 3 else ""
+        typer.echo(
+            f"{len(plan.only_in_dicom)} series were skipped or are undecided "
+            f"({', '.join(x[:38] for x in plan.only_in_dicom[:3])}{more}); they exist only "
+            "in these DICOM files. To import one later you would scan the original source again."
+        )
+    typer.echo("Everything that was imported is already in rawbids/ and stays.")
+    question = "Delete the DICOM copy? Your original files elsewhere are untouched"
+    if not yes and not typer.confirm(question):
+        typer.echo("Nothing was deleted.")
+        raise typer.Exit(1)
+    remove_dicom(ws, manifest, rules)
+    typer.echo(f"Deleted. {_human(plan.size_bytes)} freed.")
+
+
+@import_app.command("remove-dicom")
+@friendly
+def import_remove_dicom(
+    import_id: Annotated[
+        str | None, typer.Argument(help="e.g. import-001 (default: latest).")
+    ] = None,
+    workspace: WorkspaceOption = Path("."),
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Do not ask for confirmation.")] = False,
+) -> None:
+    """Delete the workspace's copy of the original DICOM files (to save space).
+
+    Use this only if you keep the originals elsewhere. It is refused unless everything that is
+    set to be imported is already safely in rawbids/."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    _remove_dicom_flow(ws, manifest, load_rules(ws), yes)
+
+
+@import_app.command("validate")
+@friendly
+def import_validate(
+    workspace: WorkspaceOption = Path("."),
+    as_json: Annotated[bool, typer.Option("--json", help="Print the report as JSON.")] = False,
+) -> None:
+    """Check rawbids/ against the BIDS standard and explain any problems in plain language."""
+    ws = Workspace.open(workspace)
+    report = validate_dataset(ws)
+    typer.echo(report.model_dump_json(indent=2) if as_json else format_report(report))
+    if not report.ok:
+        raise typer.Exit(1)
+
+
+@import_app.command("classify")
+@friendly
+def import_classify(
+    import_id: Annotated[
+        str | None, typer.Argument(help="e.g. import-001 (default: latest).")
+    ] = None,
+    workspace: WorkspaceOption = Path("."),
+    rules_file: Annotated[
+        Path | None, typer.Option("--rules", help="Use this rules file instead.")
+    ] = None,
+) -> None:
+    """Run the classification rules again (for example after editing them). Your own
+    decisions are kept."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    rules = load_rules(ws, rules_file)
+    apply_rules(manifest, rules)
+    save_manifest(ws, manifest)
+    typer.echo(format_manifest(manifest, effective_all(manifest, rules)))
+
+
+@config_app.command("bids-validator")
+@friendly
+def config_bids_validator(
+    path: Annotated[
+        Path | None, typer.Argument(help="The bids-validator program (omit to show what is used).")
+    ] = None,
+) -> None:
+    """Show or set where the BIDS validator is installed."""
+    if path is not None:
+        path = path.expanduser().resolve()
+        if not path.is_file():
+            raise StepError(
+                code="NOT_A_VALIDATOR",
+                message=f"{path} is not a file.",
+                suggested_action="Give the path of the bids-validator program "
+                "(find it with 'which bids-validator').",
+            )
+        save_config({**load_config(), "bids_validator": str(path)})
+        typer.echo(f"MRForge will use the BIDS validator at {path}")
+        return
+    typer.echo(f"BIDS validator: {find_validator()}")
 
 
 @app.command("steps")
