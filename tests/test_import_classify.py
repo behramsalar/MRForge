@@ -487,3 +487,135 @@ def test_format_without_classification_still_works(rules: RuleSet) -> None:
         series=real_series(),
     )
     assert "WILL BE" not in format_manifest(m)
+
+
+# -- other scanners and protocols (real sessions, written from what each series is) -------------
+
+DATA_DIR = Path(__file__).parent / "data"
+SKIP = ("scanner-generated", "skip")
+
+# series number -> (kind, action).  Series 0 appears several times (non-image objects).
+SIEMENS2 = {
+    1: ("localizer", "skip"),
+    3: SKIP,  # diffusion trace map made by the scanner
+    4: SKIP,  # diffusion ADC map
+    8: ("T1w", "import"),
+    9: SKIP,  # multi-planar reformat (MPR) of the T1, flagged DERIVED
+    10: SKIP,
+}
+PHILIPS = {
+    401: ("T1w", "import"),
+    501: ("bold", "import"),  # an acquisition stopped early: still a functional run
+    601: ("bold", "import"),
+    701: ("bold", "import"),
+    801: ("dwi", "import"),
+}
+PHILIPS2 = {
+    101: ("localizer", "skip"),  # named "Survey"
+    201: ("T1w", "import"),
+    301: ("T1w", "import"),
+    401: ("bold", "ask"),  # FE_EPI: a functional run, but the task is unknown
+    501: ("T2w", "import"),
+    601: ("unknown", "ask"),  # "B0 map": a Philips fieldmap; not supported, so it asks
+    701: ("T2w", "import"),
+    801: ("FLAIR", "import"),
+    901: ("dwi", "import"),  # only two volumes (b=0 and one b-value)
+    902: SKIP,  # dADC map
+    1001: ("T2w", "import"),
+}
+
+
+def load_session(name: str) -> list[DicomSeries]:
+    return [DicomSeries(**s) for s in json.loads((DATA_DIR / name).read_text())["series"]]
+
+
+@pytest.mark.parametrize(
+    ("fixture", "expected", "n_series"),
+    [
+        ("siemens_session2_series.json", SIEMENS2, 6),
+        ("philips_session_series.json", PHILIPS, 8),
+        ("philips_session2_series.json", PHILIPS2, 13),
+    ],
+    ids=["siemens-2", "philips-1", "philips-2"],
+)
+def test_other_scanners_are_classified_correctly(
+    rules: RuleSet, fixture: str, expected: dict[int, tuple[str, str]], n_series: int
+) -> None:
+    series = load_session(fixture)
+    assert len(series) == n_series
+    got = classify_all(series, rules)
+    for s in series:
+        c = got[s.uid]
+        if s.number == 0:  # scanner objects without an image: never imported, never asked about
+            assert (c.kind, c.action) == SKIP, f"{s.label}: {c.kind} {c.action}"
+            continue
+        assert (c.kind, c.action) == expected[s.number or 0], (
+            f"series {s.number} ({s.label}): {c.kind} {c.action} {c.confidence} {c.reasons}"
+        )
+        assert c.reasons and (c.action != "import" or c.confidence in ("High", "Medium"))
+
+
+def test_philips_functional_runs_get_a_task_from_their_resting_state_name(rules: RuleSet) -> None:
+    got = classify_all(load_session("philips_session_series.json"), rules)
+    series = {s.number: s for s in load_session("philips_session_series.json")}
+    for number in (501, 601, 701):  # RSTNG_FE_EPI1 / EPI2: Philips for resting state
+        assert got[series[number].uid].entities == {"task": "rest"}
+    assert all(got[series[n].uid].confidence == "Medium" for n in (501, 601, 701))  # no FMRI type
+
+
+def test_an_unnamed_functional_run_asks_for_its_task_and_is_not_imported(rules: RuleSet) -> None:
+    series = {s.number: s for s in load_session("philips_session2_series.json")}
+    c = classify_all(list(series.values()), rules)[series[401].uid]
+    assert (c.kind, c.action, c.needs, c.confidence) == ("bold", "ask", ["task"], "Medium")
+
+
+def test_unsupported_scanner_fieldmaps_are_asked_about_not_guessed(rules: RuleSet) -> None:
+    series = load_session("philips_session2_series.json")
+    b0 = next(s for s in series if s.label == "B0 map")
+    c = classify_all(series, rules)[b0.uid]
+    assert (c.kind, c.action, c.confidence) == ("unknown", "ask", "Low")
+
+
+def test_reformats_are_found_by_name_but_mprage_is_not_a_reformat(rules: RuleSet) -> None:
+    mprage = make(8, "t1_mprage_sag_p2_iso", slices=192)
+    mpr = make(9, "t1_mprage_sag_p2_iso_MPR_tra", slices=184)  # name only (not flagged DERIVED)
+    got = classify_all([mprage, mpr], rules)
+    assert got[mprage.uid].kind == "T1w" and got[mprage.uid].action == "import"
+    assert (got[mpr.uid].kind, got[mpr.uid].action) == SKIP
+    assert got[mpr.uid].confidence == "Medium"  # the name alone: please check
+    derived = make(10, "t1_mprage_MIP_cor", slices=100, image_type=["DERIVED", "PRIMARY", "M"])
+    assert classify_all([derived], rules)[derived.uid].confidence == "High"
+
+
+def test_a_derived_flag_alone_is_not_enough_to_drop_a_t1(rules: RuleSet) -> None:
+    flagged = make(3, "t1w_3d", slices=180, image_type=["DERIVED", "PRIMARY", "M", "NONE"])
+    c = classify_series(flagged, [flagged], rules)
+    assert (c.kind, c.action, c.confidence) == ("unknown", "ask", "Low")  # the clues disagree
+
+
+def test_objects_without_an_image_are_skipped(rules: RuleSet) -> None:
+    blank = {"rows": None, "columns": None, "slices": None, "volumes": None}
+    exam = make(0, "ExamCard", uid="exam", modality="MR", **blank)
+    state = make(0, "x", uid="state", modality="PR", **blank)
+    got = classify_all([exam, state], rules)
+    assert got[exam.uid].action == "skip" and got[exam.uid].confidence == "Medium"
+    assert got[state.uid].action == "skip" and got[state.uid].confidence == "High"
+
+
+def test_flair_dwi_localizer_and_philips_names(rules: RuleSet) -> None:
+    flair = make(8, "3D_Brain_VIEW_FLAIR_SHC", slices=381)
+    assert classify_series(flair, [flair], rules).kind == "FLAIR"
+    two = make(9, "DWI_og", volumes=2, slices=24, image_type=["ORIGINAL", "PRIMARY", "M_SE", "M"])
+    assert (classify_series(two, [two], rules).kind, classify_series(two, [two], rules).action) == (
+        "dwi",
+        "import",
+    )
+    survey = make(
+        1, "Survey", slices=12, volumes=None, image_type=["ORIGINAL", "PRIMARY", "M_FFE", "M"]
+    )
+    assert classify_series(survey, [survey], rules).kind == "localizer"
+    philips_t1 = make(401, "", slices=190)
+    philips_t1.protocol = "sT1W_3D_TFE_v2 SENSE"  # an 's' in front of T1W
+    assert classify_series(philips_t1, [philips_t1], rules).kind == "T1w"
+    adc = make(902, "dADC DWI_og", volumes=1, slices=24, image_type=["ADC_UNSPECIFIED", "ADC"])
+    assert classify_series(adc, [adc], rules).confidence == "High"

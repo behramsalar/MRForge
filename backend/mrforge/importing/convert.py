@@ -56,7 +56,7 @@ class ConvertSummary:
 
 
 def _label(series: DicomSeries) -> str:
-    return f"series {series.number} ({series.description})"
+    return f"series {series.number} ({series.label})"
 
 
 def converted_dir(ws: Workspace, manifest: ImportManifest, series: DicomSeries) -> Path:

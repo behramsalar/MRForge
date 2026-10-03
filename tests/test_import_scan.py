@@ -114,14 +114,78 @@ def test_series_with_disagreeing_files_gets_a_warning(tmp_path: Path) -> None:
     assert any("image size" in w for w in series.warnings)
 
 
-def test_odd_file_count_is_reported_not_guessed(tmp_path: Path) -> None:
+def test_extra_slices_after_whole_volumes_are_reported_as_a_stopped_acquisition(
+    tmp_path: Path,
+) -> None:
     uid = new_uid()
-    for z in (0, 1, 2):  # 3 slices ...
-        make_dicom(tmp_path / "s" / f"a{z}.dcm", uid, 1, position_z=z)
-    make_dicom(tmp_path / "s" / "b.dcm", uid, 1, position_z=0)  # ... plus a stray repeat
+    for volume in range(2):  # 2 complete volumes of 3 slices ...
+        for z in range(3):
+            make_dicom(tmp_path / "s" / f"v{volume}_{z}.dcm", uid, 1, position_z=float(z))
+    for z in range(2):  # ... and a third one that was never finished
+        make_dicom(tmp_path / "s" / f"v2_{z}.dcm", uid, 1, position_z=float(z))
     (series,), _ = scan_directory(tmp_path / "s")
-    assert series.slices == 3 and series.volumes is None
+    assert series.slices == 3 and series.volumes == 2 and series.n_files == 8
+    note = next(w for w in series.warnings if "do not fill whole volumes" in w)
+    assert "2 extra slice(s) after 2 complete volume(s)" in note and "stopped early" in note
+
+
+def test_a_series_without_a_slice_count_has_no_volume_count(tmp_path: Path) -> None:
+    make_dicom(tmp_path / "s" / "a.dcm", new_uid(), 1, position_z=None)  # no position, no frames
+    (series,), _ = scan_directory(tmp_path / "s")
+    assert series.volumes is None
     assert any("number of volumes" in w for w in series.warnings)
+
+
+@pytest.mark.parametrize(
+    "object_has_rows", [False, True], ids=["no-rows", "private-object-with-rows"]
+)
+def test_scanner_objects_without_an_image_do_not_count_as_slices(
+    tmp_path: Path, object_has_rows: bool
+) -> None:
+    """Philips adds one extra object to every series. Sometimes it has no size at all, sometimes
+    it carries Rows and Columns but no ImageType, no position and no pixels."""
+    uid = new_uid()
+    for z in range(3):
+        make_dicom(
+            tmp_path / "s" / f"img_{z}.dcm",
+            uid,
+            401,
+            "",
+            protocol="sT1W_3D_TFE",
+            position_z=float(z),
+        )
+    # sorts first, so it must not be used to describe the series
+    make_dicom(
+        tmp_path / "s" / "a_object.dcm", uid, 401, "", protocol="sT1W_3D_TFE",
+        image_type=(), position_z=None, rows=4 if object_has_rows else None,
+        columns=4 if object_has_rows else None,
+    )  # fmt: skip
+    (series,), _ = scan_directory(tmp_path / "s")
+    assert (series.n_files, series.slices, series.volumes) == (3, 3, 1)
+    assert series.rows == 4 and series.image_type == ["ORIGINAL", "PRIMARY", "M", "NONE"]
+    assert any("1 file(s) without an image" in w for w in series.warnings)
+    assert not any("number of volumes" in w or "stopped early" in w for w in series.warnings)
+
+
+def test_objects_without_any_image_share_series_number_zero_quietly(tmp_path: Path) -> None:
+    for name in ("ExamCard", "Presentation"):
+        make_dicom(
+            tmp_path / "s" / f"{name}.dcm", new_uid(), 0, "", protocol=name, image_type=(),
+            position_z=None, rows=None, columns=None, modality="PR",
+        )  # fmt: skip
+    make_dicom(tmp_path / "s" / "t1.dcm", new_uid(), 2, "t1w", position_z=0.0)
+    series, _ = scan_directory(tmp_path / "s")
+    objects = [s for s in series if s.number == 0]
+    assert len(objects) == 2 and all(s.rows is None and s.n_files == 1 for s in objects)
+    assert {s.label for s in objects} == {"ExamCard", "Presentation"}  # protocol as the name
+
+
+def test_the_series_name_falls_back_to_the_protocol_name(tmp_path: Path) -> None:
+    make_dicom(tmp_path / "s" / "a.dcm", new_uid(), 5, "", protocol="RSTNG_FE_EPI1 SENSE")
+    make_dicom(tmp_path / "t" / "b.dcm", new_uid(), 6, "", protocol="")
+    (named,), _ = scan_directory(tmp_path / "s")
+    (anonymous,), _ = scan_directory(tmp_path / "t")
+    assert named.label == "RSTNG_FE_EPI1 SENSE" and anonymous.label == "series 6"
 
 
 def test_parallel_and_serial_scans_agree(tmp_path: Path) -> None:
@@ -308,3 +372,58 @@ def test_real_session(ws: Workspace, monkeypatch: pytest.MonkeyPatch) -> None:
     # the rules find the same 8 / 17 / 2 split on the freshly scanned real data
     plan = [c.action for c in manifest.classifications.values()]
     assert (plan.count("import"), plan.count("skip"), plan.count("ask")) == (8, 17, 2)
+
+
+# -- macOS / Windows debris in sources ---------------------------------------------------------------
+
+
+def add_junk(root: Path) -> list[str]:
+    junk = ["__MACOSX/session/._img_0.dcm", "session/._img_1.dcm", "session/.DS_Store", "Thumbs.db"]
+    for rel in junk:
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"\x00\x05\x16\x07 AppleDouble debris")
+    return junk
+
+
+def test_metadata_debris_is_not_copied_counted_or_listed_as_skipped(
+    session: Path, ws: Workspace, tmp_path: Path
+) -> None:
+    clean = scan_source(Workspace.create(tmp_path / "clean"), session)[0]
+    junk = add_junk(session)
+    manifest, _ = scan_source(ws, session)
+    copied = [
+        str(p.relative_to(ws.root / manifest.dicom_dir))
+        for p in (ws.root / manifest.dicom_dir).rglob("*")
+        if p.is_file()
+    ]
+    assert not any(is_junk_name(c) for c in copied)
+    assert manifest.source.n_files == clean.source.n_files  # real files only
+    assert manifest.source.ignored == len(junk)
+    assert manifest.skipped_files == []  # not reported as "not a DICOM file"
+    assert any(f"{len(junk)} file(s) of macOS/Windows metadata" in w for w in manifest.warnings)
+    assert manifest.source.fingerprint == clean.source.fingerprint  # the same data, the same source
+
+
+def test_a_zip_with_macos_debris_gives_the_same_result(
+    session: Path, ws: Workspace, tmp_path: Path
+) -> None:
+    archive = tmp_path / "session.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        for path in session.rglob("*"):
+            if path.is_file():
+                zf.write(path, f"Folder/{path.relative_to(session)}")
+        for rel in ("__MACOSX/Folder/._a", "Folder/mixed/._t1_0.dcm", "Folder/.DS_Store"):
+            zf.writestr(rel, "debris")
+    manifest, _ = scan_source(ws, archive)
+    assert [s.number for s in manifest.series] == [2, 6, 19]
+    assert manifest.source.ignored == 3 and manifest.skipped_files == []
+    tree = [p.name for p in (ws.root / manifest.dicom_dir).rglob("*") if p.is_file()]
+    assert not any(n.startswith("._") or n == ".DS_Store" for n in tree)
+    assert not list((ws.root / manifest.dicom_dir).rglob("__MACOSX"))
+
+
+def is_junk_name(rel: str) -> bool:
+    from mrforge.importing.scan import is_junk
+
+    return is_junk(rel)

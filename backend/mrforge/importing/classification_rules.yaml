@@ -31,10 +31,32 @@ rules:
     reason: "A report written by the scanner, not an image"
     min_families: 2
     high_families: 2
+    overrides: [non_image_object]
     signals:
       - {family: text, say: "the description looks like a scanner report", field: description, regex: "(?i)report|phoenix"}
       - {family: imagetype, say: "the image type says it is a report", field: image_type, contains_any: ["CSA REPORT", "REPORT"]}
       - {family: geometry, say: "it holds no image data", field: rows, is_null: true}
+
+  - id: non_image_object
+    kind: scanner-generated
+    action: skip
+    reason: "Not an image: scanner information such as an exam card or a presentation state"
+    min_families: 1
+    high_families: 2
+    signals:
+      - {family: geometry, say: "it holds no image data", field: rows, is_null: true}
+      - {family: modality, say: "its type is not an MR image (presentation state, report or similar)", field: modality, regex: "^(PR|SR|KO|DOC|RAW|REG|OT)$"}
+
+  - id: scanner_reformat
+    kind: scanner-generated
+    action: skip
+    reason: "A reformatted copy of another scan made by the scanner (for example MPR or MIP), not raw data"
+    min_families: 1
+    high_families: 2
+    overrides: [t1w, t2w, flair, bold]
+    signals:
+      - {family: text, required: true, say: "the name contains MPR, MIP or reformat", field: text, regex: "(?i)(^|[^a-z0-9])(MPR|MIP|MinIP|reformat(ted)?)([^a-z0-9]|$)"}
+      - {family: imagetype, say: "the image type says DERIVED", field: image_type, contains_any: [DERIVED]}
 
   - id: localizer
     kind: localizer
@@ -44,7 +66,7 @@ rules:
     high_families: 2
     signals:
       - {family: text, required: true, say: "the description says localizer", field: text, regex: "(?i)localizer|scout|survey"}
-      - {family: geometry, say: "it has only a few slices", field: slices, max: 8}
+      - {family: geometry, say: "it has only a few slices", field: slices, max: 15}
 
   - id: scanner_motion_corrected
     kind: scanner-generated
@@ -77,7 +99,7 @@ rules:
     high_families: 2
     overrides: [dwi]
     signals:
-      - {family: text, say: "the name ends in a scanner map name (ADC, FA, TRACEW, TENSOR)", field: description, regex: "(?i)_(ADC|TRACEW|FA|COLFA|TENSOR|TENSOR_B0)$"}
+      - {family: text, say: "the name ends in a scanner map name (ADC, FA, TRACEW, TENSOR)", field: description, regex: "(?i)(_(ADC|TRACEW|FA|COLFA|TENSOR|TENSOR_B0)$|(^|[^a-z0-9])d?ADC([^a-z0-9]|$))"}
       - {family: imagetype, say: "the image type is a diffusion map", field: image_type, contains_any: [ADC, TRACEW, FA, TENSOR, TENSOR_B0]}
 
   - id: scanner_derived_generic
@@ -99,7 +121,7 @@ rules:
     min_families: 2
     high_families: 2
     signals:
-      - {family: text, say: "the name says T1 / MPRAGE", field: text, regex: "(?i)(^|[^a-z0-9])(t1w?|mprage|spgr|bravo|tfl3d)([^a-z0-9]|$)"}
+      - {family: text, say: "the name says T1 / MPRAGE", field: text, regex: "(?i)(^|[^a-z0-9])s?(t1w?|mprage|spgr|bravo|tfl3d)([^a-z0-9]|$)"}
       - {family: geometry, say: "it is a single 3D volume", field: volumes, equals: 1}
       - {family: geometry, say: "it has many slices (3D)", field: slices, min: 60}
 
@@ -112,9 +134,22 @@ rules:
     min_families: 2
     high_families: 2
     signals:
-      - {family: text, say: "the name says T2", field: text, regex: "(?i)(^|[^a-z0-9])(t2w?|space|cube)([^a-z0-9*]|$)"}
+      - {family: text, say: "the name says T2", field: text, regex: "(?i)(^|[^a-z0-9])s?(t2w?|space|cube)([^a-z0-9*]|$)"}
       - {family: geometry, say: "it is a single 3D volume", field: volumes, equals: 1}
       - {family: geometry, say: "it has many slices (3D)", field: slices, min: 60}
+
+  - id: flair
+    kind: FLAIR
+    action: import
+    datatype: anat
+    suffix: FLAIR
+    reason: "A FLAIR anatomical image"
+    min_families: 2
+    high_families: 2
+    signals:
+      - {family: text, say: "the name says FLAIR", field: text, regex: "(?i)flair"}
+      - {family: geometry, say: "it is a single volume", field: volumes, equals: 1}
+      - {family: geometry, say: "it has many slices", field: slices, min: 20}
 
   - id: bold
     kind: bold
@@ -126,9 +161,9 @@ rules:
     high_families: 3
     needs: [task]
     task_from_text:
-      - {regex: "(?i)rest", task: rest}
+      - {regex: "(?i)rest|rstng", task: rest}  # REVIEW(domain): "RSTNG" is a Philips-style abbreviation of resting state
     signals:
-      - {family: text, say: "the name looks like a functional sequence", field: text, regex: "(?i)(bold|epi|ep2d|func|fmri|rest(ing)?)"}
+      - {family: text, say: "the name looks like a functional sequence", field: text, regex: "(?i)(bold|epi|ep2d|func|fmri|rest(ing)?|rstng)"}
       - {family: imagetype, say: "the image type says FMRI", field: image_type, contains_any: [FMRI]}
       - {family: geometry, say: "it has many time points", field: volumes, min: 5}
 
@@ -143,7 +178,7 @@ rules:
     signals:
       - {family: text, say: "the name says DTI / diffusion", field: text, regex: "(?i)(dti|dwi|diffusion)"}
       - {family: imagetype, say: "the image type says DIFFUSION", field: image_type, contains_any: [DIFFUSION]}
-      - {family: geometry, say: "it has many directions", field: volumes, min: 6}
+      - {family: geometry, say: "it has several volumes (b=0 plus at least one direction)", field: volumes, min: 2}
 
   - id: fieldmap_magnitude
     kind: fieldmap-magnitude

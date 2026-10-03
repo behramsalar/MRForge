@@ -46,6 +46,12 @@ class DicomSeries(BaseModel):
     warnings: list[str] = []
 
     @property
+    def label(self) -> str:
+        """A name to show: the description, else the protocol name (Philips leaves the
+        description empty), else the series number."""
+        return self.description or self.protocol or f"series {self.number}"
+
+    @property
     def matrix(self) -> str:
         """Columns x rows x slices, the way NIfTI and dcm2niix write the image size."""
         dims = [self.columns, self.rows, self.slices]
@@ -125,6 +131,7 @@ class SourceInfo(BaseModel):
     name: str  # the folder or ZIP name as given by the user
     kind: Literal["folder", "zip", "nifti", "bids"]
     n_files: int
+    ignored: int = 0  # macOS metadata files (__MACOSX, ._*, .DS_Store) that were not copied
     fingerprint: str  # hash of the file names and sizes; recognises the same source again
 
 

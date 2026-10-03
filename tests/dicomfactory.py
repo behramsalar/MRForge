@@ -28,8 +28,9 @@ def make_dicom(
     image_type: tuple[str, ...] = ("ORIGINAL", "PRIMARY", "M", "NONE"),
     position_z: float | None = 0.0,
     frames: int | None = None,
-    rows: int = 4,
-    columns: int = 4,
+    rows: int | None = 4,
+    columns: int | None = 4,
+    modality: str = "MR",
     tr_ms: float = 2000.0,
     te_ms: float = 30.0,
     sop_class: str = MR_IMAGE_STORAGE,
@@ -45,9 +46,11 @@ def make_dicom(
     ds.SeriesNumber = series_number
     ds.SeriesDescription = description
     ds.ProtocolName = protocol or description
-    ds.ImageType = list(image_type)
-    ds.Modality = "MR"
-    ds.Rows, ds.Columns = rows, columns
+    if image_type:
+        ds.ImageType = list(image_type)
+    ds.Modality = modality
+    if rows is not None and columns is not None:
+        ds.Rows, ds.Columns = rows, columns
     ds.RepetitionTime = tr_ms
     ds.EchoTime = te_ms
     ds.SliceThickness = 3.0
@@ -61,9 +64,14 @@ def make_dicom(
     ds.PatientBirthDate = SECRET_DATE
     ds.StudyDate = SECRET_DATE
     ds.InstitutionName = "Secret Hospital"
-    ds.BitsAllocated, ds.BitsStored, ds.HighBit = 16, 16, 15
-    ds.SamplesPerPixel, ds.PhotometricInterpretation, ds.PixelRepresentation = 1, "MONOCHROME2", 0
-    ds.PixelData = np.zeros((rows, columns), dtype=np.uint16).tobytes()
+    if rows is not None and columns is not None:
+        ds.BitsAllocated, ds.BitsStored, ds.HighBit = 16, 16, 15
+        ds.SamplesPerPixel, ds.PhotometricInterpretation, ds.PixelRepresentation = (
+            1,
+            "MONOCHROME2",
+            0,
+        )
+        ds.PixelData = np.zeros((rows, columns), dtype=np.uint16).tobytes()
     path.parent.mkdir(parents=True, exist_ok=True)
     ds.save_as(str(path), enforce_file_format=True)
     return path

@@ -62,10 +62,7 @@ def duplicates_raw_sibling(s: DicomSeries, everything: list[DicomSeries]) -> boo
 
 def _has_partner(s: DicomSeries, everything: list[DicomSeries], image_kind: str) -> bool:
     return any(
-        o.uid != s.uid
-        and o.description == s.description
-        and _same_shape(o, s)
-        and image_kind in o.image_type
+        o.uid != s.uid and o.label == s.label and _same_shape(o, s) and image_kind in o.image_type
         for o in everything
     )
 

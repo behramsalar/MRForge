@@ -32,7 +32,7 @@ def _row(
     kind = "/".join(t for t in s.image_type[2:4] if t) or "-"
     row = [
         "?" if s.number is None else str(s.number),
-        s.description or "-",
+        s.label,
         kind,
         str(s.n_files),
         s.matrix,
@@ -113,7 +113,7 @@ def format_manifest(
         if why:
             lines += ["", "Why:"]
             for s in manifest.series:
-                lines.append(f"  series {s.number} ({s.description}):")
+                lines.append(f"  series {s.number} ({s.label}):")
                 lines += [f"    - {r}" for r in classes[s.uid].reasons]
     notes = [f"series {s.number}: {w}" for s in manifest.series for w in s.warnings]
     notes += manifest.warnings

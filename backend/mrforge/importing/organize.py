@@ -206,7 +206,7 @@ def build_plan(ws: Workspace, manifest: ImportManifest, rules: RuleSet) -> Plan:
             (
                 p
                 for p in phases
-                if p.description == mag.description
+                if p.label == mag.label
                 and (p.rows, p.columns, p.slices) == (mag.rows, mag.columns, mag.slices)
                 and (p.number or 0) > (mag.number or 0)
             ),
@@ -235,12 +235,12 @@ def build_plan(ws: Workspace, manifest: ImportManifest, rules: RuleSet) -> Plan:
             "it was not written."
         )
 
-    descriptions = [m.description for m, _ in sets]
+    descriptions = [m.label for m, _ in sets]
     use_acq = len(sets) > 1 and len(set(descriptions)) == len(descriptions)
     for index, (mag, phase) in enumerate(sets, start=1):
         extra: dict[str, str] = {}
         if len(sets) > 1:
-            extra = {"acq": _alnum(mag.description)} if use_acq else {"run": str(index)}
+            extra = {"acq": _alnum(mag.label)} if use_acq else {"run": str(index)}
         e1, e2 = sorted(manifest.conversions[mag.uid].images, key=lambda i: i.suffix)
         phase_image = manifest.conversions[phase.uid].images[0]
         ents = {**base_entities, **extra}

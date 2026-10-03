@@ -89,6 +89,9 @@ def read_header(path: str) -> dict[str, Any]:
         "rows": int(ds["Rows"].value) if "Rows" in ds else None,
         "columns": int(ds["Columns"].value) if "Columns" in ds else None,
         "frames": int(ds["NumberOfFrames"].value) if "NumberOfFrames" in ds else 1,
+        # A real MR image always has an ImageType. Philips adds private objects that carry
+        # Rows/Columns but no ImageType, no position and no pixels: they are not images.
+        "is_image": "Rows" in ds and ("ImageType" in ds or "NumberOfFrames" in ds),
         "tr_ms": _float(ds.get("RepetitionTime")),
         "te_ms": _float(ds.get("EchoTime")),
         "flip": _float(ds.get("FlipAngle")),
@@ -111,8 +114,15 @@ def _read_all(paths: Sequence[Path], workers: int | None) -> list[dict[str, Any]
 
 
 def build_series(headers: list[dict[str, Any]]) -> DicomSeries:
+    # Some scanners (Philips) add one object without an image to every series. It must not
+    # decide the series' size or be counted as a slice.
+    images = [h for h in headers if h["is_image"]] or [h for h in headers if h["rows"] is not None]
+    extra = len(headers) - len(images) if images else 0
+    headers = images or headers
     first = headers[0]
     warnings: list[str] = []
+    if extra:
+        warnings.append(f"{extra} file(s) without an image (scanner information) were ignored.")
     for key, label in (("description", "description"), ("rows", "image size")):
         if len({h[key] for h in headers}) > 1:
             warnings.append(f"The files of this series do not agree on their {label}.")
@@ -147,26 +157,37 @@ def build_series(headers: list[dict[str, Any]]) -> DicomSeries:
     return finalize_volumes(series)
 
 
+VOLUME_NOTES = ("The number of volumes", "The files do not fill whole volumes")
+
+
 def finalize_volumes(series: DicomSeries) -> DicomSeries:
     """Count 3D volumes. Every echo or magnitude/phase image counts separately in the raw file
     count, so divide by the number of images dcm2niix reports for the series."""
     n_images = max(1, len(series.outputs))
     per_image: int | None
+    leftover = 0
     if series.multiframe:
         per_image = series.n_files
     elif series.slices:
-        per_image = series.n_files // series.slices if series.n_files % series.slices == 0 else None
+        per_image, leftover = divmod(series.n_files, series.slices)
     else:
         per_image = None
-    if per_image is None or per_image % n_images != 0:
+    series.warnings = [w for w in series.warnings if not w.startswith(VOLUME_NOTES)]
+    if not per_image or per_image % n_images != 0:
         series.volumes = None
-        note = "The number of volumes could not be worked out from the file count."
         # Series without an image (reports, design files) have no volumes to count.
-        if series.rows is not None and note not in series.warnings:
-            series.warnings.append(note)
+        if series.rows is not None:
+            series.warnings.append(
+                "The number of volumes could not be worked out from the file count."
+            )
     else:
         series.volumes = per_image // n_images
-        series.warnings = [w for w in series.warnings if not w.startswith("The number of volumes")]
+        if leftover:
+            series.warnings.append(
+                f"The files do not fill whole volumes: {leftover} extra slice(s) after "
+                f"{series.volumes} complete volume(s). The acquisition may have been stopped "
+                "early; check this series before using it."
+            )
     return series
 
 
@@ -208,19 +229,31 @@ def _fingerprint(entries: list[tuple[str, int]]) -> str:
     return digest.hexdigest()[:16]
 
 
+def is_junk(path: str) -> bool:
+    """macOS and Windows metadata that zip tools and file managers add; never DICOM."""
+    parts = path.replace("\\", "/").split("/")
+    return "__MACOSX" in parts or parts[-1].startswith("._") or parts[-1] in JUNK_NAMES
+
+
+JUNK_NAMES = {".DS_Store", "Thumbs.db", "desktop.ini"}
+
+
 def describe_source(src: Path) -> SourceInfo:
     if src.is_dir():
-        entries = [
-            (str(p.relative_to(src)), p.stat().st_size) for p in src.rglob("*") if p.is_file()
-        ]
-        return SourceInfo(
-            name=src.name, kind="folder", n_files=len(entries), fingerprint=_fingerprint(entries)
-        )
-    if src.is_file() and zipfile.is_zipfile(src):
+        every = [(str(p.relative_to(src)), p.stat().st_size) for p in src.rglob("*") if p.is_file()]
+    elif src.is_file() and zipfile.is_zipfile(src):
         with zipfile.ZipFile(src) as zf:
-            entries = [(i.filename, i.file_size) for i in zf.infolist() if not i.is_dir()]
+            every = [(i.filename, i.file_size) for i in zf.infolist() if not i.is_dir()]
+    else:
+        every = None
+    if every is not None:
+        entries = [e for e in every if not is_junk(e[0])]
         return SourceInfo(
-            name=src.name, kind="zip", n_files=len(entries), fingerprint=_fingerprint(entries)
+            name=src.name,
+            kind="folder" if src.is_dir() else "zip",
+            n_files=len(entries),
+            ignored=len(every) - len(entries),
+            fingerprint=_fingerprint(entries),
         )
     raise StepError(
         code="IMPORT_SOURCE_INVALID",
@@ -237,7 +270,10 @@ def copy_source(src: Path, dest: Path, info: SourceInfo) -> None:
     shutil.rmtree(partial, ignore_errors=True)
     partial.mkdir(parents=True)
     if info.kind == "folder":
-        shutil.copytree(src, partial, dirs_exist_ok=True)
+        shutil.copytree(
+            src, partial, dirs_exist_ok=True,
+            ignore=lambda d, names: [n for n in names if is_junk(n)],
+        )  # fmt: skip
     else:
         with zipfile.ZipFile(src) as zf:
             for member in zf.infolist():
@@ -250,7 +286,9 @@ def copy_source(src: Path, dest: Path, info: SourceInfo) -> None:
                         probable_cause="The archive is damaged or was built to write elsewhere.",
                         suggested_action="Do not import this file; export the scan again.",
                     )
-            zf.extractall(partial)
+            for member in zf.infolist():
+                if not is_junk(member.filename):  # no metadata debris in sourcedata/
+                    zf.extract(member, partial)
     if dest.exists():
         shutil.rmtree(dest)
     partial.rename(dest)
@@ -316,8 +354,13 @@ def sidecar_pass(
         notes.append(
             "dcm2niix could not read the session headers; phase-encoding information is missing."
         )
-    numbers = [s.number for s in series]
+    # Objects without an image (Philips ExamCard, presentation states) often share series
+    # number 0; they have nothing to look up, so they are not "repeated numbers".
+    with_image = [s for s in series if s.rows is not None]
+    numbers = [s.number for s in with_image]
     for s in series:
+        if s.rows is None:
+            continue
         if s.number is None or numbers.count(s.number) > 1:
             if s.number is not None:
                 notes.append(f"Series number {s.number} is used more than once; details skipped.")
@@ -411,6 +454,10 @@ def scan_source(
     copy_source(src, dest, info)
     series, skipped = scan_directory(dest, workers)
     command, dcm2niix_version, notes = sidecar_pass(dest, series)
+    if info.ignored:
+        notes.append(
+            f"{info.ignored} file(s) of macOS/Windows metadata in the source were not copied."
+        )
     manifest = ImportManifest(
         id=manifest_id,
         source=info,
