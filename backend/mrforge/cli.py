@@ -14,6 +14,9 @@ from mrforge.config import load_config, save_config
 from mrforge.engine import Action, StepOutcome, latest_pipeline_run, run_pipeline, run_step
 from mrforge.errors import StepError
 from mrforge.fsl_env import find_fsl, looks_like_fsl
+from mrforge.importing.manifest import load_manifest
+from mrforge.importing.report import format_manifest
+from mrforge.importing.scan import scan_source
 from mrforge.models import JobStatus
 from mrforge.pipeline import PipelineSpec, load_pipeline, parse_pipeline
 from mrforge.runner.jobs import get_job, list_jobs, recover_stale_jobs
@@ -28,7 +31,9 @@ pipeline_app = typer.Typer(help="Run pipelines of several steps.", no_args_is_he
 app.add_typer(workspace_app, name="workspace")
 config_app = typer.Typer(help="App settings.", no_args_is_help=True)
 app.add_typer(pipeline_app, name="pipeline")
+import_app = typer.Typer(help="Bring scans into a workspace.", no_args_is_help=True)
 app.add_typer(config_app, name="config")
+app.add_typer(import_app, name="import")
 
 WorkspaceOption = Annotated[
     Path,
@@ -155,6 +160,37 @@ def config_fsl(
         return
     fsl = find_fsl()
     typer.echo(f"FSL {fsl.version} in {fsl.fsldir} (found via {fsl.source})")
+
+
+@import_app.command("scan")
+@friendly
+def import_scan(
+    source: Annotated[Path, typer.Argument(help="Folder or .zip file with the DICOM files.")],
+    workspace: WorkspaceOption = Path("."),
+    subject: Annotated[
+        str | None, typer.Option("--subject", "-s", help="Subject label (default: next free).")
+    ] = None,
+    session: Annotated[str | None, typer.Option(help="Session label, e.g. ses-01.")] = None,
+) -> None:
+    """Copy a DICOM session into the workspace and list the series found in it."""
+    ws = Workspace.open(workspace)
+    manifest, is_new = scan_source(ws, source, subject, session)
+    typer.echo(format_manifest(manifest))
+    if not is_new:
+        typer.echo(f"\nThis source was already scanned ({manifest.id}); nothing was copied again.")
+
+
+@import_app.command("show")
+@friendly
+def import_show(
+    import_id: Annotated[
+        str | None, typer.Argument(help="e.g. import-001 (default: latest).")
+    ] = None,
+    workspace: WorkspaceOption = Path("."),
+) -> None:
+    """Show the series table of an import."""
+    ws = Workspace.open(workspace)
+    typer.echo(format_manifest(load_manifest(ws, import_id)))
 
 
 @app.command("steps")

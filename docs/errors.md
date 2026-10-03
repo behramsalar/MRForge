@@ -98,3 +98,27 @@ Codes are stable identifiers: add new ones, do not rename existing ones.
 - **Suggested action:** Start one with `mrforge pipeline run <file>`.
 
 Step-specific codes (for example for `bet` and `fsl_anat`) are added as those steps are written.
+
+## Import codes (Stage 2a)
+
+### IMPORT_SOURCE_INVALID
+- **What happened:** The path given to `mrforge import scan` is not a folder or a ZIP file.
+- **Probable cause:** The path is wrong, or the file is not a ZIP archive.
+- **Suggested action:** Give the folder that contains the DICOM files, or a .zip of it.
+
+### IMPORT_ZIP_UNSAFE
+- **What happened:** A ZIP file contains a path that points outside its own folder. Nothing was extracted.
+- **Probable cause:** The archive is damaged or was built to write elsewhere.
+- **Suggested action:** Do not import this file; export the scan again.
+
+### IMPORT_ALREADY_SCANNED
+- **What happened:** The same data was already scanned under another subject or session label.
+- **Suggested action:** Use the existing import, or choose a different source.
+
+### BAD_SUBJECT_LABEL / BAD_SESSION_LABEL
+- **What happened:** A subject or session label is not valid BIDS (`sub-` or `ses-` followed by letters and digits only).
+- **Suggested action:** Use something like `sub-001` or `ses-01`.
+
+### NO_IMPORT / UNKNOWN_IMPORT
+- **What happened:** There is nothing imported yet, or the named import does not exist.
+- **Suggested action:** Run `mrforge import scan <folder or zip>`, or `mrforge import show` to list imports.

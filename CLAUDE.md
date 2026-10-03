@@ -86,6 +86,7 @@ The UI looks linear (Import → Anatomical → Functional → Denoising → QC �
         sub-XXX/[ses-YY/]anat/   # results with BIDS names, e.g. sub-001_desc-brain_mask.nii.gz
             sub-XXX_T1w.anat/    # native fsl_anat folder, named after the input image
             _runs/<label>/       # per-step record: provenance.json, logs/ (stdout.log, stderr.log)
+    imports/import-NNN/      # import manifests: scan results, user decisions, provenance
     reports/
 ```
 

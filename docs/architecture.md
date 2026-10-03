@@ -29,6 +29,7 @@ UI (React)  ->  API (FastAPI)  ->  Services  ->  Step objects  ->  Job runner  -
             sub-XXX_T1w.anat/       # native fsl_anat folder, named after the input image
             _runs/<label>/          # one folder per step run: provenance.json, logs/stdout.log, stderr.log
         sub-XXX/[ses-YY/]func/      # (later stages)
+    imports/import-NNN/manifest.json   # scan results, user decisions, conversion provenance
     reports/
 ```
 

@@ -10,7 +10,7 @@ Last test status: `pytest -m "not fsl"` 82 passed; `pytest -m "fsl and not slow"
 ## Stage 2 sub-steps
 | Sub-step | Status |
 |---|---|
-| 2a Scan + metadata | not started |
+| 2a Scan + metadata | done |
 | 2b Classification | not started |
 | 2c Conversion (dcm2niix) | not started |
 | 2d BIDS organizer | not started |
@@ -32,4 +32,4 @@ Last test status: `pytest -m "not fsl"` 82 passed; `pytest -m "fsl and not slow"
 - Fieldmap handling: your DICOM set contains gradient-echo field maps; types to confirm before Stage 5c.
 
 ## Next action
-Start sub-step 2a (install pydicom and nibabel, scan DICOM folders/ZIPs).
+Sub-step 2b: classification rules (`classification_rules.yaml`) with confidence levels, tested on `tests/data/siemens_session_series.json`.
