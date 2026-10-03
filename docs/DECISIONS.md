@@ -75,3 +75,9 @@ separate queue service adds nothing. Revisit only for multi-machine compute.
 `openapi-typescript` 7 needs the TypeScript 5 JavaScript API; TypeScript 7 (native) lacks it, so
 the frontend pins `typescript@5`.
 
+## 2026-10-04: Component library is Radix Themes; Tailwind not installed (proposed)
+User chose Radix Themes from three visual samples. Its layout components and spacing scale cover
+layout, so Tailwind (CLAUDE.md section 3) was not installed, to avoid two styling systems. Awaiting the
+user's approval to update section 3 accordingly. Viewer default layout: three slices in a row, 3D optional
+(user decision).
+

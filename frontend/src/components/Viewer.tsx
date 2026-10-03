@@ -21,7 +21,7 @@ function applyLayout(nv: Niivue, layout: ViewerLayout) {
 export function Viewer({
   underlay,
   overlays,
-  layout = "grid",
+  layout = "row",
 }: {
   underlay: ViewerImage;
   overlays: ViewerImage[];

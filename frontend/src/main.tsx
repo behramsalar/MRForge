@@ -1,12 +1,16 @@
+import "@radix-ui/themes/styles.css";
+import { Theme } from "@radix-ui/themes";
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { api } from "./api/client";
 import { Viewer, type ViewerImage, type ViewerLayout } from "./components/Viewer";
+import { DesignSystem } from "./pages/DesignSystem";
+import { theme } from "./theme/tokens";
 
-// Spike page for 3b: shows one subject's T1 with the segmentation overlay.
+// Temporary pages until the real screens (3e): the viewer spike and the design reference.
 function Spike() {
   const [images, setImages] = useState<ViewerImage[]>([]);
-  const [layout, setLayout] = useState<ViewerLayout>("grid");
+  const [layout, setLayout] = useState<ViewerLayout>("row");
   const params = new URLSearchParams(location.search);
   const ws = params.get("ws") ?? "demo";
   const sub = params.get("sub") ?? "sub-001";
@@ -36,8 +40,10 @@ function Spike() {
   );
 }
 
+const page = new URLSearchParams(location.search).get("page");
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Spike />
+    <Theme {...theme}>{page === "design" ? <DesignSystem /> : <Spike />}</Theme>
   </StrictMode>,
 );

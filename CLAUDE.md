@@ -362,10 +362,12 @@ Run API (Stage 3):           (set in Stage 3)
 Run frontend (Stage 3):      (set in Stage 3)
 ```
 
-## 11. Design system (filled in during Stage 3/4)
+## 11. Design system (set in Stage 3; refined in Stage 4)
 
 ```text
-Component library:   (decided in Stage 3)
-Design tokens file:  (path)
-Rules:               reuse existing components; no one-off styles; plain-language copy; advanced options collapsed by default
+Component library:   Radix Themes (soft, rounded; indigo accent, slate grey)
+Design tokens file:  frontend/src/theme/tokens.ts   (only place for colours, spacing, text sizes)
+Reference page:      /?page=design  (see docs/design-system.md)
+Rules:               reuse existing components; no one-off styles; plain-language copy;
+                     advanced options collapsed by default; colours chosen by meaning
 ```
