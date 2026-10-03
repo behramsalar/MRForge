@@ -69,4 +69,32 @@ Codes are stable identifiers: add new ones, do not rename existing ones.
 - **What happened:** The test-only `fake` step was configured to fail.
 - **Suggested action:** Change its `fail_at` parameter. Never occurs with real steps.
 
+## Stage 1e/1g codes
+
+### FSL_NOT_FOUND
+- **What happened:** A step needs FSL but MRForge could not find it.
+- **Probable cause:** FSL is not installed, or MRForge was not told where it is (the message lists the places that were checked).
+- **Suggested action:** Install FSL, or run `mrforge config fsl /path/to/fsl`.
+
+### NOT_AN_FSL_FOLDER
+- **What happened:** The folder given to `mrforge config fsl` is not an FSL installation.
+- **Suggested action:** Choose the folder FSL was installed into (it contains `etc/fslversion`).
+
+### INPUT_NOT_NIFTI
+- **What happened:** An image file could not be read as a NIfTI image.
+- **Probable cause:** The file is damaged, incomplete or not a NIfTI (.nii/.nii.gz).
+- **Suggested action:** Check the file opens in FSLeyes, or import the scan again.
+
+### PIPELINE_INVALID / PIPELINE_UNREADABLE
+- **What happened:** A pipeline file has a mistake (duplicate step id, missing subject, a step using the result of a step listed after it) or could not be read.
+- **Suggested action:** Correct the pipeline file and run again.
+
+### BAD_OPTION
+- **What happened:** A `--param` or `--input` option was not written as `name=value`.
+- **Suggested action:** Write options like `--param frac=0.4`.
+
+### NOTHING_TO_RESUME
+- **What happened:** `mrforge resume` was run in a workspace with no earlier pipeline run.
+- **Suggested action:** Start one with `mrforge pipeline run <file>`.
+
 Step-specific codes (for example for `bet` and `fsl_anat`) are added as those steps are written.

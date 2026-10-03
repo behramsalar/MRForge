@@ -9,8 +9,10 @@ from typing import Annotated, Any, TypeVar, get_origin
 import typer
 from pydantic import BaseModel
 
+from mrforge.config import load_config, save_config
 from mrforge.engine import Action, StepOutcome, latest_pipeline_run, run_pipeline, run_step
 from mrforge.errors import StepError
+from mrforge.fsl_env import find_fsl, looks_like_fsl
 from mrforge.models import JobStatus
 from mrforge.pipeline import PipelineSpec, load_pipeline, parse_pipeline
 from mrforge.runner.jobs import get_job, list_jobs, recover_stale_jobs
@@ -23,7 +25,9 @@ app = typer.Typer(help="MRForge: guided MRI analysis on top of FSL.", no_args_is
 workspace_app = typer.Typer(help="Create and manage workspaces.", no_args_is_help=True)
 pipeline_app = typer.Typer(help="Run pipelines of several steps.", no_args_is_help=True)
 app.add_typer(workspace_app, name="workspace")
+config_app = typer.Typer(help="App settings.", no_args_is_help=True)
 app.add_typer(pipeline_app, name="pipeline")
+app.add_typer(config_app, name="config")
 
 WorkspaceOption = Annotated[
     Path,
@@ -119,6 +123,30 @@ def workspace_create(
 ) -> None:
     ws = Workspace.create(path, name)
     typer.echo(f"Created workspace '{ws.name}' in {ws.root}")
+
+
+@config_app.command("fsl")
+@friendly
+def config_fsl(
+    path: Annotated[
+        Path | None, typer.Argument(help="FSL folder to remember (omit to show what is used).")
+    ] = None,
+) -> None:
+    """Show or set where FSL is installed."""
+    if path is not None:
+        path = path.expanduser().resolve()
+        if not looks_like_fsl(path):
+            raise StepError(
+                code="NOT_AN_FSL_FOLDER",
+                message=f"{path} does not look like an FSL installation.",
+                probable_cause="The folder should contain 'etc/fslversion' and the FSL tools.",
+                suggested_action="Choose the folder FSL was installed into (often ~/fsl).",
+            )
+        save_config({**load_config(), "fsldir": str(path)})
+        typer.echo(f"MRForge will use FSL in {path}")
+        return
+    fsl = find_fsl()
+    typer.echo(f"FSL {fsl.version} in {fsl.fsldir} (found via {fsl.source})")
 
 
 @app.command("steps")

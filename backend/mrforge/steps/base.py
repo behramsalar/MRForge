@@ -136,6 +136,7 @@ class Step(ABC, Generic[I, P, O]):
     ParamSpec: ClassVar[type[BaseModel]]
     OutputSpec: ClassVar[type[BaseModel]]
     depends_on: ClassVar[tuple[str, ...]] = ()  # names of upstream steps
+    requires_fsl: ClassVar[bool] = False  # runner supplies the FSL environment when True
 
     # -- the contract -------------------------------------------------------
 

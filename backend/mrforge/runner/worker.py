@@ -17,6 +17,7 @@ import psutil
 
 from mrforge import __version__
 from mrforge.errors import StepError
+from mrforge.fsl_env import find_fsl
 from mrforge.hashing import file_sha256
 from mrforge.models import JobStatus, Subject
 from mrforge.provenance import (
@@ -70,7 +71,12 @@ def run_job(ws: Workspace, job_id: int) -> JobStatus:
     ]
     error: StepError | None = None
     status = JobStatus.COMPLETED
+    versions = {"mrforge": __version__}
     try:
+        if step.requires_fsl:
+            fsl = find_fsl()
+            ctx.env = fsl.env
+            versions["fsl"] = fsl.version
         execute_step(step, ctx)
     except Cancelled:
         status = JobStatus.CANCELLED
@@ -97,7 +103,7 @@ def run_job(ws: Workspace, job_id: int) -> JobStatus:
             inputs=inputs,
             outputs=outputs,
             commands=ctx.commands,
-            tool_versions={"mrforge": __version__, **step.tool_versions(ctx)},
+            tool_versions={**versions, **step.tool_versions(ctx)},
             started=get_job(ws, job_id).started,
             finished=finished,
             status=status.value,
