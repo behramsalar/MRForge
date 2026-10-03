@@ -61,3 +61,17 @@ Format: date, decision, reason.
 | 2026-10-04 | Open decision for the user: Philips data stores **no phase-encoding direction** (not in the DICOM headers dcm2niix reads), so Philips BOLD and diffusion sidecars lack `PhaseEncodingDirection`/`TotalReadoutTime`. Fieldmap or distortion correction (Stage 5c) will need the user to supply it per protocol. Also open: when several images of the same type exist (for example two different T2w protocols), MRForge numbers them `run-1`, `run-2`; BIDS would prefer an `acq-` label per protocol (settable by hand with `mrforge import set --acq`). | Found on the Philips sessions. |
 | 2026-10-04 | Hard links between `rawbids/` and `imports/…/converted/` stay for now (user decision; revisit once the project is in order). Verified on real data: deleting `converted/` (link count 2 to 1) and `sourcedata/` leaves every file in `rawbids/` identical and the dataset valid; tested. Finder shows linked files at full size in both folders (about 650 MB each here), but the real bytes on disk are counted once. | User asked about duplicates and links. |
 | 2026-10-04 | The workspace's copy of the original DICOM files (`sourcedata/dicom/import-NNN/`) is **kept by default**. `mrforge import remove-dicom [id]` (or `mrforge import run --remove-dicom`) deletes it for users who store the originals elsewhere. It asks for confirmation (`--yes` skips) and says what is lost (series that were skipped or undecided exist only in the DICOM files). It is refused unless every series set to be imported has a successful conversion and all its files are in `rawbids/` with their recorded hashes. The manifest (series table, decisions, provenance) stays; `import show` notes the removal. Anything that would need the DICOM files again (`convert --force`, a newly switched-on series) stops with `DICOM_REMOVED` and the exact command; scanning the original again with the same subject restores the copy. The user's own original files are never touched. | User request: option to remove source DICOMs. |
+
+## 2026-10-03: Viewer is NiiVue 0.69.0
+Chosen by the user after the spike in `docs/viewer-decision.md` (396 kB gzipped page, overlays from
+fsl_anat align without extra code). Pinned to 0.69.0.
+
+## 2026-10-03: Stage 3d (Redis + RQ) skipped
+Imports and pipelines run as detached operation workers and jobs as detached job workers, both
+found again through PID + start time in the database. The API process never runs the work, so a
+separate queue service adds nothing. Revisit only for multi-machine compute.
+
+## 2026-10-03: Typed client uses TypeScript 5 for generation
+`openapi-typescript` 7 needs the TypeScript 5 JavaScript API; TypeScript 7 (native) lacks it, so
+the frontend pins `typescript@5`.
+
