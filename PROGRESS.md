@@ -1,24 +1,36 @@
 # Progress
 
-**Current stage:** 0 (Foundations), branch `stage-0-foundations`
+**Current stage:** 1 (Headless engine), branch `stage-1-engine`. Stage 0 accepted (tag `stage0-accepted`).
 
 | Sub-step | Status |
 |---|---|
-| 0a Repo scaffold | done |
-| 0b `scripts/check_env.py` | done |
-| 0c `docs/architecture.md` | done (draft; user review pending) |
-| 0d DECISIONS / TEST_DATA / PROGRESS | done |
-| CLAUDE.md update (`mriapp` -> `mrforge`, section 0 facts) | waiting for user approval of diff |
+| 1a Models + SQLite, workspace create/open | done |
+| 1b Step base, registry, specs, StepError | done |
+| 1c Job runner (worker processes, stale-job recovery, JobQueue) | done |
+| 1d Provenance, hash cache, resume, pipelines | done |
+| 1e CLI (`mrforge`) | done |
+| 1f FakeStep | done (delivered with 1c; fail-once option with 1e) |
+| 1g BetStep + FSL lookup | done |
+| 1h FslAnatStep | done |
+| Stage-end protocol | done; waiting for user to accept the stage |
 
-## Known issues
-- Non-login shells do not load `FSLDIR` (set in `~/.zprofile`). Handled in design by configurable FSL lookup (see DECISIONS).
-- `bids-validator` is only on PATH when nvm's Node is loaded.
-- Test data is full-size DICOM (1.2 GB), possibly with identifying info; not suitable for fast unit tests.
+## Test status (last run)
+- `pytest -m "not fsl"`: 71 passed
+- `pytest -m "fsl and not slow"`: 6 passed
+- `pytest -m "fsl and slow"`: kill test passed (23 s); full fsl_anat vs manual run passed (21 min 20 s)
+- ruff and mypy: clean
+
+## Known issues / limits
+- One `LocalJobQueue` per workspace at a time (two could start the same queued job).
+- Pipelines run steps sequentially; per-subject parallelism is Stage 6.
+- No QC output yet for `bet`/`fsl_anat` (QC contract exists; real QC arrives in Stage 5).
+- `fsl_anat` leaves stray `imcp.e<PID>`/`imcp.o<PID>` files; ignored.
+- The claim "fsl_anat on a skull-stripped input skips registration" is from the script source, not an experiment.
+- Test data is full-size DICOM, possibly with identifying information.
 
 ## Open questions
-- Lab members for UX feedback (blank; needed only from Stage 3/4).
-- Fieldmap types the lab's scanner produces (needed before Stage 5c).
-- Public test datasets to record in `docs/TEST_DATA.md`.
+- Lab members for UX feedback (needed from Stage 3/4).
+- Fieldmap handling: your DICOM set contains gradient-echo field maps; types to confirm before Stage 5c.
 
 ## Next action
-User reviews `docs/architecture.md` and the stage-end checklist; then says "stage accepted".
+User runs the Stage 1 manual checklist and says "stage accepted" (or lists changes). Then merge to `main`, tag `stage1-accepted`, and plan Stage 2.

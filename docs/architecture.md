@@ -56,6 +56,13 @@ class Step:
 
 Lifecycle order: validate_inputs -> prepare -> run -> validate_outputs -> register_outputs -> generate_qc. If validate_inputs returns problems, the step does not run. Steps declare dependencies on other steps by naming the upstream outputs they consume (a DAG, not a fixed list), so the UI can look linear while the engine stays modular. Each step lives in its own module; no `preprocess_subject()`.
 
+### Additions made during Stage 1 (see DECISIONS.md)
+
+- `Step.requires_fsl`: the runner then supplies an FSL environment and records the FSL version.
+- `Step.tool_versions(ctx)` and `Step.output_relpaths(ctx)` helpers; inputs are workspace-relative file paths (every `str` / `list[str]` field of an InputSpec is a path).
+- Output folders are named by a `label` (default: the step name; pipelines use the step id).
+- Pipelines are YAML files; later steps refer to earlier results with `${stepid.outputfield}`.
+
 ## 5. Jobs
 
 States: `Queued, Running, Completed, Failed, Cancelled, Interrupted`.
@@ -77,18 +84,23 @@ Written as `provenance.json` next to each step's outputs. Fields:
 {
   "schema_version": 1,
   "step": {"name": "bet", "version": "1"},
+  "job_id": 1,
   "subject": "sub-001", "session": null,
-  "parameters": {"frac": 0.5},
+  "parameters": {"frac": 0.5, "robust": false, "mask": true},
   "parameter_hash": "sha256:...",
-  "inputs": [{"path": "rawbids/sub-001/anat/sub-001_T1w.nii.gz", "sha256": "..."}],
+  "inputs":  [{"path": "rawbids/sub-001/anat/sub-001_T1w.nii.gz", "sha256": "..."}],
   "outputs": [{"path": "derivatives/mrforge/sub-001/bet/brain.nii.gz", "sha256": "..."}],
-  "commands": [{"argv": ["bet", "..."], "return_code": 0}],
-  "tool_versions": {"fsl": "6.0.7.23", "mrforge": "0.0.0"},
+  "commands": [{"argv": ["bet", "...", "-f", "0.5", "-m"], "return_code": 0,
+                "stdout_log": "derivatives/mrforge/sub-001/bet/logs/stdout.log",
+                "stderr_log": "derivatives/mrforge/sub-001/bet/logs/stderr.log"}],
+  "tool_versions": {"mrforge": "0.0.0", "fsl": "6.0.7.23"},
   "started": "2026-10-03T10:00:00Z", "finished": "2026-10-03T10:00:12Z",
-  "status": "Completed",
-  "stdout_log": "logs/stdout.log", "stderr_log": "logs/stderr.log"
+  "status": "Completed", "return_code": 0,
+  "error_code": null, "error_message": null
 }
 ```
+
+A record is written for every run, including Failed, Interrupted and Cancelled ones (outputs are empty then). The worker deletes the previous record before running, so a stale "Completed" record is never trusted.
 
 Paths are stored relative to the workspace so a workspace can be moved. The SQLite database is an index; provenance files are the durable record and the database should be rebuildable from them where possible.
 
