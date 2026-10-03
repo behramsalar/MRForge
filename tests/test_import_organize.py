@@ -614,3 +614,18 @@ def test_real_session_end_to_end(ws: Workspace, monkeypatch: pytest.MonkeyPatch)
     img = nibabel.load(ws.root / "rawbids/sub-001/func/sub-001_task-rest_bold.nii.gz")
     assert img.shape == (74, 74, 62, 360)  # type: ignore[attr-defined]
     assert organize(ws, manifest, rules).written == []
+
+
+def test_cli_names_series_by_protocol_when_the_description_is_empty(
+    ws: Workspace, rules: RuleSet
+) -> None:
+    """Philips leaves SeriesDescription empty; the protocol name is shown instead."""
+    series = real_series()
+    t1 = next(s for s in series if s.number == 2)
+    t1.description, t1.protocol = "", "sT1W_3D_TFE_v2 SENSE"
+    m = new_manifest(ws, rules, series=series)
+    fabricate(ws, m, rules)
+    save_manifest(ws, m)
+    r = runner.invoke(app, ["import", "organize", "-w", str(ws.root)])
+    assert r.exit_code == 0, r.output
+    assert "series 2 (sT1W_3D_TFE_v2 SENSE) -> rawbids/sub-001/anat/sub-001_T1w.nii.gz" in r.output

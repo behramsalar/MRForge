@@ -111,6 +111,11 @@ messages:
     what: "A table file (.tsv) has an empty cell."
     why: "Missing values must be written as n/a in BIDS."
     action: "Replace empty cells with n/a."
+  25:
+    key: EVENTS_TSV_MISSING
+    what: "A task scan has no events table (an events.tsv file)."
+    why: "BIDS expects a table of when stimuli or responses happened for task scans. Resting-state scans do not need one."
+    action: "If it is a resting-state scan, name the task with the word 'rest' (for example --task rest). Otherwise add an events.tsv file next to the scan; MRForge does not create task event tables."
   26:
     key: NIFTI_HEADER_UNREADABLE
     what: "An image file cannot be read."

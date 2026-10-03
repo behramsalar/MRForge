@@ -87,10 +87,22 @@ def _spatial(series: DicomSeries) -> list[int] | None:
     return None if any(d is None for d in dims) else sorted(d for d in dims if d is not None)
 
 
+# dcm2niix tags for images the scanner calculated from the data. They are not raw data: they
+# are left out of rawbids/ (they stay in the converted folder).
+DERIVED_SUFFIXES = {"ADC", "Trace", "FA", "ColFA"}
+STOPPED_EARLY = "do not fill whole volumes"
+
+
 def check_image(
-    ws: Workspace, series: DicomSeries, kind: str, image: ConvertedImage
+    ws: Workspace,
+    series: DicomSeries,
+    kind: str,
+    image: ConvertedImage,
+    removed_ok: bool = False,
 ) -> tuple[list[str], list[str]]:
-    """(problems, warnings) for one converted image."""
+    """(problems, warnings) for one converted image. ``removed_ok`` allows the image to have
+    one or two volumes fewer than the scan counted: dcm2niix takes scanner-calculated volumes
+    (ADC, trace) out of a diffusion series and writes the complete data to a separate file."""
     problems: list[str] = []
     warnings: list[str] = []
     what = f"image '{image.suffix or 'main'}' of {_label(series)}"
@@ -106,9 +118,17 @@ def check_image(
             f"says {series.matrix} (the order of the axes may differ)."
         )
     if series.volumes is not None and volumes != series.volumes:
-        problems.append(
-            f"The converted {what} has {volumes} volume(s), but the scan found {series.volumes}."
-        )
+        missing = series.volumes - volumes
+        if removed_ok and 1 <= missing <= 2:
+            warnings.append(
+                f"{what.capitalize()} has {volumes} volume(s); dcm2niix removed {missing} "
+                f"scanner-calculated volume(s) (ADC or trace) from the {series.volumes} found."
+            )
+        else:
+            problems.append(
+                f"The converted {what} has {volumes} volume(s), but the scan found "
+                f"{series.volumes}."
+            )
     if kind == "dwi":
         if not (image.bval and image.bvec):
             problems.append(f"The diffusion directions (bval/bvec) of {what} are missing.")
@@ -192,6 +212,13 @@ def convert_series(
             f"dcm2niix stopped with an error (exit code {proc.returncode}) while converting "
             f"{_label(series)}." + (f" Its last messages: {tail}" if tail else "")
         )
+        if any(STOPPED_EARLY in w for w in series.warnings):
+            problems.append(
+                f"The scan already showed that {_label(series)} has slices that do not fill whole "
+                "volumes. The acquisition was probably stopped early, and dcm2niix cannot convert "
+                "incomplete volumes. Leave it out with "
+                f"'mrforge import set {series.number} --skip'."
+            )
     elif not names:
         problems.append(f"dcm2niix produced no image for {_label(series)}.")
     for name in names:
@@ -199,15 +226,23 @@ def convert_series(
             images.append(_read_image(ws, out_dir, name))
         except Exception as exc:  # an unreadable result is a problem with this series only
             problems.append(f"The converted file {name} could not be read ({type(exc).__name__}).")
+    derived = [i for i in images if i.suffix in DERIVED_SUFFIXES]
+    images = [i for i in images if i.suffix not in DERIVED_SUFFIXES]
+    for image in derived:
+        warnings.append(
+            f"dcm2niix separated a scanner-calculated '{image.suffix}' image from "
+            f"{_label(series)}. It is not raw data and was left out; the rest of the series is "
+            "imported."
+        )
     if images:
         got = sorted(i.suffix for i in images)
-        want = sorted(o.suffix for o in series.outputs) or got
+        want = sorted(o.suffix for o in series.outputs if o.suffix not in DERIVED_SUFFIXES) or got
         if got != want:
             problems.append(
                 f"{_label(series)} should give the images {want}, but dcm2niix wrote {got}."
             )
         for image in images:
-            p, w = check_image(ws, series, classification.kind, image)
+            p, w = check_image(ws, series, classification.kind, image, removed_ok=bool(derived))
             problems += p
             warnings += w
     return Conversion(
@@ -299,4 +334,5 @@ def _result_line(series: DicomSeries, result: Conversion) -> str:
     if result.status == "ok":
         sizes = ", ".join("x".join(map(str, i.shape)) for i in result.images)
         return f"  {_label(series)}: converted ({sizes})"
-    return f"  {_label(series)}: FAILED - {result.problems[0]}"
+    details = "".join(f"\n      - {p}" for p in result.problems)
+    return f"  {_label(series)}: FAILED{details}"

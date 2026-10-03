@@ -65,7 +65,7 @@ def test_messages_are_complete_and_match_the_validators_own_list() -> None:
 
 
 def test_the_problems_an_mri_import_can_cause_are_all_explained() -> None:
-    must_have = {1, 10, 12, 15, 26, 27, 29, 31, 32, 33, 37, 49, 50, 57, 67, 74, 90, 91, 92, 99,
+    must_have = {1, 10, 12, 15, 25, 26, 27, 29, 31, 32, 33, 37, 49, 50, 57, 67, 74, 90, 91, 92, 99,
                  101, 113}  # fmt: skip
     assert must_have <= set(load_messages())
 

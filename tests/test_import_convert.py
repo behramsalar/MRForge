@@ -393,3 +393,84 @@ def test_real_session_converts_and_checks_out(
     assert all(c.status == "ok" and c.problems == [] for c in manifest.conversions.values())
     again = convert_import(ws, manifest, load_rules())
     assert again.converted == [] and len(again.up_to_date) == 8
+
+
+# -- real-world behaviours found by importing Philips and other Siemens data -----------------------
+
+
+def test_a_scanner_calculated_map_is_split_off_and_not_imported(
+    ws: Workspace, dwi: ImportManifest, fake: Fake
+) -> None:
+    """Philips diffusion series: dcm2niix writes the complete data (7 volumes, including the
+    scanner's ADC volume) as '<n>_ADC' and the diffusion volumes (6) as the main image."""
+    fake.set(
+        9,
+        images=[
+            {"suffix": "", "shape": [4, 4, 2, 6], "bval": 6},
+            {"suffix": "ADC", "shape": [4, 4, 2, 7]},
+        ],
+    )
+    summary = conv(ws, dwi)
+    assert summary.converted == [9] and summary.failed == []
+    result = next(iter(dwi.conversions.values()))
+    assert [i.suffix for i in result.images] == [""]  # the ADC image is not registered
+    assert result.images[0].shape[3] == 6 and result.images[0].bval
+    text = " ".join(result.warnings)
+    assert "scanner-calculated 'ADC'" in text and "removed 1 scanner-calculated volume" in text
+    assert (ws.root / "imports/import-001/converted/s9/9_ADC.nii.gz").exists()  # kept on disk
+
+
+def test_too_many_missing_volumes_are_still_a_problem_even_with_a_split_off_map(
+    ws: Workspace, dwi: ImportManifest, fake: Fake
+) -> None:
+    fake.set(
+        9,
+        images=[
+            {"suffix": "", "shape": [4, 4, 2, 3], "bval": 3},  # 4 volumes are missing, not 1
+            {"suffix": "ADC", "shape": [4, 4, 2, 7]},
+        ],
+    )
+    assert conv(ws, dwi).failed == [9]
+    assert (
+        "has 3 volume(s), but the scan found 7" in next(iter(dwi.conversions.values())).problems[0]
+    )
+
+
+def test_a_missing_volume_without_a_split_off_map_is_a_problem(
+    ws: Workspace, dwi: ImportManifest, fake: Fake
+) -> None:
+    fake.set(9, images=[{"suffix": "", "shape": [4, 4, 2, 6], "bval": 6}])
+    assert conv(ws, dwi).failed == [9]
+
+
+def test_a_stopped_acquisition_that_cannot_be_converted_says_how_to_leave_it_out(
+    ws: Workspace, tmp_path: Path, fake: Fake, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "stopped"
+    uid = new_uid()
+    for volume in range(2):
+        for z in range(3):
+            make_dicom(
+                source / f"v{volume}_{z}.dcm", uid, 6, "resting",
+                image_type=("ORIGINAL", "PRIMARY", "FMRI", "NONE"), position_z=float(z),
+            )  # fmt: skip
+    make_dicom(source / "v2_0.dcm", uid, 6, "resting", position_z=0.0,
+               image_type=("ORIGINAL", "PRIMARY", "FMRI", "NONE"))  # fmt: skip
+    manifest, _ = scan_source(ws, source)
+    series = manifest.series[0]
+    assert series.volumes == 2 and any("stopped early" in w for w in series.warnings)
+    fake.set(6, mode="fail")
+    assert conv(ws, manifest).failed == [6]
+    problems = manifest.conversions[series.uid].problems
+    assert len(problems) == 2 and "exit code 2" in problems[0]
+    assert "stopped early" in problems[1] and "mrforge import set 6 --skip" in problems[1]
+
+
+def test_cli_shows_every_problem_and_the_skip_hint(
+    ws: Workspace, imported: ImportManifest, fake: Fake
+) -> None:
+    fake.set(6, mode="fail")
+    r = runner.invoke(app, ["import", "convert", "-w", str(ws.root)])
+    assert r.exit_code == 1
+    assert "series 6 (resting): FAILED\n      - dcm2niix stopped with an error" in r.output
+    assert "mrforge import set <series> --skip" in r.output

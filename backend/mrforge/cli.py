@@ -263,7 +263,8 @@ def import_convert(
             "Failed series: "
             + ", ".join(map(str, summary.failed))
             + "\nFix the cause (see 'mrforge import show --why'), then run this command again; "
-            "only the failed series are converted again."
+            "only the failed series are converted again. To leave a series out instead: "
+            "mrforge import set <series> --skip"
         )
         raise typer.Exit(1)
 
@@ -275,7 +276,7 @@ def _print_organized(
         series = next((s for s in manifest.series if s.uid == uid), None)
         images = sorted(p for p in done.files if p.endswith(".nii.gz"))
         for path in images:
-            label = f"series {series.number} ({series.description})" if series else uid
+            label = f"series {series.number} ({series.label})" if series else uid
             typer.echo(f"  {label} -> {path}")
     for label, runs in uses.items():
         pair = label.replace("/", " + ")
