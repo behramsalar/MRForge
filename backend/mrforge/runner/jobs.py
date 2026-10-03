@@ -156,6 +156,8 @@ def process_alive(pid: int | None, start_time: float | None) -> bool:
 def kill_orphans(worker_pid: int) -> None:
     """Kill leftover tool processes of a dead worker (they share its process group)."""
     for proc in psutil.process_iter():
+        if proc.pid <= 0:  # os.getpgid(0) means "this process", not process 0
+            continue
         try:
             if proc.pid != worker_pid and os.getpgid(proc.pid) == worker_pid:
                 proc.send_signal(signal.SIGKILL)

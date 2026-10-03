@@ -144,3 +144,13 @@ def test_ctrl_c_cancels_the_running_job(wsdir: Path) -> None:
     proc.communicate(timeout=60)
     assert proc.returncode == 130
     assert list_jobs(ws)[0].status == "Cancelled"
+
+
+def test_status_shows_local_time_not_utc(wsdir: Path) -> None:
+    from datetime import UTC, datetime
+
+    from mrforge.cli import _local_time
+
+    naive_utc = datetime(2026, 1, 1, 12, 0, 0)  # how SQLite hands back a stored UTC time
+    expected = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC).astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    assert _local_time(naive_utc) == expected

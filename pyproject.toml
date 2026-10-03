@@ -21,7 +21,10 @@ where = ["backend"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["backend", "scripts"]
-markers = ["fsl: integration tests that need a working FSL installation"]
+markers = [
+    "fsl: integration tests that need a working FSL installation",
+    "slow: tests that take many minutes (fsl_anat); run with -m \"fsl and slow\"",
+]
 
 [tool.ruff]
 line-length = 100

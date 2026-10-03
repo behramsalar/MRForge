@@ -1,0 +1,18 @@
+# Default anatomical processing: fsl_anat on the ORIGINAL T1 (with skull).
+# fsl_anat does its own brain extraction, so 'bet' is not needed before it.
+#
+# Run:  mrforge pipeline run examples/anat_pipeline.yaml -w <workspace>
+# The T1 must already be in the workspace at the path below (workspace-relative).
+name: anatomical
+subject: sub-001
+steps:
+  - id: fsl_anat
+    step: fsl_anat
+    inputs: {t1: rawbids/sub-001/anat/sub-001_T1w.nii.gz}
+
+  # OPTIONAL: a quick, separate brain extraction (for a look at the data, or masks).
+  # Its output is never fed into fsl_anat. Remove the '#' signs to include it.
+  # - id: bet
+  #   step: bet
+  #   inputs: {t1: rawbids/sub-001/anat/sub-001_T1w.nii.gz}
+  #   params: {frac: 0.5}

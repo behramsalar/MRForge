@@ -231,14 +231,15 @@ def execute_step(step: Step[I, P, O], ctx: StepContext[I, P]) -> StepResult:
     """Run the full lifecycle: validate_inputs, prepare, run, validate_outputs,
     register_outputs, generate_qc. Raises StepError on any error-level problem."""
     try:
-        _raise_on_errors(step.validate_inputs(ctx))
+        input_problems = step.validate_inputs(ctx)
+        _raise_on_errors(input_problems)
         step.prepare(ctx)
         result = step.run(ctx)
         outcome = step.validate_outputs(ctx)
         _raise_on_errors(outcome)
         step.register_outputs(ctx)
         result.qc = step.generate_qc(ctx)
-        result.warnings = [p for p in outcome if p.severity == "warning"]
+        result.warnings = [p for p in input_problems + outcome if p.severity == "warning"]
         if not result.commands:
             result.commands = list(ctx.commands)
         return result

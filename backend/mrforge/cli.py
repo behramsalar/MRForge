@@ -3,6 +3,7 @@
 import functools
 import json
 from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, TypeVar, get_origin
 
@@ -94,6 +95,13 @@ def describe(outcome: StepOutcome) -> str:
     if outcome.action == Action.REUSED:
         return f"{line} ({outcome.reason})"
     return f"{line}. {outcome.reason}" if outcome.reason else line
+
+
+def _local_time(moment: datetime) -> str:
+    """Times are stored in UTC; SQLite returns them without a timezone, so add it back."""
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=UTC)
+    return moment.astimezone().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _indent(text: str) -> str:
@@ -245,7 +253,7 @@ def status_command(workspace: WorkspaceOption = Path(".")) -> None:
         return
     rows = [("JOB", "STEP", "STATUS", "FINISHED", "PROBLEM")]
     for j in jobs:
-        finished = j.finished.astimezone().strftime("%Y-%m-%d %H:%M:%S") if j.finished else "-"
+        finished = _local_time(j.finished) if j.finished else "-"
         rows.append((str(j.id), j.label or j.step_name, j.status, finished, j.error_code or ""))
     widths = [max(len(r[i]) for r in rows) for i in range(5)]
     for r in rows:

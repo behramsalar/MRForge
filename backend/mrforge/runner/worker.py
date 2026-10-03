@@ -27,7 +27,7 @@ from mrforge.provenance import (
     remove_provenance,
     write_provenance,
 )
-from mrforge.runner.jobs import build_context, get_job, now, update_job
+from mrforge.runner.jobs import build_context, get_job, kill_orphans, now, update_job
 from mrforge.steps import builtin  # noqa: F401  (registers built-in steps)
 from mrforge.steps.base import execute_step, input_relpaths
 from mrforge.workspace import Workspace
@@ -77,7 +77,11 @@ def run_job(ws: Workspace, job_id: int) -> JobStatus:
             fsl = find_fsl()
             ctx.env = fsl.env
             versions["fsl"] = fsl.version
-        execute_step(step, ctx)
+        try:
+            execute_step(step, ctx)
+        finally:
+            # A tool that was killed can leave its own children running (fsl_anat starts many).
+            kill_orphans(me.pid)
     except Cancelled:
         status = JobStatus.CANCELLED
         error = StepError("CANCELLED", "The step was cancelled.")
