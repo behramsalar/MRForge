@@ -95,6 +95,8 @@ class Job(Base):
     return_code: Mapped[int | None] = mapped_column(nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Structured StepError (code, message, probable_cause, suggested_action, log_path) for the UI.
+    error: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
     output_dir: Mapped[str | None] = mapped_column(String(1000), nullable=True)  # results folder
     run_dir: Mapped[str | None] = mapped_column(String(1000), nullable=True)  # provenance + logs
 
@@ -108,3 +110,25 @@ class PipelineRun(Base):
     name: Mapped[str] = mapped_column(String(200))
     spec: Mapped[dict[str, object]] = mapped_column(JSON)
     created: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Operation(Base):
+    """A long-running action that is not a processing step: importing, running a pipeline,
+    removing a DICOM copy. Runs in its own detached worker process like a job, so closing the
+    browser or restarting the server never stops it."""
+
+    __tablename__ = "operation"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String(50))
+    title: Mapped[str] = mapped_column(String(300))  # plain language, shown in the UI
+    args: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(20), default=JobStatus.QUEUED.value)
+    pid: Mapped[int | None] = mapped_column(nullable=True)
+    pid_start_time: Mapped[float | None] = mapped_column(nullable=True)
+    created: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    started: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    result: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    error: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    log: Mapped[str | None] = mapped_column(String(1000), nullable=True)  # workspace-relative

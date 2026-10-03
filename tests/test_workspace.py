@@ -62,3 +62,26 @@ def test_relpath_round_trip(tmp_path: Path) -> None:
     p = ws.derivatives_dir / "sub-001" / "bet" / "brain.nii.gz"
     assert ws.relpath(p) == "derivatives/mrforge/sub-001/bet/brain.nii.gz"
     assert ws.abspath(ws.relpath(p)) == p.resolve()
+
+
+def test_version_2_workspace_is_migrated(tmp_path: Path) -> None:
+    """Older workspaces (no Job.error column) open and keep working."""
+    import json
+
+    root = tmp_path / "old"
+    ws = Workspace.create(root)
+    with ws.engine.begin() as conn:
+        conn.exec_driver_sql("ALTER TABLE job DROP COLUMN error")
+    ws.engine.dispose()
+    meta_path = root / "workspace.json"
+    meta = json.loads(meta_path.read_text())
+    meta["schema_version"] = 2
+    meta_path.write_text(json.dumps(meta))
+
+    reopened = Workspace.open(root)
+    assert json.loads(meta_path.read_text())["schema_version"] == SCHEMA_VERSION
+    from mrforge.runner.jobs import create_job, get_job
+    from mrforge.steps import builtin  # noqa: F401
+
+    jid = create_job(reopened, "fake", "sub-001")
+    assert get_job(reopened, jid).error is None

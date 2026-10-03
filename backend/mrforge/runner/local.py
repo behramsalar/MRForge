@@ -8,8 +8,12 @@ import subprocess
 import sys
 import time
 from collections import deque
+from pathlib import Path
 
-from mrforge.models import JobStatus
+from sqlalchemy import select
+
+from mrforge.errors import StepError
+from mrforge.models import Job, JobStatus
 from mrforge.runner.jobs import (
     get_job,
     kill_orphans,
@@ -53,6 +57,7 @@ class LocalJobQueue(JobQueue):
                 finished=now(),
                 error_code="CANCELLED",
                 error_message="The step was cancelled before it started.",
+                error=StepError("CANCELLED", "The step was cancelled before it started.").to_dict(),
             )
             return
         job = get_job(self.ws, job_id)
@@ -63,6 +68,26 @@ class LocalJobQueue(JobQueue):
     def cancel_all(self) -> None:
         for job_id in list(self._pending) + list(self._running):
             self.cancel(job_id)
+
+    def adopt_queued(self) -> list[int]:
+        """Take over Queued jobs this queue does not know yet (for example after the server
+        restarted with jobs waiting). Returns the adopted ids, oldest first."""
+        with self.ws.session() as s:
+            queued = list(
+                s.scalars(
+                    select(Job.id).where(Job.status == JobStatus.QUEUED.value).order_by(Job.id)
+                )
+            )
+        known = set(self._pending) | set(self._running)
+        adopted = [j for j in queued if j not in known]
+        self._pending.extend(adopted)
+        return adopted
+
+    def tick(self) -> None:
+        """One scheduling step: mark dead workers, reap finished ones, start waiting jobs.
+        A long-running server calls this regularly; ``wait`` calls it in a loop."""
+        recover_stale_jobs(self.ws)
+        self._pump()
 
     def wait(self, timeout: float | None = None) -> bool:
         deadline = None if timeout is None else time.monotonic() + timeout
@@ -77,8 +102,15 @@ class LocalJobQueue(JobQueue):
 
     def _pump(self) -> None:
         self._reap()
-        while self._pending and len(self._running) < self.max_concurrency:
+        while self._pending and self._busy() < self.max_concurrency:
             self._start(self._pending.popleft())
+
+    def _busy(self) -> int:
+        """Workers in use: ours, plus live ones started by an earlier server process."""
+        with self.ws.session() as s:
+            running = list(s.scalars(select(Job).where(Job.status == JobStatus.RUNNING.value)))
+        alive = {j.id for j in running if process_alive(j.pid, j.pid_start_time)}
+        return len(alive | set(self._running))
 
     def _start(self, job_id: int) -> None:
         job = get_job(self.ws, job_id)
@@ -105,6 +137,11 @@ class LocalJobQueue(JobQueue):
             if job.status in (JobStatus.QUEUED.value, JobStatus.RUNNING.value):
                 # The worker died without recording an outcome.
                 killed = code < 0
+                crash_msg = (
+                    "This step was stopped before it finished."
+                    if killed
+                    else "The worker process crashed. See the worker log for details."
+                )
                 if job.pid:
                     kill_orphans(job.pid)
                 update_job(
@@ -114,9 +151,22 @@ class LocalJobQueue(JobQueue):
                     finished=now(),
                     return_code=code,
                     error_code="INTERRUPTED" if killed else "WORKER_CRASHED",
-                    error_message=(
-                        "This step was stopped before it finished."
-                        if killed
-                        else "The worker process crashed. See the worker log for details."
-                    ),
+                    error_message=crash_msg,
+                    error=_crash_error(killed, crash_msg, job.run_dir),
                 )
+
+
+def _crash_error(killed: bool, message: str, run_dir: str | None) -> dict[str, object]:
+    return StepError(
+        "INTERRUPTED" if killed else "WORKER_CRASHED",
+        message,
+        probable_cause=(
+            "The program was stopped or the computer restarted."
+            if killed
+            else "The worker hit an unexpected problem."
+        ),
+        suggested_action="Resume the pipeline; finished steps are not repeated."
+        if killed
+        else "Open the log for details, then retry the step.",
+        log_path=Path(run_dir) / "logs" / "worker.log" if run_dir else None,
+    ).to_dict()

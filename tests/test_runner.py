@@ -181,3 +181,32 @@ def test_recover_ignores_live_jobs(ws: Workspace) -> None:
     q.cancel(jid)
     assert q.wait(timeout=30)
     assert JobStatus.CANCELLED.value == status(ws, jid)
+
+
+def test_new_queue_adopts_queued_jobs(ws: Workspace) -> None:
+    """A restarted server picks up jobs that were Queued but never started."""
+    jid = create_job(ws, "fake", "sub-001", params={"duration": 0.2})
+    q = LocalJobQueue(ws)  # a fresh queue that never saw submit()
+    assert q.adopt_queued() == [jid]
+    assert q.adopt_queued() == []  # not adopted twice
+    q.tick()
+    assert q.wait(timeout=30)
+    assert status(ws, jid) == "Completed"
+
+
+def test_live_worker_of_earlier_server_counts_against_limit(ws: Workspace) -> None:
+    """Workers outlive the server; a new server must not oversubscribe the machine."""
+    old = LocalJobQueue(ws, max_concurrency=1)
+    first = create_job(ws, "fake", "sub-001", params={"duration": 60})
+    old.submit(first)
+    running_with_tool(ws, first)
+    new = LocalJobQueue(ws, max_concurrency=1)  # "restarted server"
+    second = create_job(ws, "fake", "sub-002", params={"duration": 0.2})
+    new.submit(second)
+    time.sleep(0.5)
+    assert status(ws, second) == "Queued"
+    old.cancel(first)
+    wait_for(lambda: status(ws, first) == "Cancelled")
+    new.tick()
+    assert new.wait(timeout=30)
+    assert status(ws, second) == "Completed"

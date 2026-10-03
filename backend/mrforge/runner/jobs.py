@@ -195,6 +195,12 @@ def recover_stale_jobs(ws: Workspace) -> list[int]:
                 "This step was stopped before it finished, for example because the "
                 "program was killed or the computer restarted."
             ),
+            error=StepError(
+                "INTERRUPTED",
+                "This step was stopped before it finished.",
+                probable_cause="The program was killed or the computer restarted.",
+                suggested_action="Resume the pipeline; finished steps are not repeated.",
+            ).to_dict(),
         )
         recovered.append(job.id)
     return recovered

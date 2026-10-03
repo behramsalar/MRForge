@@ -459,6 +459,16 @@ def scan_source(
     dest = ws.root / "sourcedata" / "dicom" / manifest_id
     copy_source(src, dest, info)
     series, skipped = scan_directory(dest, workers)
+    if not series:
+        shutil.rmtree(dest, ignore_errors=True)  # nothing usable was found: leave no trace
+        raise StepError(
+            code="NO_DICOM_FOUND",
+            message="No scanner images were found in that folder.",
+            probable_cause="It holds no DICOM files (or only files MRForge cannot read), or it "
+            "is the wrong folder.",
+            suggested_action="Choose the folder that contains the scanner's DICOM files "
+            "(subfolders are searched), or a ZIP of it.",
+        )
     command, dcm2niix_version, notes = sidecar_pass(dest, series)
     if info.ignored:
         notes.append(
