@@ -7,11 +7,11 @@
 Fill these in before Stage 0 starts. Claude Code: if any of these are blank, ask the user instead of guessing.
 
 ```text
-OS / environment:        ___  (Linux, macOS, or Windows + WSL)
-FSL version / FSLDIR:    ___
-Test data location:      ___  (never committed to git)
-Working name of the app: mriapp  (placeholder; `mriapp` in commands below means the real CLI name)
-Lab members available for UX feedback: ___
+OS / environment:        macOS (arm64); Python venv ~/progders
+FSL version / FSLDIR:    6.0.7.23 / ~/fsl (never hard-coded in the app; see docs/DECISIONS.md)
+Test data location:      ~/Documents/mri-test-data/  (never committed to git)
+Working name of the app: MRForge  (CLI command: `mrforge`)
+Lab members available for UX feedback: ___  (needed from Stage 3/4)
 ```
 
 ---
@@ -206,19 +206,19 @@ Each stage lists what to build, then **how the user tests it**. Do not skip ahea
 - 1b. `Step` base class, step registry, pydantic parameter/input/output specs.
 - 1c. Job runner: subprocess execution, log capture, command recording, return code, state machine, stale-job detection on startup, configurable max concurrency, `JobQueue` interface with a local implementation.
 - 1d. Provenance writer and resume logic exactly as in section 6, including downstream invalidation.
-- 1e. CLI: `mriapp workspace create`, `mriapp run <step> ...`, `mriapp status`, `mriapp resume`, `mriapp log <job>`.
+- 1e. CLI: `mrforge workspace create`, `mrforge run <step> ...`, `mrforge status`, `mrforge resume`, `mrforge log <job>`.
 - 1f. `FakeStep` for tests: configurable duration, can fail at a chosen point, writes dummy outputs.
 - 1g. `BetStep` (FSL `bet`) as the first real step.
 - 1h. `FslAnatStep`: wraps `fsl_anat`, handles its `.anat` output directory, registers the key outputs (bias-corrected, brain, segmentation, registration transforms), validates them.
 
 **Quick checks along the way**
-- After 1e/1f: run a pipeline of fake steps with a failure at step 3, then `mriapp resume` and confirm steps 1–2 are not rerun.
+- After 1e/1f: run a pipeline of fake steps with a failure at step 3, then `mrforge resume` and confirm steps 1–2 are not rerun.
 - After 1g: run `bet` through the app and manually with the same options, then compare outputs.
 
 **Manual test checklist**
-1. `mriapp workspace create demo` then run `bet` on a test T1. Open the result in FSLeyes and compare with your own manual `bet` run. They should be identical.
-2. Start `fsl_anat` and `kill -9` the process while it runs. `mriapp status` must show `Interrupted`, not `Running`.
-3. `mriapp resume` continues correctly and the final result matches a manual `fsl_anat` run.
+1. `mrforge workspace create demo` then run `bet` on a test T1. Open the result in FSLeyes and compare with your own manual `bet` run. They should be identical.
+2. Start `fsl_anat` and `kill -9` the process while it runs. `mrforge status` must show `Interrupted`, not `Running`.
+3. `mrforge resume` continues correctly and the final result matches a manual `fsl_anat` run.
 4. Rerun the same step with unchanged inputs: it must report "already completed" and not run.
 5. Change one parameter: that step reruns, and any downstream step is invalidated.
 6. Delete one output file by hand: the step is detected as invalid and reruns.
@@ -348,12 +348,12 @@ Each follows the same pattern: backend step with tests and a comparison against 
 ## 10. Commands (fill in as they are built)
 
 ```text
-Run tests (unit):            pytest -m "not fsl"
-Run tests (with real FSL):   pytest -m fsl
-Lint/format:                 ruff check . && ruff format .
-Type check:                  (set in Stage 0)
-Check environment:           python scripts/check_env.py
-Run CLI:                     mriapp --help
+Run tests (unit):            ~/progders/bin/pytest -m "not fsl"
+Run tests (with real FSL):   zsh -lc '~/progders/bin/pytest -m fsl'
+Lint/format:                 ~/progders/bin/ruff check . && ~/progders/bin/ruff format .
+Type check:                  ~/progders/bin/mypy
+Check environment:           zsh -lc '~/progders/bin/python scripts/check_env.py'
+Run CLI:                     mrforge --help
 Run API (Stage 3):           (set in Stage 3)
 Run frontend (Stage 3):      (set in Stage 3)
 ```
