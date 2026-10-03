@@ -95,12 +95,12 @@ def test_not_a_nifti_is_refused(ws: Workspace) -> None:
 def test_outputs_follow_the_subcortical_option(ws: Workspace) -> None:
     put_nifti(ws, T1_REL)
     step, ctx = build_context(ws, "fsl_anat", "sub-001", None, {"t1": T1_REL}, {})
-    assert any("T1_subcort_seg" in p for p in step.output_relpaths(ctx))
-    step, ctx = build_context(
-        ws, "fsl_anat", "sub-001", None, {"t1": T1_REL}, {"subcortical_segmentation": False}
-    )
-    out = step.output_relpaths(ctx)
+    out = step.output_relpaths(ctx)  # default: subcortical segmentation is off
     assert not any("subcort" in p for p in out) and len(out) == 12
+    step, ctx = build_context(
+        ws, "fsl_anat", "sub-001", None, {"t1": T1_REL}, {"subcortical_segmentation": True}
+    )
+    assert any("T1_subcort_seg" in p for p in step.output_relpaths(ctx))
     assert all(p.startswith(f"{OUT}/fsl_anat/{ANAT_DIR}/") for p in out)
 
 
@@ -114,7 +114,7 @@ def test_command_line_is_built_from_the_settings(
         "sub-001",
         None,
         {"t1": T1_REL},
-        {"image_type": "T2", "strong_bias": True, "subcortical_segmentation": False},
+        {"image_type": "T2", "strong_bias": True},
     )
     seen: list[list[str]] = []
     monkeypatch.setattr(type(ctx), "run_command", lambda self, argv, check=True: seen.append(argv))
@@ -125,7 +125,13 @@ def test_command_line_is_built_from_the_settings(
     default_step, default_ctx = build_context(ws, "fsl_anat", "sub-001", None, {"t1": T1_REL}, {})
     seen.clear()
     default_step.run(default_ctx)
-    assert len(seen[0]) == 5  # defaults add no extra flags, and never --nobet
+    assert seen[0][5:] == ["--nosubcortseg"]  # the default; and --nobet is never used
+    seen.clear()
+    with_first, with_first_ctx = build_context(
+        ws, "fsl_anat", "sub-001", None, {"t1": T1_REL}, {"subcortical_segmentation": True}
+    )
+    with_first.run(with_first_ctx)
+    assert len(seen[0]) == 5  # opting in adds no flag (fsl_anat runs FIRST by itself)
 
 
 def test_prepare_removes_only_the_leftover_anat_folder(ws: Workspace) -> None:
@@ -257,16 +263,19 @@ def test_full_run_matches_manual_fsl_anat(
     assert outcome.action == Action.RAN, outcome.reason
 
     out = ws.derivatives_dir / "sub-001" / "fsl_anat" / ANAT_DIR
-    for _field, rel in FslAnatOutput():
+    expected = FslAnatOutput(subcortical_segmentation=None)  # the default run skips FIRST
+    for _field, rel in expected:
         if rel is None or rel.endswith(".mat"):
             continue
         name = Path(rel).name
         assert max_abs_difference(fsl, out / name, manual / name, tmp_path) == 0.0, name
-    for rel_mat in (r for _, r in FslAnatOutput() if r and r.endswith(".mat")):
+    for rel_mat in (r for _, r in expected if r and r.endswith(".mat")):
         assert (out / Path(rel_mat).name).read_text() == (manual / Path(rel_mat).name).read_text()
 
     prov = read_provenance(out.parent)
     assert prov and prov.status == "Completed" and prov.tool_versions["fsl"] == fsl.version
-    assert len(prov.outputs) == 13
+    assert len(prov.outputs) == 12
+    assert not (out / "T1_subcort_seg.nii.gz").exists()  # opt-in extra was not run
+    assert "--nosubcortseg" in prov.commands[0].argv
     again = run_step(ws, queue, "fsl_anat", "sub-001", {"t1": T1_REL})
     assert again.action == Action.REUSED

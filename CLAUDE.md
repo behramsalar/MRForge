@@ -82,13 +82,14 @@ The UI looks linear (Import → Anatomical → Functional → Denoising → QC �
     db.sqlite                # state index (rebuildable from provenance where possible)
     sourcedata/dicom/        # original DICOMs, never modified
     rawbids/                 # BIDS dataset: dataset_description.json, participants.tsv, sub-*/{anat,func,fmap,dwi}
-    derivatives/<appname>/
-        sub-XXX/ses-YY/<step-name>/
-            outputs...
-            provenance.json  # written next to the outputs, travels with them
-            logs/            # stdout.log, stderr.log
+    derivatives/<appname>/   # a BIDS derivatives dataset (dataset_description.json, .bidsignore)
+        sub-XXX/[ses-YY/]anat/   # results with BIDS names, e.g. sub-001_desc-brain_mask.nii.gz
+            sub-XXX_T1w.anat/    # native fsl_anat folder, named after the input image
+            _runs/<label>/       # per-step record: provenance.json, logs/ (stdout.log, stderr.log)
     reports/
 ```
+
+Result files follow BIDS derivatives naming (see `docs/architecture.md` section 2). Provenance and logs are kept in `_runs/<label>/` next to the results of that datatype folder.
 
 Internal entities (define early, even if some stay thin): `Workspace, Subject, Session, Acquisition, File, Pipeline, PipelineRun, ProcessingStep, Job, QCResult, UserDecision, Report, Atlas, ROI`.
 

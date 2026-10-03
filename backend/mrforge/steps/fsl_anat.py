@@ -34,9 +34,10 @@ class FslAnatInput(BaseModel):
 class FslAnatParams(BaseModel):
     image_type: Literal["T1", "T2", "PD"] = "T1"  # fsl_anat -t
     strong_bias: bool = False  # --strongbias (for images with very strong bias fields)
-    # REVIEW(domain): the subcortical segmentation (FIRST) is slow and not needed for the
-    # functional pipeline; it is on by default, as in fsl_anat itself.
-    subcortical_segmentation: bool = True  # False adds --nosubcortseg
+    # Optional extra, off by default (user decision): the subcortical segmentation (FIRST) is
+    # slow and not needed for the functional pipeline (WM/CSF signals come from the tissue
+    # segmentation). True runs it; False adds --nosubcortseg.
+    subcortical_segmentation: bool = False
 
 
 class FslAnatOutput(BaseModel):

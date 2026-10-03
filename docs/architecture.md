@@ -22,15 +22,19 @@ UI (React)  ->  API (FastAPI)  ->  Services  ->  Step objects  ->  Job runner  -
     db.sqlite                  # state index
     sourcedata/dicom/          # original DICOMs, immutable
     rawbids/                   # BIDS dataset, immutable after creation
-    derivatives/mrforge/
-        sub-XXX/ses-YY/<step-name>/
-            <outputs>
-            provenance.json
-            logs/stdout.log, logs/stderr.log
+    derivatives/mrforge/            # a BIDS derivatives dataset
+        dataset_description.json    # DatasetType "derivative"; GeneratedBy lists MRForge and FSL versions
+        .bidsignore                 # hides MRForge-only folders (_runs/, *.anat/) from BIDS validators
+        sub-XXX/[ses-YY/]anat/      # results with BIDS names, e.g. sub-001_desc-brain_mask.nii.gz
+            sub-XXX_T1w.anat/       # native fsl_anat folder, named after the input image
+            _runs/<label>/          # one folder per step run: provenance.json, logs/stdout.log, stderr.log
+        sub-XXX/[ses-YY/]func/      # (later stages)
     reports/
 ```
 
 Rules: `sourcedata/` and `rawbids/` are never modified after creation. All results go under `derivatives/`. A workspace with one scan is simply `sub-001`.
+
+**Naming.** Result files follow BIDS derivatives naming: entities taken from the input file (`sub`, `ses`, `acq`, `run`, ...) plus `space-`, `desc-`, `label-`, `from-`/`to-`/`mode-` as needed, then a suffix (`T1w`, `mask`, `dseg`, `probseg`, `xfm`). The BIDS-named results of a step are hard links to (or copies of) the tool's native files, so the native folder stays intact for FSL tools that expect it. Each step declares its BIDS datatype folder (`anat`, `func`, ...). The per-step record (`_runs/<label>/`) is MRForge-specific and listed in `.bidsignore`.
 
 ## 3. Entities
 
