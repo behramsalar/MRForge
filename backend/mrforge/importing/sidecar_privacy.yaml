@@ -1,0 +1,41 @@
+# JSON sidecar fields that are removed when an image is written into rawbids/.
+#
+# dcm2niix already strips the patient's name, ID and dates (-ba y). The fields below still
+# identify the site, the scanner or the study, so they are removed too. This list is a
+# REVIEW(domain/privacy) item: edit it, or put your own copy at
+#   <workspace>/imports/sidecar_privacy.yaml
+# to replace it for one workspace. Fields BIDS needs for analysis (RepetitionTime, EchoTime,
+# PhaseEncodingDirection, TotalReadoutTime, SliceTiming, ...) are never in this list.
+remove:
+  # site and scanner
+  - DeviceSerialNumber
+  - StationName
+  - InstitutionName
+  - InstitutionAddress
+  - InstitutionalDepartmentName
+  # study descriptions (often a clinic or project name)
+  - StudyDescription
+  - ProcedureStepDescription
+  - PerformedProcedureStepDescription
+  - RequestedProcedureDescription
+  - AccessionNumber
+  # time of day and anything dated
+  - AcquisitionTime
+  - AcquisitionDateTime
+  - StudyDate
+  - SeriesDate
+  - AcquisitionDate
+  # patient (dcm2niix normally removes these; listed again as a safety net)
+  - PatientName
+  - PatientID
+  - PatientBirthDate
+  - PatientSex
+  - PatientAge
+  - PatientWeight
+  - PatientSize
+  - OtherPatientIDs
+  # identifiers that link back to the scanner database
+  - StudyInstanceUID
+  - SeriesInstanceUID
+  - SOPInstanceUID
+  - StudyID

@@ -22,6 +22,8 @@ from mrforge.importing.classify import (
 )
 from mrforge.importing.convert import convert_import
 from mrforge.importing.manifest import load_manifest, save_manifest
+from mrforge.importing.models import ImportManifest
+from mrforge.importing.organize import OrganizeSummary, build_plan, organize
 from mrforge.importing.report import describe_plan, format_manifest
 from mrforge.importing.scan import scan_source
 from mrforge.models import JobStatus
@@ -214,15 +216,21 @@ def import_set(
     task: Annotated[str | None, typer.Option(help="Task name, e.g. rest.")] = None,
     acq: Annotated[str | None, typer.Option(help="Acquisition label, e.g. highres.")] = None,
     skip: Annotated[bool, typer.Option("--skip", help="Do not import this series.")] = False,
+    fieldmap: Annotated[
+        str | None,
+        typer.Option(help="Fieldmap for a BOLD/diffusion run: a series number, or none."),
+    ] = None,
 ) -> None:
     """Tell MRForge what a series is (your decision overrides the rules)."""
     ws = Workspace.open(workspace)
     manifest = load_manifest(ws, import_id)
     rules = load_rules(ws)
     labels = {k: v for k, v in (("task", task), ("acq", acq)) if v is not None}
-    now = set_override(manifest, rules, series, kind, skip, labels)
+    now = set_override(manifest, rules, series, kind, skip, labels, fieldmap)
     save_manifest(ws, manifest)
     typer.echo(f"Series {series}: {describe_plan(now)} ({now.confidence}, {now.source}).")
+    if fieldmap is not None:
+        typer.echo(f"Series {series} will use fieldmap: {fieldmap}.")
 
 
 @import_app.command("convert")
@@ -252,6 +260,80 @@ def import_convert(
             "only the failed series are converted again."
         )
         raise typer.Exit(1)
+
+
+def _print_organized(
+    ws: Workspace, manifest: ImportManifest, summary: OrganizeSummary, uses: dict[str, list[str]]
+) -> None:
+    for uid, done in manifest.organized.items():
+        series = next((s for s in manifest.series if s.uid == uid), None)
+        images = sorted(p for p in done.files if p.endswith(".nii.gz"))
+        for path in images:
+            label = f"series {series.number} ({series.description})" if series else uid
+            typer.echo(f"  {label} -> {path}")
+    for label, runs in uses.items():
+        pair = label.replace("/", " + ")
+        typer.echo(f"  fieldmap series {pair} is used by: {', '.join(runs) if runs else 'no run'}")
+    typer.echo(
+        f"\nrawbids/: {len(summary.written)} file(s) written, "
+        f"{len(summary.in_place)} already in place."
+    )
+    if summary.updated:
+        typer.echo(
+            f"  {len(summary.updated)} fieldmap sidecar(s) were updated: only their IntendedFor "
+            "list changed, because a run was added."
+        )
+    for note in summary.notes:
+        typer.echo(f"  Note: {note}")
+
+
+@import_app.command("organize")
+@friendly
+def import_organize(
+    import_id: Annotated[
+        str | None, typer.Argument(help="e.g. import-001 (default: latest).")
+    ] = None,
+    workspace: WorkspaceOption = Path("."),
+) -> None:
+    """Write the converted series into rawbids/ as a BIDS dataset (never overwrites)."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    rules = load_rules(ws)
+    uses = build_plan(ws, manifest, rules).uses
+    summary = organize(ws, manifest, rules)
+    _print_organized(ws, manifest, summary, uses)
+
+
+@import_app.command("run")
+@friendly
+def import_run(
+    import_id: Annotated[
+        str | None, typer.Argument(help="e.g. import-001 (default: latest).")
+    ] = None,
+    workspace: WorkspaceOption = Path("."),
+    jobs: Annotated[int, typer.Option("--jobs", "-j", help="Series converted at once.")] = 4,
+) -> None:
+    """Convert the series that are set to import, then write them into rawbids/."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    rules = load_rules(ws)
+    pending = [
+        s for s, c in zip(manifest.series, effective_all(manifest, rules).values(), strict=True)
+        if c.action == "ask"
+    ]  # fmt: skip
+    summary = convert_import(ws, manifest, rules, jobs, False, typer.echo)
+    if summary.failed:
+        typer.echo(f"\nConversion failed for series {', '.join(map(str, summary.failed))}.")
+        typer.echo("Nothing was written to rawbids/. Fix the cause and run this again.")
+        raise typer.Exit(1)
+    uses = build_plan(ws, manifest, rules).uses
+    written = organize(ws, manifest, rules)
+    _print_organized(ws, manifest, written, uses)
+    if pending:
+        typer.echo(
+            f"\n{len(pending)} series still need your input and were not imported "
+            "(see 'mrforge import show')."
+        )
 
 
 @import_app.command("classify")

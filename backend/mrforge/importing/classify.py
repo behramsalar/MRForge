@@ -358,6 +358,8 @@ def effective(manifest: ImportManifest, uid: str, rules: RuleSet) -> Classificat
     override = manifest.overrides.get(uid)
     if override is None:
         return base
+    if not (override.skip or override.kind or override.entities):
+        return base  # only a fieldmap choice was made; the type is still the rules' result
     when = override.decided.strftime("%Y-%m-%d %H:%M")
     if override.skip:
         return Classification(
@@ -428,6 +430,7 @@ def set_override(
     kind: str | None = None,
     skip: bool = False,
     entities: dict[str, str] | None = None,
+    fieldmap: str | None = None,
 ) -> Classification:
     """Record a user decision for one series and return the classification now in force."""
     series = find_series(manifest, number)
@@ -454,8 +457,23 @@ def set_override(
                 probable_cause="Labels may only contain letters and digits (no spaces or dashes).",
                 suggested_action="Use something like --task rest or --acq highres.",
             )
+    if fieldmap is not None and fieldmap != "none" and not fieldmap.isdigit():
+        raise StepError(
+            code="BAD_FIELDMAP",
+            message=f"'{fieldmap}' is not a fieldmap choice.",
+            probable_cause="Give the series number of a fieldmap, or 'none'.",
+            suggested_action="For example 'mrforge import set 6 --fieldmap 4', or --fieldmap none.",
+        )
     current = effective(manifest, series.uid, rules)
-    if not skip and kind is None and current.datatype is None:
+    only_fieldmap = fieldmap is not None and kind is None and not entities and not skip
+    if only_fieldmap and current.datatype not in ("func", "dwi"):
+        raise StepError(
+            code="FIELDMAP_NOT_APPLICABLE",
+            message=f"Series {number} is not a functional or diffusion run ({current.kind}), "
+            "so it has no fieldmap.",
+            suggested_action="Only BOLD and diffusion runs use a fieldmap.",
+        )
+    if not skip and kind is None and current.datatype is None and not only_fieldmap:
         raise StepError(
             code="SET_NEEDS_TYPE",
             message=f"Series {number} is not recognised as importable data ({current.kind}).",
@@ -463,11 +481,15 @@ def set_override(
             suggested_action=f"Add --type, for example 'mrforge import set {number} --type bold'.",
         )
     previous = manifest.overrides.get(series.uid)
+    chosen_fieldmap = None if skip else fieldmap
+    if chosen_fieldmap is None and previous is not None and not skip:
+        chosen_fieldmap = previous.fieldmap  # an earlier fieldmap choice is kept
     keep_previous = previous is not None and not skip and (kind is None or kind == previous.kind)
     kept = previous.entities if previous is not None and keep_previous else {}
     manifest.overrides[series.uid] = Override(
         kind=kind if kind is not None else (previous.kind if keep_previous and previous else None),
         skip=skip,
         entities={**kept, **entities},  # labels of an earlier type do not carry over
+        fieldmap=chosen_fieldmap,
     )
     return effective(manifest, series.uid, rules)

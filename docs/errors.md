@@ -151,3 +151,26 @@ Conversion never stops the whole import for one bad series. Problems are recorde
 - **The converted image has size X but the scan says Y / has N volumes but the scan found M / should give the images [...]:** the conversion does not match the scan, so the data may be incomplete or damaged. *What to do:* check the series in the scanner export; do not use it until it matches.
 - **The diffusion directions (bval/bvec) are missing, or the number of b-values does not match the volumes:** the series cannot be used for diffusion analysis. *What to do:* re-export the series with its diffusion information.
 - **The JSON sidecar is missing:** BIDS needs it. *What to do:* convert again; if it persists, report it.
+
+## Organizing codes (Stage 2d)
+
+### ORGANIZE_NEEDS_CONVERSION
+- **What happened:** Some series that are set to be imported are not converted yet, or their conversion failed. Nothing was written to `rawbids/`.
+- **Suggested action:** Run `mrforge import convert` and fix any failed series first.
+
+### ORGANIZE_COLLISION
+- **What happened:** `rawbids/` already contains different files with the same names.
+- **Probable cause:** Another import was already written for this subject and session; raw data is never overwritten. (Or a file in `rawbids/` was edited by hand.)
+- **Suggested action:** Import into another subject or session (`mrforge import scan --subject / --session`), or a new workspace.
+
+### ORGANIZE_WOULD_RENAME
+- **What happened:** Adding or changing series would change the names of files already in `rawbids/` (for example a second run of the same task needs `run-1` and `run-2`).
+- **Suggested action:** Create a new workspace and import again with the final choices.
+
+### FIELDMAP_UNKNOWN / BAD_FIELDMAP / FIELDMAP_NOT_APPLICABLE
+- **What happened:** `--fieldmap` named a series that is not a fieldmap to be imported, was not a series number or `none`, or was given for a series that is not a BOLD or diffusion run.
+- **Suggested action:** Use the series number of a fieldmap magnitude series, or `none`, on a BOLD or diffusion run. See `mrforge import show`.
+
+### PRIVACY_LIST_INVALID
+- **What happened:** The sidecar privacy list could not be used.
+- **Suggested action:** Correct the file (it needs a `remove:` list of field names), or remove it to use the built-in list.

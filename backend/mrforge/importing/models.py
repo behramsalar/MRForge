@@ -78,6 +78,7 @@ class Override(BaseModel):
     kind: str | None = None  # a kind from the rules table; None keeps the rules' kind
     skip: bool = False
     entities: dict[str, str] = {}
+    fieldmap: str | None = None  # "none", or the series number of the fieldmap to use
     decided: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -106,6 +107,13 @@ class Conversion(BaseModel):
     problems: list[str] = []  # why it failed or what does not match the scan
     warnings: list[str] = []
     converted: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class OrganizedSeries(BaseModel):
+    """The files of one series as written into rawbids/ (paths relative to the workspace)."""
+
+    files: dict[str, str]  # path -> sha256
+    organized: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class SkippedFile(BaseModel):
@@ -139,6 +147,8 @@ class ImportManifest(BaseModel):
     classifications: dict[str, Classification] = {}  # by series uid (from the rules)
     overrides: dict[str, Override] = {}  # by series uid (from the user)
     conversions: dict[str, Conversion] = {}  # by series uid (from dcm2niix)
+    organized: dict[str, OrganizedSeries] = {}  # by series uid (what is in rawbids/)
+    organize_notes: list[str] = []  # things the organizer left out, and why
     skipped_files: list[SkippedFile] = []
     tool_versions: dict[str, str] = {}
     commands: list[CommandRecord] = []
