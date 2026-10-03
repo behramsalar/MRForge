@@ -8,6 +8,7 @@ whole import on the real session.
 import json
 import os
 import stat
+import zlib
 from pathlib import Path
 
 import nibabel
@@ -85,9 +86,14 @@ def fabricate(
         for suffix in suffixes:
             stem = out / f"{s.number}{'_' + suffix if suffix else ''}"
             volumes = s.volumes or 1
-            shape = [4, 4, 3] + ([volumes] if volumes > 1 else [])
-            data = np.full(shape, hash((m.id, tag, s.number, suffix)) % 1000, dtype="int16")
-            nibabel.save(nibabel.Nifti1Image(data, np.eye(4)), str(stem) + ".nii.gz")
+            shape = [8, 8, 4] + ([volumes] if volumes > 1 else [])
+            seed = zlib.crc32(f"{m.id}/{tag}/{s.number}/{suffix}".encode())
+            data = np.random.default_rng(seed).integers(0, 1000, size=shape, dtype="int16")
+            image = nibabel.Nifti1Image(data, np.eye(4))
+            image.header.set_xyzt_units("mm", "sec")  # as dcm2niix writes
+            if len(shape) == 4:
+                image.header.set_zooms((1.0, 1.0, 1.0, 2.0))  # time step = TR
+            nibabel.save(image, str(stem) + ".nii.gz")
             te = next((o.echo_time_s for o in s.outputs if o.suffix == suffix), 0.03)
             sidecar = {
                 "RepetitionTime": 2.0,
@@ -96,7 +102,7 @@ def fabricate(
                 **PRIVATE,
             }
             if s.number == 6:
-                sidecar["SliceTiming"] = [0.0, 1.0]
+                sidecar["SliceTiming"] = [0.0, 0.5, 1.0, 1.5]  # one value per slice (4)
             Path(str(stem) + ".json").write_text(json.dumps(sidecar))
             if plan[s.uid].kind == "dwi":
                 Path(str(stem) + ".bval").write_text(" ".join(["1000"] * volumes) + "\n")
@@ -223,7 +229,7 @@ def test_task_name_slice_timing_and_phase_encoding_are_kept(
 ) -> None:
     organize(ws, ready, rules)
     bold = sidecar(ws, "sub-001/func/sub-001_task-rest_bold.json")
-    assert bold["TaskName"] == "rest" and bold["SliceTiming"] == [0.0, 1.0]
+    assert bold["TaskName"] == "rest" and bold["SliceTiming"] == [0.0, 0.5, 1.0, 1.5]
     assert bold["PhaseEncodingDirection"] == "j-"
 
 

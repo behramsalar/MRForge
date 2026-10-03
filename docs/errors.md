@@ -174,3 +174,21 @@ Conversion never stops the whole import for one bad series. Problems are recorde
 ### PRIVACY_LIST_INVALID
 - **What happened:** The sidecar privacy list could not be used.
 - **Suggested action:** Correct the file (it needs a `remove:` list of field names), or remove it to use the built-in list.
+
+## Validation codes (Stage 2e)
+
+BIDS validator problems are shown by `mrforge import validate` in plain language ("what happened / why / what to do"), using the explanations in `backend/mrforge/importing/bids_messages.yaml`. The validator's own number is shown in brackets after each problem. Errors must be fixed; warnings are worth knowing.
+
+### VALIDATOR_NOT_FOUND
+- **What happened:** The BIDS validator could not be found.
+- **Probable cause:** It is not installed, or MRForge does not know where it is.
+- **Suggested action:** Install it with `npm install -g bids-validator`, or run `mrforge config bids-validator /path/to/bids-validator`.
+
+### VALIDATOR_FAILED
+- **What happened:** The validator ran but did not give a usable answer.
+- **Probable cause:** It crashed, or node is missing.
+- **Suggested action:** Run `bids-validator <rawbids folder>` yourself to see why, or reinstall it.
+
+### NOTHING_TO_VALIDATE / NOT_A_VALIDATOR / MESSAGES_INVALID
+- **What happened:** There is no `rawbids/` folder yet; the path given to `mrforge config bids-validator` is not a file; or the message file is damaged.
+- **Suggested action:** Run `mrforge import run` first; give the path from `which bids-validator`; restore `bids_messages.yaml`.

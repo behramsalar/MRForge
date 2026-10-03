@@ -25,6 +25,7 @@ markers = [
     "fsl: integration tests that need a working FSL installation",
     "slow: tests that take many minutes (fsl_anat); run with -m \"fsl and slow\"",
     "realdata: tests that need the real DICOM test session (skipped when it is missing)",
+    "bidsvalidator: tests that run the real BIDS validator (skipped when it is not installed)",
 ]
 
 [tool.ruff]

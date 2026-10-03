@@ -14,7 +14,7 @@ Last test status: `pytest -m "not fsl"` 82 passed; `pytest -m "fsl and not slow"
 | 2b Classification | done |
 | 2c Conversion (dcm2niix) | done |
 | 2d BIDS organizer | done |
-| 2e Validator + plain-language messages | not started |
+| 2e Validator + plain-language messages | done |
 | 2f Import existing NIfTI / BIDS | not started |
 
 ## Known issues / limits
@@ -32,4 +32,4 @@ Last test status: `pytest -m "not fsl"` 82 passed; `pytest -m "fsl and not slow"
 - Fieldmap handling: your DICOM set contains gradient-echo field maps; types to confirm before Stage 5c.
 
 ## Next action
-Sub-step 2e: BIDS validator integration with plain-language messages.
+Sub-step 2f: import existing NIfTI files and existing BIDS datasets (no conversion), then the stage-end protocol.

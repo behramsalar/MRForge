@@ -14,6 +14,11 @@ from mrforge.config import load_config, save_config
 from mrforge.engine import Action, StepOutcome, latest_pipeline_run, run_pipeline, run_step
 from mrforge.errors import StepError
 from mrforge.fsl_env import find_fsl, looks_like_fsl
+from mrforge.importing.bids_validate import (
+    find_validator,
+    format_report,
+    validate_dataset,
+)
 from mrforge.importing.classify import (
     apply_rules,
     effective_all,
@@ -329,11 +334,30 @@ def import_run(
     uses = build_plan(ws, manifest, rules).uses
     written = organize(ws, manifest, rules)
     _print_organized(ws, manifest, written, uses)
+    typer.echo("")
+    try:
+        typer.echo(format_report(validate_dataset(ws)))
+    except StepError as err:  # the check is a bonus here: its absence must not undo the import
+        typer.echo(f"BIDS check skipped: {err.message}\n{err.suggested_action}")
     if pending:
         typer.echo(
             f"\n{len(pending)} series still need your input and were not imported "
             "(see 'mrforge import show')."
         )
+
+
+@import_app.command("validate")
+@friendly
+def import_validate(
+    workspace: WorkspaceOption = Path("."),
+    as_json: Annotated[bool, typer.Option("--json", help="Print the report as JSON.")] = False,
+) -> None:
+    """Check rawbids/ against the BIDS standard and explain any problems in plain language."""
+    ws = Workspace.open(workspace)
+    report = validate_dataset(ws)
+    typer.echo(report.model_dump_json(indent=2) if as_json else format_report(report))
+    if not report.ok:
+        raise typer.Exit(1)
 
 
 @import_app.command("classify")
@@ -355,6 +379,29 @@ def import_classify(
     apply_rules(manifest, rules)
     save_manifest(ws, manifest)
     typer.echo(format_manifest(manifest, effective_all(manifest, rules)))
+
+
+@config_app.command("bids-validator")
+@friendly
+def config_bids_validator(
+    path: Annotated[
+        Path | None, typer.Argument(help="The bids-validator program (omit to show what is used).")
+    ] = None,
+) -> None:
+    """Show or set where the BIDS validator is installed."""
+    if path is not None:
+        path = path.expanduser().resolve()
+        if not path.is_file():
+            raise StepError(
+                code="NOT_A_VALIDATOR",
+                message=f"{path} is not a file.",
+                suggested_action="Give the path of the bids-validator program "
+                "(find it with 'which bids-validator').",
+            )
+        save_config({**load_config(), "bids_validator": str(path)})
+        typer.echo(f"MRForge will use the BIDS validator at {path}")
+        return
+    typer.echo(f"BIDS validator: {find_validator()}")
 
 
 @app.command("steps")
