@@ -96,7 +96,7 @@ def test_unchanged_rerun_is_skipped(ws: Workspace, queue: LocalJobQueue) -> None
     first = run_step(ws, queue, "fake", "sub-001")
     second = run_step(ws, queue, "fake", "sub-001")
     assert (first.action, second.action) == (Action.RAN, Action.REUSED)
-    assert "already completed" in second.reason and second.job_id == first.job_id
+    assert "nothing changed" in second.reason and second.job_id == first.job_id
     assert len(list_jobs(ws)) == 1
 
 
@@ -190,7 +190,7 @@ def test_upstream_rerun_invalidates_downstream(ws: Workspace, queue: LocalJobQue
     # 'duration' does not change a's output bytes, but a does rerun, so b and c must too.
     out = run_pipeline(ws, queue, chain(a_params={"duration": 0.1}))
     assert actions(out) == ["Ran", "Ran", "Ran"]
-    assert "step 'a' ran again" in out[1].reason
+    assert "step 'a'" in out[1].reason and "was just run" in out[1].reason
 
 
 def test_resume_after_killed_tool_starts_at_interrupted_step(

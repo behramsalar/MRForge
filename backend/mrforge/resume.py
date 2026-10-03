@@ -77,4 +77,4 @@ def check_reusable(
         if file_sha256(ws, rel) != recorded_out[rel]:
             return Reuse(False, f"a result was modified after it was made: {rel}")
 
-    return Reuse(True, "already completed with the same settings and inputs", prov.job_id)
+    return Reuse(True, "nothing changed since the last run", prov.job_id)

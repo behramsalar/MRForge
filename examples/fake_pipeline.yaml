@@ -1,0 +1,18 @@
+# A three-step demo pipeline that uses the built-in test step (no FSL needed).
+# Step 'c' fails the first time it runs, then succeeds: try
+#   mrforge pipeline run examples/fake_pipeline.yaml -w <workspace>
+#   mrforge resume -w <workspace>
+name: fake-demo
+subject: sub-001
+steps:
+  - id: a
+    step: fake
+    params: {duration: 1}
+  - id: b
+    step: fake
+    inputs: {sources: ["${a.result}"]}
+    params: {duration: 1}
+  - id: c
+    step: fake
+    inputs: {sources: ["${b.result}"]}
+    params: {duration: 1, fail_once_marker: fail_once.marker}

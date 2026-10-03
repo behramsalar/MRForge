@@ -26,6 +26,9 @@ class FakeParams(BaseModel):
     duration: float = 0.0  # seconds of fake work
     fail_at: Literal["never", "start", "middle", "end", "command"] = "never"
     content: str = "x"
+    # Fail the first time only: creates this file (relative to the workspace) and fails if
+    # it did not exist yet. Lets tests and demos show "fail, then resume".
+    fail_once_marker: str | None = None
 
 
 class FakeOutput(BaseModel):
@@ -57,6 +60,11 @@ class FakeStep(Step[FakeInput, FakeParams, FakeOutput]):
         p = ctx.params
         if p.fail_at == "start":
             raise self._fail("start")
+        if p.fail_once_marker:
+            marker = ctx.workspace.root / p.fail_once_marker
+            if not marker.exists():
+                marker.write_text("failed once\n")
+                raise self._fail("first attempt")
         self._sleep(ctx, p.duration / 2)
         if p.fail_at == "middle":
             raise self._fail("middle")

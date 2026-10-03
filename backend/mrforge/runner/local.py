@@ -60,6 +60,10 @@ class LocalJobQueue(JobQueue):
             assert job.pid is not None
             os.kill(job.pid, signal.SIGTERM)
 
+    def cancel_all(self) -> None:
+        for job_id in list(self._pending) + list(self._running):
+            self.cancel(job_id)
+
     def wait(self, timeout: float | None = None) -> bool:
         deadline = None if timeout is None else time.monotonic() + timeout
         while self._pending or self._running:

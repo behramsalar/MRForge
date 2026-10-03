@@ -16,5 +16,9 @@ class JobQueue(ABC):
         """Cancel a queued job, or stop a running one."""
 
     @abstractmethod
+    def cancel_all(self) -> None:
+        """Cancel every queued and running job (used when the user presses Ctrl-C)."""
+
+    @abstractmethod
     def wait(self, timeout: float | None = None) -> bool:
         """Block until no queued or running jobs remain. Returns False on timeout."""

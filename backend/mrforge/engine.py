@@ -98,7 +98,9 @@ def run_pipeline(ws: Workspace, queue: JobQueue, spec: PipelineSpec) -> list[Ste
             st.params,
             st.session,
             force=bool(upstream_dirty),
-            force_reason=f"step '{upstream_dirty[0]}' ran again" if upstream_dirty else "",
+            force_reason=(
+                f"step '{upstream_dirty[0]}', which it uses, was just run" if upstream_dirty else ""
+            ),
             pipeline_run_id=run_id,
             label=st.id,
         )
