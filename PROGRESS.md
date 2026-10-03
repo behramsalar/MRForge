@@ -1,13 +1,13 @@
 # Progress
 
-**Current stage:** 2 (Import and BIDS), branch `stage-2-import`. Stages 0 and 1 accepted (tags `stage0-accepted`, `stage1-accepted`).
+**Current stage:** 2 accepted; Stage 3 (first vertical slice) not started. Stages 0, 1 and 2 accepted (tags `stage0-accepted`, `stage1-accepted`, `stage2-accepted`).
 
 ## Stage 1 (accepted)
 Headless engine: workspace + SQLite, Step contract, job runner with stale-job recovery, provenance and resume, `mrforge` CLI, FakeStep, `bet`, `fsl_anat`. Amendments made at acceptance: subcortical segmentation is opt-in; results use a full BIDS derivatives layout (`derivatives/mrforge/sub-XXX/[ses-YY/]anat/` with BIDS names, native `sub-001_T1w.anat/`, per-step `_runs/<label>/`).
 
 Last test status: `pytest -m "not fsl"` 82 passed; `pytest -m "fsl and not slow"` 6 passed; `pytest -m "fsl and slow"` kill test passed (24 s) and full `fsl_anat` vs manual run passed (18 min 30 s); ruff and mypy clean.
 
-## Stage 2 (Import and BIDS): all sub-steps done, waiting for "stage accepted"
+## Stage 2 (Import and BIDS): accepted
 | Sub-step | Status |
 |---|---|
 | 2a Scan + metadata | done |
@@ -17,7 +17,7 @@ Last test status: `pytest -m "not fsl"` 82 passed; `pytest -m "fsl and not slow"
 | 2e BIDS validator + plain-language messages | done |
 | 2f Import existing NIfTI files / BIDS datasets | done |
 
-Last test status: `pytest -m "not fsl"` 267 passed (includes real-session tests and real-validator tests); `pytest -m "fsl and not slow"` 6 passed; `pytest -m "fsl and slow" -k kill` passed. The slow full `fsl_anat` comparison (about 19 minutes) was not re-run in Stage 2 (the engine and the FSL steps were not changed). ruff and mypy clean.
+Last test status: `pytest -m "not fsl"` 304 passed (includes real-session tests and real-validator tests); `pytest -m "fsl and not slow"` 6 passed; `pytest -m "fsl and slow" -k kill` passed. The slow full `fsl_anat` comparison (about 19 minutes) was not re-run in Stage 2 (the engine and the FSL steps were not changed). ruff and mypy clean.
 
 Demo workspace with your real session imported: `~/Documents/mrforge-workspaces/import-test`.
 
@@ -42,4 +42,4 @@ Demo workspace with your real session imported: `~/Documents/mrforge-workspaces/
 - Fieldmap handling: your DICOM set contains gradient-echo field maps; types to confirm before Stage 5c.
 
 ## Next action
-User runs the Stage 2 manual checklist and says "stage accepted" (or lists changes). Then merge to `main`, tag `stage2-accepted`, plan Stage 3.
+Plan Stage 3 (backend API + minimal real UI) in plan mode. Component library, viewer and layout need the user's decision (CLAUDE.md 3b/3c).
