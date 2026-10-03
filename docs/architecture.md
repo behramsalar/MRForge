@@ -127,7 +127,7 @@ All codes are catalogued in `docs/errors.md`. Raw tool output is never the only 
 
 ## 10. Environment notes (this machine)
 
-macOS arm64, FSL 6.0.7.23 at `~/fsl`, project Python venv `~/progders`. Non-login shells do not load `FSLDIR` (set in `~/.zprofile`). **[PROPOSAL]** The job runner builds the subprocess environment explicitly from a configured `FSLDIR` (sourcing `fsl.sh` semantics: `FSLDIR`, `PATH`, `FSLOUTPUTTYPE=NIFTI_GZ`) rather than inheriting whatever shell started the server.
+macOS arm64, FSL 6.0.7.23 at `~/fsl`, project Python venv `~/progders`. Non-login shells do not load `FSLDIR` (set in `~/.zprofile`). The app must run on other machines, so **no FSL path is hard-coded**. The FSL location is resolved in this order: app setting, then the `FSLDIR` environment variable, then common install locations; if none works the UI shows a plain message about where to set it. The job runner then builds the subprocess environment from the resolved location (`FSLDIR`, `PATH`, `FSLOUTPUTTYPE=NIFTI_GZ`) rather than inheriting whatever shell started the server. (Decided 2026-10-03, see `DECISIONS.md`.)
 
 ## 11. Glossary
 
@@ -142,11 +142,7 @@ macOS arm64, FSL 6.0.7.23 at `~/fsl`, project Python venv `~/progders`. Non-logi
 
 ## 12. Open questions (for you)
 
-1. **Source of truth**: provenance files durable, SQLite rebuildable (as drafted), or the reverse?
-2. **Hashing**: SHA-256 of every input on each resume check is slow for large 4D files. OK to cache hashes keyed by (path, size, mtime) and rehash only when those change?
-3. **Liveness check**: OK with PID + start time for detecting interrupted jobs (section 5)?
-4. **FSL environment**: OK for the runner to construct the FSL environment from a configured `FSLDIR` instead of inheriting the shell (section 10)? Preferred output type `NIFTI_GZ`?
-5. **Path style**: workspace-relative paths in provenance (as drafted) so workspaces are movable?
-6. **Multi-session**: is `ses-*` needed from the start, or may sessions be optional and omitted from paths when absent (as drafted)?
-7. **Step granularity of `fsl_anat`**: wrap as one step (per CLAUDE.md 1h) even though it is internally many stages. Resume inside it is then all-or-nothing. Acceptable?
-8. **Scanner/fieldmap types** your lab uses (needed before Stage 5c) and who the lab members for UX feedback are (CLAUDE.md section 0 still blank).
+Questions 1-7 (source of truth, hash caching, crash detection, FSL lookup, relative paths, optional sessions, `fsl_anat` as one step) were answered on 2026-10-03; see `DECISIONS.md`. Still open:
+
+1. **Fieldmap types** the lab's scanner produces (needed before Stage 5c). The app must work with and without fieldmaps.
+2. **Lab members for UX feedback** (CLAUDE.md section 0; needed from Stage 3/4 only).
