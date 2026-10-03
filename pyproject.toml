@@ -3,10 +3,13 @@ name = "mrforge"
 version = "0.0.0"
 description = "Guided, reliable MRI/fMRI analysis on top of FSL"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["pydantic>=2", "sqlalchemy>=2", "typer", "psutil", "pyyaml"]
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff", "mypy"]
+dev = ["pytest", "ruff", "mypy", "types-psutil", "types-PyYAML"]
+
+[project.scripts]
+mrforge = "mrforge.cli:app"
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -18,7 +21,10 @@ where = ["backend"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["backend", "scripts"]
-markers = ["fsl: integration tests that need a working FSL installation"]
+markers = [
+    "fsl: integration tests that need a working FSL installation",
+    "slow: tests that take many minutes (fsl_anat); run with -m \"fsl and slow\"",
+]
 
 [tool.ruff]
 line-length = 100
@@ -27,6 +33,9 @@ extend-exclude = ["frontend"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mrforge"]
 
 [tool.mypy]
 python_version = "3.11"

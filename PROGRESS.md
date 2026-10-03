@@ -1,24 +1,35 @@
 # Progress
 
-**Current stage:** 0 (Foundations), branch `stage-0-foundations`
+**Current stage:** 2 (Import and BIDS), branch `stage-2-import`. Stages 0 and 1 accepted (tags `stage0-accepted`, `stage1-accepted`).
 
+## Stage 1 (accepted)
+Headless engine: workspace + SQLite, Step contract, job runner with stale-job recovery, provenance and resume, `mrforge` CLI, FakeStep, `bet`, `fsl_anat`. Amendments made at acceptance: subcortical segmentation is opt-in; results use a full BIDS derivatives layout (`derivatives/mrforge/sub-XXX/[ses-YY/]anat/` with BIDS names, native `sub-001_T1w.anat/`, per-step `_runs/<label>/`).
+
+Last test status: `pytest -m "not fsl"` 82 passed; `pytest -m "fsl and not slow"` 6 passed; `pytest -m "fsl and slow"` kill test passed (24 s) and full `fsl_anat` vs manual run passed (18 min 30 s); ruff and mypy clean.
+
+## Stage 2 sub-steps
 | Sub-step | Status |
 |---|---|
-| 0a Repo scaffold | done |
-| 0b `scripts/check_env.py` | done |
-| 0c `docs/architecture.md` | done (draft; user review pending) |
-| 0d DECISIONS / TEST_DATA / PROGRESS | done |
-| CLAUDE.md update (`mriapp` -> `mrforge`, section 0 facts) | waiting for user approval of diff |
+| 2a Scan + metadata | not started |
+| 2b Classification | not started |
+| 2c Conversion (dcm2niix) | not started |
+| 2d BIDS organizer | not started |
+| 2e Validator + plain-language messages | not started |
+| 2f Import existing NIfTI / BIDS | not started |
 
-## Known issues
-- Non-login shells do not load `FSLDIR` (set in `~/.zprofile`). Handled in design by configurable FSL lookup (see DECISIONS).
-- `bids-validator` is only on PATH when nvm's Node is loaded.
-- Test data is full-size DICOM (1.2 GB), possibly with identifying info; not suitable for fast unit tests.
+## Known issues / limits
+- The installed BIDS validator (npm `bids-validator` 1.15.0) predates derivatives support and rejects `desc-` files as 'not part of BIDS'. Layout is checked by tests and by eye; validator upgrade is proposed for Stage 2e.
+- One `fsl_anat` per T1 input per subject: two runs with different labels on the same input would share the native `.anat` folder and several result names.
+- One `LocalJobQueue` per workspace at a time (two could start the same queued job).
+- Pipelines run steps sequentially; per-subject parallelism is Stage 6.
+- No QC output yet for `bet`/`fsl_anat` (QC contract exists; real QC arrives in Stage 5).
+- `fsl_anat` leaves stray `imcp.e<PID>`/`imcp.o<PID>` files; ignored.
+- The claim "fsl_anat on a skull-stripped input skips registration" is from the script source, not an experiment.
+- Test data is full-size DICOM, possibly with identifying information.
 
 ## Open questions
-- Lab members for UX feedback (blank; needed only from Stage 3/4).
-- Fieldmap types the lab's scanner produces (needed before Stage 5c).
-- Public test datasets to record in `docs/TEST_DATA.md`.
+- Lab members for UX feedback (needed from Stage 3/4).
+- Fieldmap handling: your DICOM set contains gradient-echo field maps; types to confirm before Stage 5c.
 
 ## Next action
-User reviews `docs/architecture.md` and the stage-end checklist; then says "stage accepted".
+Start sub-step 2a (install pydicom and nibabel, scan DICOM folders/ZIPs).
