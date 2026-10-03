@@ -1,6 +1,6 @@
 # Progress
 
-**Current stage:** 2 accepted; Stage 3 (first vertical slice) not started. Stages 0, 1 and 2 accepted (tags `stage0-accepted`, `stage1-accepted`, `stage2-accepted`).
+**Current stage:** Stage 3 in progress (branch `stage-3-api-ui`): 3a API done except the generated typed client (comes with the frontend scaffold); 3b-3f not started. Stages 0, 1 and 2 accepted (tags `stage0-accepted`, `stage1-accepted`, `stage2-accepted`).
 
 ## Stage 1 (accepted)
 Headless engine: workspace + SQLite, Step contract, job runner with stale-job recovery, provenance and resume, `mrforge` CLI, FakeStep, `bet`, `fsl_anat`. Amendments made at acceptance: subcortical segmentation is opt-in; results use a full BIDS derivatives layout (`derivatives/mrforge/sub-XXX/[ses-YY/]anat/` with BIDS names, native `sub-001_T1w.anat/`, per-step `_runs/<label>/`).
@@ -42,4 +42,4 @@ Demo workspace with your real session imported: `~/Documents/mrforge-workspaces/
 - Fieldmap handling: your DICOM set contains gradient-echo field maps; types to confirm before Stage 5c.
 
 ## Next action
-Plan Stage 3 (backend API + minimal real UI) in plan mode. Component library, viewer and layout need the user's decision (CLAUDE.md 3b/3c).
+3a quick check by the user, then 3b (NiiVue spike and frontend scaffold with the typed client). Decisions made: Radix Themes, server-side folder browser, workspaces in ~/Documents/mrforge-workspaces/.
