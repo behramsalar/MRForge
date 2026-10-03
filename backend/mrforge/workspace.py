@@ -16,7 +16,7 @@ from mrforge.bids import init_derivatives
 from mrforge.models import Base, Subject
 from mrforge.models import Workspace as WorkspaceRow
 
-SCHEMA_VERSION = 2  # 2: BIDS derivatives layout (results folder + _runs/<label>/)
+SCHEMA_VERSION = 3  # 2: BIDS derivatives layout; 3: structured Job.error (auto-migrated from 2)
 APP_DIRNAME = "mrforge"  # derivatives/<appname>/
 
 SUBDIRS = ("sourcedata/dicom", "rawbids", f"derivatives/{APP_DIRNAME}", "reports")
@@ -70,6 +70,8 @@ class Workspace:
                 f"No workspace found in {root}. Create one with 'mrforge workspace create'."
             )
         meta = json.loads(meta_path.read_text())
+        if meta.get("schema_version") == 2:
+            _migrate_2_to_3(root, meta)
         if meta.get("schema_version") != SCHEMA_VERSION:
             raise WorkspaceError(
                 f"This workspace uses layout version {meta.get('schema_version')}, "
@@ -112,3 +114,14 @@ class Workspace:
 def _engine(root: Path) -> Engine:
     # Several worker processes write to this database; wait for locks instead of failing.
     return create_engine(f"sqlite:///{root / 'db.sqlite'}", connect_args={"timeout": 30})
+
+
+def _migrate_2_to_3(root: Path, meta: dict[str, object]) -> None:
+    """Version 3 adds the ``error`` column to jobs. Nothing else changes."""
+    engine = _engine(root)
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(job)")}
+        if cols and "error" not in cols:
+            conn.exec_driver_sql("ALTER TABLE job ADD COLUMN error JSON")
+    meta["schema_version"] = SCHEMA_VERSION
+    (root / "workspace.json").write_text(json.dumps(meta, indent=2) + "\n")

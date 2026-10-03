@@ -121,7 +121,7 @@ def run_job(ws: Workspace, job_id: int) -> JobStatus:
         record_tool_versions(ws.derivatives_dir, {**versions, **step.tool_versions(ctx)})
         _finish(ws, job_id, status, None, None, return_code=0)
     else:
-        _finish(ws, job_id, status, error.code, error.format())
+        _finish(ws, job_id, status, error.code, error.format(), error=error.to_dict())
     return status
 
 
@@ -132,6 +132,7 @@ def _finish(
     code: str | None,
     message: str | None,
     return_code: int | None = 1,
+    error: dict[str, object] | None = None,
 ) -> None:
     update_job(
         ws,
@@ -141,6 +142,7 @@ def _finish(
         return_code=return_code,
         error_code=code,
         error_message=message,
+        error=error,
     )
 
 
@@ -151,7 +153,14 @@ def main(argv: list[str]) -> int:
     try:
         status = run_job(ws, job_id)
     except Cancelled:
-        _finish(ws, job_id, JobStatus.CANCELLED, "CANCELLED", "The step was cancelled.")
+        _finish(
+            ws,
+            job_id,
+            JobStatus.CANCELLED,
+            "CANCELLED",
+            "The step was cancelled.",
+            error=StepError("CANCELLED", "The step was cancelled.").to_dict(),
+        )
         return 1
     return 0 if status == JobStatus.COMPLETED else 1
 
