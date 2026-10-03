@@ -372,6 +372,8 @@ def _label(subject: str, session: str | None) -> str:
 def _find_existing(ws: Workspace, info: SourceInfo) -> ImportManifest | None:
     for manifest in list_manifests(ws):
         same = manifest.source.fingerprint == info.fingerprint
+        if manifest.source.kind in ("nifti", "bids"):
+            continue  # those imports are found by their own commands
         if same and (ws.root / manifest.dicom_dir).is_dir():
             return manifest
     return None

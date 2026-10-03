@@ -123,7 +123,7 @@ class SkippedFile(BaseModel):
 
 class SourceInfo(BaseModel):
     name: str  # the folder or ZIP name as given by the user
-    kind: Literal["folder", "zip"]
+    kind: Literal["folder", "zip", "nifti", "bids"]
     n_files: int
     fingerprint: str  # hash of the file names and sizes; recognises the same source again
 
@@ -140,8 +140,8 @@ class ImportManifest(BaseModel):
     id: str  # "import-001"
     created: datetime = Field(default_factory=lambda: datetime.now(UTC))
     source: SourceInfo
-    dicom_dir: str  # workspace-relative folder under sourcedata/dicom/
-    subject: str  # e.g. "sub-001"
+    dicom_dir: str = ""  # workspace-relative folder under sourcedata/dicom/ (DICOM imports)
+    subject: str = ""  # e.g. "sub-001" (empty for a whole-dataset BIDS import)
     session: str | None = None
     series: list[DicomSeries] = []
     classifications: dict[str, Classification] = {}  # by series uid (from the rules)

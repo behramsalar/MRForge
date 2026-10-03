@@ -26,6 +26,7 @@ from mrforge.importing.classify import (
     set_override,
 )
 from mrforge.importing.convert import convert_import
+from mrforge.importing.existing import format_bids_import, import_bids, import_nifti
 from mrforge.importing.manifest import load_manifest, save_manifest
 from mrforge.importing.models import ImportManifest
 from mrforge.importing.organize import OrganizeSummary, build_plan, organize
@@ -344,6 +345,81 @@ def import_run(
             f"\n{len(pending)} series still need your input and were not imported "
             "(see 'mrforge import show')."
         )
+
+
+def _bids_check(ws: Workspace) -> None:
+    """Show the BIDS check of rawbids/; a missing validator is a note, not a failure."""
+    typer.echo("")
+    try:
+        typer.echo(format_report(validate_dataset(ws)))
+    except StepError as err:
+        typer.echo(f"BIDS check skipped: {err.message}\n{err.suggested_action}")
+
+
+@import_app.command("nifti")
+@friendly
+def import_nifti_command(
+    files: Annotated[list[Path], typer.Argument(help="One or more .nii / .nii.gz files.")],
+    kind: Annotated[str, typer.Option("--type", help="What they are: T1w, T2w, bold or dwi.")],
+    workspace: WorkspaceOption = Path("."),
+    subject: Annotated[
+        str | None, typer.Option("--subject", "-s", help="Subject label (default: next free).")
+    ] = None,
+    session: Annotated[str | None, typer.Option(help="Session label, e.g. ses-01.")] = None,
+    task: Annotated[str | None, typer.Option(help="Task name (required for bold).")] = None,
+    acq: Annotated[str | None, typer.Option(help="Acquisition label, e.g. highres.")] = None,
+    tr: Annotated[float | None, typer.Option(help="Repetition time in seconds (bold).")] = None,
+) -> None:
+    """Import NIfTI files that already exist (no conversion). The files are copied, never moved."""
+    ws = Workspace.open(workspace)
+    rules = load_rules(ws)
+    result = import_nifti(ws, files, kind, rules, subject, session, task, acq, tr)
+    manifest = result.manifest
+    where = manifest.subject + (f"/{manifest.session}" if manifest.session else "")
+    typer.echo(f"{manifest.id}: {len(files)} NIfTI file(s) as {kind}, {where}.")
+    for index, path in enumerate(files, start=1):  # file names are shown here, never stored
+        typer.echo(f"  file {index} ({path.name})")
+    if not result.is_new:
+        typer.echo("These files were already imported; nothing was copied again.")
+    _print_organized(ws, manifest, result.summary, {})
+    for note in result.notes:
+        typer.echo(f"  Note: {note}")
+    _bids_check(ws)
+
+
+@import_app.command("bids")
+@friendly
+def import_bids_command(
+    source: Annotated[Path, typer.Argument(help="Top folder of an existing BIDS dataset.")],
+    workspace: WorkspaceOption = Path("."),
+    allow_errors: Annotated[
+        bool, typer.Option(help="Import even if the dataset has BIDS errors.")
+    ] = False,
+) -> None:
+    """Import an existing BIDS dataset into rawbids/ (copied, no conversion)."""
+    ws = Workspace.open(workspace)
+    result = import_bids(ws, source, allow_errors)
+    typer.echo(format_bids_import(result))
+    if not result.is_new:
+        typer.echo("This dataset was already imported; nothing was changed.")
+    _bids_check(ws)
+
+
+@import_app.command("list")
+@friendly
+def import_list(workspace: WorkspaceOption = Path(".")) -> None:
+    """List the imports in this workspace."""
+    from mrforge.importing.manifest import list_manifests
+
+    ws = Workspace.open(workspace)
+    manifests = list_manifests(ws)
+    if not manifests:
+        typer.echo("Nothing has been imported yet.")
+    for m in manifests:
+        what = {"folder": "DICOM folder", "zip": "DICOM zip", "nifti": "NIfTI", "bids": "BIDS"}
+        who = m.subject or "(whole dataset)"
+        count = f"{len(m.series)} series" if m.series else f"{m.source.n_files} files"
+        typer.echo(f"{m.id}  {what[m.source.kind]:<13} {who:<18} {count}")
 
 
 @import_app.command("validate")

@@ -192,3 +192,29 @@ BIDS validator problems are shown by `mrforge import validate` in plain language
 ### NOTHING_TO_VALIDATE / NOT_A_VALIDATOR / MESSAGES_INVALID
 - **What happened:** There is no `rawbids/` folder yet; the path given to `mrforge config bids-validator` is not a file; or the message file is damaged.
 - **Suggested action:** Run `mrforge import run` first; give the path from `which bids-validator`; restore `bids_messages.yaml`.
+
+## Importing existing data (Stage 2f)
+
+### INPUT_NOT_NIFTI / INPUT_JSON_INVALID
+- **What happened:** A file given to `mrforge import nifti` does not exist, does not end in `.nii`/`.nii.gz`, is damaged, or its `.json` sidecar is not valid JSON.
+- **Suggested action:** Check the file opens in FSLeyes; fix or remove the sidecar.
+
+### NIFTI_WRONG_SHAPE
+- **What happened:** The image does not fit the `--type` given (for example a T1w with several volumes, or a bold run with one).
+- **Suggested action:** Check the file and the type you gave.
+
+### NIFTI_TYPE_UNSUPPORTED / TASK_NEEDED / TR_NEEDED
+- **What happened:** The type cannot be imported from NIfTI files (fieldmaps), or a bold image has no task name or repetition time.
+- **Suggested action:** Use T1w, T2w, bold or dwi; add `--task <name>` and `--tr <seconds>`.
+
+### DWI_NEEDS_DIRECTIONS / DWI_DIRECTIONS_MISMATCH
+- **What happened:** A diffusion image has no `.bval`/`.bvec` next to it, or they do not match its number of volumes.
+- **Suggested action:** Put the b-value and b-vector files exported with the image next to it, with the same name.
+
+### IMPORT_NOT_BIDS / IMPORT_BIDS_IS_DERIVATIVE / IMPORT_BIDS_SELF / IMPORT_BIDS_INVALID
+- **What happened:** The folder given to `mrforge import bids` has no `dataset_description.json`, is a derivatives dataset, is this workspace's own `rawbids/`, or has BIDS errors.
+- **Suggested action:** Choose the top folder of a raw BIDS dataset; for BIDS errors fix them in the source or use `--allow-errors`.
+
+### NO_FILES
+- **What happened:** No NIfTI files were given to `mrforge import nifti`.
+- **Suggested action:** Give one or more `.nii`/`.nii.gz` files.

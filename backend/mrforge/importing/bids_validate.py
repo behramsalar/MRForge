@@ -193,18 +193,9 @@ def parse_validator_json(
     return errors, warnings, summary
 
 
-def validate_dataset(
-    ws: Workspace, setting: str | None = None, dataset: str = "rawbids"
-) -> ValidationReport:
-    """Run the validator on a dataset folder of the workspace and save the report."""
+def validate_path(root: Path, label: str, setting: str | None = None) -> ValidationReport:
+    """Run the validator on any dataset folder (nothing is saved)."""
     exe = find_validator(setting)
-    root = ws.root / dataset
-    if not root.is_dir():
-        raise StepError(
-            code="NOTHING_TO_VALIDATE",
-            message=f"There is no '{dataset}' folder in this workspace yet.",
-            suggested_action="Import data first with 'mrforge import run'.",
-        )
     try:
         proc = subprocess.run(
             [str(exe), "--json", str(root)],
@@ -219,18 +210,32 @@ def validate_dataset(
             code="VALIDATOR_FAILED",
             message="The BIDS validator did not give a usable answer.",
             probable_cause=f"{type(exc).__name__}: it may have crashed, or node is missing.",
-            suggested_action="Run 'bids-validator <rawbids folder>' yourself to see why, or "
+            suggested_action="Run 'bids-validator <dataset folder>' yourself to see why, or "
             "reinstall it with 'npm install -g bids-validator'.",
         ) from exc
     errors, warnings, summary = parse_validator_json(raw, load_messages())
-    report = ValidationReport(
+    return ValidationReport(
         validator=str(exe.name),
         version=validator_version(exe),
-        dataset=dataset,
+        dataset=label,
         errors=errors,
         warnings=warnings,
         summary=summary,
     )
+
+
+def validate_dataset(
+    ws: Workspace, setting: str | None = None, dataset: str = "rawbids"
+) -> ValidationReport:
+    """Run the validator on a dataset folder of the workspace and save the report."""
+    root = ws.root / dataset
+    if not root.is_dir():
+        raise StepError(
+            code="NOTHING_TO_VALIDATE",
+            message=f"There is no '{dataset}' folder in this workspace yet.",
+            suggested_action="Import data first with 'mrforge import run'.",
+        )
+    report = validate_path(root, dataset, setting)
     save_report(ws, report)
     return report
 

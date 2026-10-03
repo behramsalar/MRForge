@@ -15,7 +15,7 @@ Last test status: `pytest -m "not fsl"` 82 passed; `pytest -m "fsl and not slow"
 | 2c Conversion (dcm2niix) | done |
 | 2d BIDS organizer | done |
 | 2e Validator + plain-language messages | done |
-| 2f Import existing NIfTI / BIDS | not started |
+| 2f Import existing NIfTI / BIDS | done |
 
 ## Known issues / limits
 - The installed BIDS validator (npm `bids-validator` 1.15.0) predates derivatives support and rejects `desc-` files as 'not part of BIDS'. Layout is checked by tests and by eye; validator upgrade is proposed for Stage 2e.

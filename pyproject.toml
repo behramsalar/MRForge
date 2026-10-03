@@ -36,6 +36,9 @@ extend-exclude = ["frontend"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]  # the formatter still wraps code; long comment banners and strings are fine
+
 [tool.ruff.lint.isort]
 known-first-party = ["mrforge"]
 

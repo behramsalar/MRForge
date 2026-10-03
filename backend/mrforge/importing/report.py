@@ -80,6 +80,12 @@ def format_manifest(
     why: bool = False,
 ) -> str:
     where = manifest.subject + (f"/{manifest.session}" if manifest.session else "")
+    if manifest.source.kind == "bids":
+        subjects = sorted({u.removeprefix("bids:") for u in manifest.organized})
+        return (
+            f"{manifest.id}: BIDS dataset '{manifest.source.name}', "
+            f"{manifest.source.n_files} files, subjects: {', '.join(subjects) or 'none'}"
+        )
     lines = [
         f"{manifest.id}: {manifest.source.kind} '{manifest.source.name}', "
         f"{manifest.source.n_files} files, {len(manifest.series)} series, as {where}",
