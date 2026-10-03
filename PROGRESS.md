@@ -1,25 +1,21 @@
 # Progress
 
-**Current stage:** 1 (Headless engine), branch `stage-1-engine`. Stage 0 accepted (tag `stage0-accepted`).
+**Current stage:** 2 (Import and BIDS), branch `stage-2-import`. Stages 0 and 1 accepted (tags `stage0-accepted`, `stage1-accepted`).
 
+## Stage 1 (accepted)
+Headless engine: workspace + SQLite, Step contract, job runner with stale-job recovery, provenance and resume, `mrforge` CLI, FakeStep, `bet`, `fsl_anat`. Amendments made at acceptance: subcortical segmentation is opt-in; results use a full BIDS derivatives layout (`derivatives/mrforge/sub-XXX/[ses-YY/]anat/` with BIDS names, native `sub-001_T1w.anat/`, per-step `_runs/<label>/`).
+
+Last test status: `pytest -m "not fsl"` 82 passed; `pytest -m "fsl and not slow"` 6 passed; `pytest -m "fsl and slow"` kill test passed (24 s) and full `fsl_anat` vs manual run passed (18 min 30 s); ruff and mypy clean.
+
+## Stage 2 sub-steps
 | Sub-step | Status |
 |---|---|
-| 1a Models + SQLite, workspace create/open | done |
-| 1b Step base, registry, specs, StepError | done |
-| 1c Job runner (worker processes, stale-job recovery, JobQueue) | done |
-| 1d Provenance, hash cache, resume, pipelines | done |
-| 1e CLI (`mrforge`) | done |
-| 1f FakeStep | done (delivered with 1c; fail-once option with 1e) |
-| 1g BetStep + FSL lookup | done |
-| 1h FslAnatStep | done |
-| Amendments after review | subcortical segmentation opt-in; full BIDS derivatives layout (in progress: verifying with real runs) |
-| Stage-end protocol | done once; redone after the amendments |
-
-## Test status (last run)
-- `pytest -m "not fsl"`: 71 passed
-- `pytest -m "fsl and not slow"`: 6 passed
-- `pytest -m "fsl and slow"`: kill test passed (23 s); full fsl_anat vs manual run passed (21 min 20 s)
-- ruff and mypy: clean
+| 2a Scan + metadata | not started |
+| 2b Classification | not started |
+| 2c Conversion (dcm2niix) | not started |
+| 2d BIDS organizer | not started |
+| 2e Validator + plain-language messages | not started |
+| 2f Import existing NIfTI / BIDS | not started |
 
 ## Known issues / limits
 - The installed BIDS validator (npm `bids-validator` 1.15.0) predates derivatives support and rejects `desc-` files as 'not part of BIDS'. Layout is checked by tests and by eye; validator upgrade is proposed for Stage 2e.
@@ -36,4 +32,4 @@
 - Fieldmap handling: your DICOM set contains gradient-echo field maps; types to confirm before Stage 5c.
 
 ## Next action
-User runs the Stage 1 manual checklist and says "stage accepted" (or lists changes). Then merge to `main`, tag `stage1-accepted`, and plan Stage 2.
+Start sub-step 2a (install pydicom and nibabel, scan DICOM folders/ZIPs).
