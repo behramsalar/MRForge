@@ -97,6 +97,7 @@ class Job(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Structured StepError (code, message, probable_cause, suggested_action, log_path) for the UI.
     error: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    started_by: Mapped[str | None] = mapped_column(String(100), nullable=True)  # researcher
     output_dir: Mapped[str | None] = mapped_column(String(1000), nullable=True)  # results folder
     run_dir: Mapped[str | None] = mapped_column(String(1000), nullable=True)  # provenance + logs
 

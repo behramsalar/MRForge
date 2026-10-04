@@ -51,7 +51,10 @@ function Activity({ ws }: { ws: string }) {
           )}
           {running.map((o) => (
             <Flex key={o.id} justify="between" gap={space.group} align="center">
-              <Text size={type.help}>{o.title}</Text>
+              <Text size={type.help}>
+                {o.title}
+                {o.started_by ? ` · ${o.started_by}` : ""}
+              </Text>
               <StatusBadge status="Running" />
             </Flex>
           ))}
@@ -60,6 +63,7 @@ function Activity({ ws }: { ws: string }) {
               <Text size={type.help}>
                 {stepName[j.step] ?? j.step}
                 {j.run ? ` (${j.run})` : ""}
+                {j.started_by ? ` · ${j.started_by}` : ""}
               </Text>
               <StatusBadge status={j.status} />
             </Flex>

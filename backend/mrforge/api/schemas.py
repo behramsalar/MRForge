@@ -34,6 +34,7 @@ class WorkspaceInfo(BaseModel):
     created: datetime | None = None
     subjects: int = 0
     imports: int = 0
+    created_by: str | None = None  # researcher profile that created it
 
 
 class WorkspaceCreate(BaseModel):
@@ -92,6 +93,7 @@ class ImportSummary(BaseModel):
     organized: int
     dicom_removed: bool
     created: datetime
+    created_by: str | None = None
 
 
 class ImportKind(BaseModel):
@@ -181,6 +183,7 @@ class JobInfo(BaseModel):
     started: datetime | None
     finished: datetime | None
     error: ErrorBody | None
+    started_by: str | None = None
 
 
 class LogText(BaseModel):

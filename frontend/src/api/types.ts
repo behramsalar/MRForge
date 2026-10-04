@@ -20,3 +20,6 @@ export type RunStatus = S["RunStatus"];
 export type QcGroup = S["QcGroup"];
 export type QcEntry = S["QcEntry"];
 export type ResearcherInfo = S["ResearcherInfo"];
+export type Overview = S["Overview"];
+export type SubjectOverview = S["SubjectOverview"];
+export type StageStatus = S["StageStatus"];

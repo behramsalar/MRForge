@@ -48,6 +48,7 @@ export function JobsPanel({
   const rows = latestJobs(jobs);
   if (rows.length === 0) return null;
   const showRun = rows.some((j) => j.run);
+  const showWho = rows.some((j) => j.started_by);
   return (
     <Flex direction="column" gap={space.group}>
       <Heading size={type.sectionTitle}>Progress</Heading>
@@ -59,6 +60,7 @@ export function JobsPanel({
               {showRun && <Table.ColumnHeaderCell>Recording</Table.ColumnHeaderCell>}
               <Table.ColumnHeaderCell>Subject</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
+              {showWho && <Table.ColumnHeaderCell>Started by</Table.ColumnHeaderCell>}
               <Table.ColumnHeaderCell>Started</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell>Time</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell />
@@ -73,6 +75,7 @@ export function JobsPanel({
                 <Table.Cell>
                   <StatusBadge status={j.status} />
                 </Table.Cell>
+                {showWho && <Table.Cell>{j.started_by ?? ""}</Table.Cell>}
                 <Table.Cell>{when(j.started)}</Table.Cell>
                 <Table.Cell>{elapsed(j.started, j.finished)}</Table.Cell>
                 <Table.Cell>{j.status === "Completed" && action ? action(j) : null}</Table.Cell>

@@ -138,6 +138,11 @@ export function ImportPage({ ws, importId, state }: { ws: string; importId?: str
             <Badge variant="soft" color="gray">
               {d.n_series} series found
             </Badge>
+            {d.created_by && (
+              <Badge variant="soft" color="gray">
+                Imported by {d.created_by}
+              </Badge>
+            )}
           </Flex>
           {d.needs_input > 0 && (
             <Callout.Root color="amber">

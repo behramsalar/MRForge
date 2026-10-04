@@ -77,3 +77,26 @@ export const statusLabel: Record<string, string> = {
   Cancelled: "Cancelled",
   Interrupted: "Stopped early",
 };
+
+/** How far a subject is in a stage (dashboard). Same colours as the job states above. */
+export const stageColor: Record<string, RadixColor> = {
+  none: "gray",
+  unavailable: "gray",
+  waiting: "gray",
+  running: "blue",
+  partial: "amber",
+  done: "green",
+  failed: "red",
+  stopped: "orange",
+};
+
+export const stageLabel: Record<string, string> = {
+  none: "Not started",
+  unavailable: "Not possible",
+  waiting: "Waiting",
+  running: "Running",
+  partial: "Partly done",
+  done: "Done",
+  failed: "Failed",
+  stopped: "Stopped early",
+};

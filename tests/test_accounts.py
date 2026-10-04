@@ -101,13 +101,74 @@ def test_workspaces_from_before_profiles_are_upgraded(tmp_path: Path) -> None:
     ws = Workspace.create(root)
     with ws.engine.begin() as conn:
         conn.exec_driver_sql("ALTER TABLE operation DROP COLUMN started_by")
+        conn.exec_driver_sql("ALTER TABLE job DROP COLUMN started_by")
     ws.engine.dispose()
     meta_path = root / "workspace.json"
     meta = json.loads(meta_path.read_text())
     meta["schema_version"] = 3
     meta_path.write_text(json.dumps(meta))
     reopened = Workspace.open(root)
-    assert json.loads(meta_path.read_text())["schema_version"] == 4
+    assert json.loads(meta_path.read_text())["schema_version"] == 5
     from mrforge.operations import list_operations
 
     assert list_operations(reopened) == []  # the table works with the new column
+
+
+def test_workspace_remembers_who_created_it(client: TestClient, tmp_path: Path) -> None:
+    jane = client.post("/api/researchers", json={"name": "Jane Smith"}).json()["id"]
+    mine = client.post(
+        "/api/workspaces", json={"name": "Jane's study"}, headers={"X-MRForge-User": str(jane)}
+    ).json()
+    anonymous = client.post("/api/workspaces", json={"name": "Old study"}).json()
+    assert mine["created_by"] == "Jane Smith" and anonymous["created_by"] is None
+    listed = {w["name"]: w["created_by"] for w in client.get("/api/workspaces").json()}
+    assert listed == {"Jane's study": "Jane Smith", "Old study": None}
+    reopened = Workspace.open(tmp_path / "workspaces" / mine["id"])
+    assert reopened.created_by == "Jane Smith"  # it is in workspace.json, so it survives restarts
+
+
+def test_jobs_and_imports_remember_who_started_them(client: TestClient, tmp_path: Path) -> None:
+    from mrforge.operations import start_operation
+
+    ws_id = client.post("/api/workspaces", json={"name": "w"}).json()["id"]
+    ws = Workspace.open(tmp_path / "workspaces" / ws_id)
+    spec = {
+        "name": "quick",
+        "subject": "sub-001",
+        "steps": [{"id": "a", "step": "fake", "params": {"duration": 0.1}}],
+    }
+    op_id = start_operation(ws, "pipeline", "quick", {"spec": spec}, started_by="Jane Smith")
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        if client.get(f"/api/workspaces/{ws_id}/operations/{op_id}").json()["status"] not in (
+            "Queued",
+            "Running",
+        ):
+            break
+        time.sleep(0.2)
+    jobs = client.get(f"/api/workspaces/{ws_id}/jobs").json()
+    assert [j["started_by"] for j in jobs] == ["Jane Smith"]
+
+
+def test_an_import_remembers_who_started_it(
+    client: TestClient, tmp_path: Path, fake: object
+) -> None:
+    from dicomfactory import make_session
+
+    jane = client.post("/api/researchers", json={"name": "Jane Smith"}).json()["id"]
+    ws_id = client.post("/api/workspaces", json={"name": "w"}).json()["id"]
+    make_session(tmp_path / "session")
+    started = client.post(
+        f"/api/workspaces/{ws_id}/imports/scan",
+        json={"source": str(tmp_path / "session")},
+        headers={"X-MRForge-User": str(jane)},
+    ).json()["operation_id"]
+    deadline = time.monotonic() + 60
+    while time.monotonic() < deadline:
+        op = client.get(f"/api/workspaces/{ws_id}/operations/{started}").json()
+        if op["status"] not in ("Queued", "Running"):
+            break
+        time.sleep(0.2)
+    assert op["status"] == "Completed", op["error"]
+    imports = client.get(f"/api/workspaces/{ws_id}/imports").json()
+    assert [i["created_by"] for i in imports] == ["Jane Smith"]

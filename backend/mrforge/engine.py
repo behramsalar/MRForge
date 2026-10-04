@@ -45,6 +45,7 @@ def run_step(
     force_reason: str = "rerun requested",
     pipeline_run_id: int | None = None,
     label: str | None = None,
+    started_by: str | None = None,
 ) -> StepOutcome:
     """Run one step unless a valid completed run exists. Blocks until the job finishes."""
     sid = label or step_name
@@ -56,7 +57,9 @@ def run_step(
         reason = f"Running because {reuse.reason}."
     else:
         reason = f"Running because {force_reason}."
-    job_id = create_job(ws, step_name, subject, inputs, params, session, pipeline_run_id, label)
+    job_id = create_job(
+        ws, step_name, subject, inputs, params, session, pipeline_run_id, label, started_by
+    )
     queue.submit(job_id)
     queue.wait()
     job = get_job(ws, job_id)
@@ -67,7 +70,9 @@ def run_step(
     )
 
 
-def run_pipeline(ws: Workspace, queue: JobQueue, spec: PipelineSpec) -> list[StepOutcome]:
+def run_pipeline(
+    ws: Workspace, queue: JobQueue, spec: PipelineSpec, started_by: str | None = None
+) -> list[StepOutcome]:
     """Run the steps in order. Steps that are still valid are skipped; the first step that is
     not reusable, and everything after it that depends on it, runs. Stops at the first
     failure; running the same spec again (resume) continues from there."""
@@ -103,6 +108,7 @@ def run_pipeline(ws: Workspace, queue: JobQueue, spec: PipelineSpec) -> list[Ste
             ),
             pipeline_run_id=run_id,
             label=st.id,
+            started_by=started_by,
         )
         outcomes.append(outcome)
         if outcome.action != Action.REUSED:

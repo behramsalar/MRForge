@@ -41,6 +41,7 @@ from mrforge.operations import (
     recover_stale_operations,
     start_operation,
 )
+from mrforge.overview import Overview, build_overview
 from mrforge.pipeline import PipelineSpec, PipelineStep
 from mrforge.provenance import read_provenance
 from mrforge.runner.jobs import get_job, list_jobs, process_alive, recover_stale_jobs
@@ -142,6 +143,7 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             organized=len(m.organized),
             dicom_removed=m.dicom_removed is not None,
             created=m.created,
+            created_by=m.created_by,
         )
 
     def job_info(job: Job, subject: str | None) -> S.JobInfo:
@@ -159,6 +161,7 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             started=job.started,
             finished=job.finished,
             error=_body(job.error, job.error_code or "", job.error_message),
+            started_by=job.started_by,
         )
 
     def all_jobs(ws: Workspace) -> list[S.JobInfo]:
@@ -247,6 +250,7 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
                         created=data.get("created"),
                         subjects=n_subjects,
                         imports=len(list_manifests(ws)),
+                        created_by=ws.created_by,
                     )
                 )
             except (OSError, ValueError, StepError, WorkspaceError):
@@ -254,15 +258,17 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         return found
 
     @app.post("/api/workspaces", response_model=S.WorkspaceInfo)
-    def create_workspace(req: S.WorkspaceCreate) -> S.WorkspaceInfo:
+    def create_workspace(
+        req: S.WorkspaceCreate, who: accounts.Researcher | None = Researcher
+    ) -> S.WorkspaceInfo:
         root.mkdir(parents=True, exist_ok=True)
         slug = _slug(req.name)
         folder, n = root / slug, 2
         while folder.exists():
             folder, n = root / f"{slug}-{n}", n + 1
-        ws = Workspace.create(folder, req.name.strip())
+        ws = Workspace.create(folder, req.name.strip(), who.name if who else None)
         opened[folder.name] = ws
-        return S.WorkspaceInfo(id=folder.name, name=ws.name)
+        return S.WorkspaceInfo(id=folder.name, name=ws.name, created_by=ws.created_by)
 
     @app.get("/api/workspaces/{ws_id}", response_model=S.WorkspaceInfo)
     def get_workspace(ws_id: str) -> S.WorkspaceInfo:
@@ -270,8 +276,19 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         with ws.session() as s:
             n_subjects = len(list(s.scalars(select(Subject.id))))
         return S.WorkspaceInfo(
-            id=ws_id, name=ws.name, subjects=n_subjects, imports=len(list_manifests(ws))
+            id=ws_id,
+            name=ws.name,
+            subjects=n_subjects,
+            imports=len(list_manifests(ws)),
+            created_by=ws.created_by,
         )
+
+    @app.get("/api/workspaces/{ws_id}/overview", response_model=Overview)
+    def overview(ws_id: str) -> Overview:
+        """Where every subject stands, for the dashboard."""
+        ws = ws_of(ws_id)
+        refresh(ws)
+        return build_overview(ws)
 
     @app.get("/api/workspaces/{ws_id}/subjects", response_model=list[S.SubjectInfo])
     def list_subjects(ws_id: str) -> list[S.SubjectInfo]:

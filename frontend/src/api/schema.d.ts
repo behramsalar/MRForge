@@ -91,6 +91,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overview
+         * @description Where every subject stands, for the dashboard.
+         */
+        get: operations["overview_api_workspaces__ws_id__overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/subjects": {
         parameters: {
             query?: never;
@@ -536,6 +556,20 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActivityItem */
+        ActivityItem: {
+            /** Title */
+            title: string;
+            /** Status */
+            status: string;
+            /**
+             * When
+             * Format: date-time
+             */
+            when: string;
+            /** Started By */
+            started_by: string | null;
+        };
         /** AnatRequest */
         AnatRequest: {
             /** Subject */
@@ -703,6 +737,8 @@ export interface components {
              * Format: date-time
              */
             created: string;
+            /** Created By */
+            created_by?: string | null;
             /** Series */
             series: components["schemas"]["SeriesRow"][];
             /** Kinds */
@@ -759,6 +795,8 @@ export interface components {
              * Format: date-time
              */
             created: string;
+            /** Created By */
+            created_by?: string | null;
         };
         /** JobInfo */
         JobInfo: {
@@ -789,6 +827,8 @@ export interface components {
             /** Finished */
             finished: string | null;
             error: components["schemas"]["ErrorBody"] | null;
+            /** Started By */
+            started_by?: string | null;
         };
         /** LogText */
         LogText: {
@@ -828,6 +868,25 @@ export interface components {
         OperationStarted: {
             /** Operation Id */
             operation_id: number;
+        };
+        /** Overview */
+        Overview: {
+            /** Subjects Total */
+            subjects_total: number;
+            /** Processed */
+            processed: number;
+            /** Needs Attention */
+            needs_attention: number;
+            /** Running */
+            running: number;
+            /** Stages */
+            stages: components["schemas"]["StageSummary"][];
+            /** Subjects */
+            subjects: components["schemas"]["SubjectOverview"][];
+            /** Running Now */
+            running_now: components["schemas"]["RunningItem"][];
+            /** Recent */
+            recent: components["schemas"]["ActivityItem"][];
         };
         /** QcEntry */
         QcEntry: {
@@ -906,6 +965,15 @@ export interface components {
             volumes?: number | null;
             fieldmap: components["schemas"]["FieldmapStatus"];
             slice_timing: components["schemas"]["SliceTimingStatus"];
+        };
+        /** RunningItem */
+        RunningItem: {
+            /** Title */
+            title: string;
+            /** Started */
+            started: string | null;
+            /** Started By */
+            started_by: string | null;
         };
         /** ScanRequest */
         ScanRequest: {
@@ -1006,6 +1074,27 @@ export interface components {
             /** Reason */
             reason?: string | null;
         };
+        /** StageStatus */
+        StageStatus: {
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "none" | "unavailable" | "waiting" | "running" | "partial" | "done" | "failed" | "stopped";
+            /** Detail */
+            detail?: string | null;
+        };
+        /** StageSummary */
+        StageSummary: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
+        };
         /** SubjectFile */
         SubjectFile: {
             /** Relpath */
@@ -1024,6 +1113,19 @@ export interface components {
              * @default false
              */
             has_anat_result: boolean;
+        };
+        /** SubjectOverview */
+        SubjectOverview: {
+            /** Label */
+            label: string;
+            /** N Files */
+            n_files: number;
+            anatomical: components["schemas"]["StageStatus"];
+            functional: components["schemas"]["StageStatus"];
+            /** Last Activity */
+            last_activity?: string | null;
+            /** Last Activity By */
+            last_activity_by?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -1077,6 +1179,8 @@ export interface components {
              * @default 0
              */
             imports: number;
+            /** Created By */
+            created_by?: string | null;
         };
         /**
          * WorkspaceState
@@ -1265,6 +1369,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_api_workspaces__ws_id__overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Overview"];
                 };
             };
             /** @description Validation Error */

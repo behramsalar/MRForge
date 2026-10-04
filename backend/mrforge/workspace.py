@@ -16,7 +16,7 @@ from mrforge.bids import init_derivatives
 from mrforge.models import Base, Subject
 from mrforge.models import Workspace as WorkspaceRow
 
-SCHEMA_VERSION = 4  # 2: BIDS layout; 3: Job.error; 4: Operation.started_by (2 and 3 auto-migrate)
+SCHEMA_VERSION = 5  # 2: BIDS layout; 3: Job.error; 4: Operation.started_by; 5: Job.started_by
 APP_DIRNAME = "mrforge"  # derivatives/<appname>/
 
 SUBDIRS = ("sourcedata/dicom", "rawbids", f"derivatives/{APP_DIRNAME}", "reports")
@@ -27,15 +27,20 @@ class WorkspaceError(Exception):
 
 
 class Workspace:
-    def __init__(self, root: Path, engine: Engine, name: str) -> None:
+    def __init__(
+        self, root: Path, engine: Engine, name: str, created_by: str | None = None
+    ) -> None:
         self.root = root
         self.engine = engine
         self.name = name
+        self.created_by = created_by  # researcher profile name at creation (None: unknown)
 
     # -- creation / opening -------------------------------------------------
 
     @classmethod
-    def create(cls, root: Path, name: str | None = None) -> Workspace:
+    def create(
+        cls, root: Path, name: str | None = None, created_by: str | None = None
+    ) -> Workspace:
         root = root.resolve()
         if (root / "workspace.json").exists():
             raise WorkspaceError(f"A workspace already exists in {root}. Open it instead.")
@@ -49,12 +54,17 @@ class Workspace:
         created = datetime.now(UTC)
         (root / "workspace.json").write_text(
             json.dumps(
-                {"name": name, "created": created.isoformat(), "schema_version": SCHEMA_VERSION},
+                {
+                    "name": name,
+                    "created": created.isoformat(),
+                    "schema_version": SCHEMA_VERSION,
+                    "created_by": created_by,
+                },
                 indent=2,
             )
             + "\n"
         )
-        ws = cls(root, _engine(root), name)
+        ws = cls(root, _engine(root), name, created_by)
         init_derivatives(ws.derivatives_dir, __version__)
         Base.metadata.create_all(ws.engine)
         with ws.session() as s:
@@ -70,7 +80,7 @@ class Workspace:
                 f"No workspace found in {root}. Create one with 'mrforge workspace create'."
             )
         meta = json.loads(meta_path.read_text())
-        if meta.get("schema_version") in (2, 3):
+        if meta.get("schema_version") in (2, 3, 4):
             _migrate_to_current(root, meta)
         if meta.get("schema_version") != SCHEMA_VERSION:
             raise WorkspaceError(
@@ -80,7 +90,7 @@ class Workspace:
             )
         engine = _engine(root)
         Base.metadata.create_all(engine)  # adds tables introduced later; never drops
-        return cls(root, engine, meta["name"])
+        return cls(root, engine, meta["name"], meta.get("created_by"))
 
     # -- helpers ------------------------------------------------------------
 
@@ -117,13 +127,17 @@ def _engine(root: Path) -> Engine:
 
 
 def _migrate_to_current(root: Path, meta: dict[str, object]) -> None:
-    """Older workspaces gain the columns added since: ``job.error`` (version 3) and
-    ``operation.started_by`` (version 4). Nothing else changes."""
+    """Older workspaces gain the columns added since: ``job.error`` (version 3),
+    ``operation.started_by`` (4) and ``job.started_by`` (5). Nothing else changes."""
     engine = _engine(root)
     Base.metadata.create_all(engine)  # tables introduced later (for example operation)
-    wanted = {"job": ("error", "JSON"), "operation": ("started_by", "VARCHAR(100)")}
+    wanted = [
+        ("job", "error", "JSON"),
+        ("operation", "started_by", "VARCHAR(100)"),
+        ("job", "started_by", "VARCHAR(100)"),
+    ]
     with engine.begin() as conn:
-        for table, (column, sql_type) in wanted.items():
+        for table, column, sql_type in wanted:
             cols = {row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")}
             if cols and column not in cols:
                 conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {column} {sql_type}")

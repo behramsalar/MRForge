@@ -28,7 +28,7 @@ from mrforge.errors import StepError
 from mrforge.importing.bids_validate import format_report, validate_dataset
 from mrforge.importing.classify import load_rules
 from mrforge.importing.convert import convert_import
-from mrforge.importing.manifest import load_manifest
+from mrforge.importing.manifest import load_manifest, save_manifest
 from mrforge.importing.organize import organize
 from mrforge.importing.scan import scan_source
 from mrforge.importing.sourcedata import remove_dicom
@@ -52,6 +52,9 @@ def _scan(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
     manifest, is_new = scan_source(
         ws, Path(args["source"]), args.get("subject"), args.get("session")
     )
+    if is_new and args.get("started_by"):
+        manifest.created_by = args["started_by"]
+        save_manifest(ws, manifest)
     return {"import_id": manifest.id, "is_new": is_new}
 
 
@@ -99,7 +102,7 @@ def _pipeline(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
     spec = parse_pipeline(args["spec"])
     queue = LocalJobQueue(ws, max_concurrency=args.get("max_concurrency", 2))
     log(f"Running pipeline '{spec.name}'...")
-    outcomes = run_pipeline(ws, queue, spec)
+    outcomes = run_pipeline(ws, queue, spec, args.get("started_by"))
     for o in outcomes:
         log(f"{o.step_id}: {o.action.value}")
     failed = [o for o in outcomes if o.action == Action.FAILED]
@@ -295,7 +298,7 @@ def run_operation(ws: Workspace, op_id: int) -> JobStatus:
     result: dict[str, Any] | None = None
     error: StepError | None = None
     try:
-        result = HANDLERS[op.kind](ws, op.args, log)
+        result = HANDLERS[op.kind](ws, {**op.args, "started_by": op.started_by}, log)
     except Cancelled:
         status, error = JobStatus.CANCELLED, StepError("CANCELLED", "The action was cancelled.")
     except StepError as err:
