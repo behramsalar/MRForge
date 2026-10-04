@@ -69,6 +69,8 @@ class FeatPreprocOutput(BaseModel):
     )  # six realignment parameters per volume (TSV; None without motion correction)
     to_t1_affine: str | None = None  # boldref -> T1 (FSL matrix); the fieldmap is applied apart
     to_t1_warp: str | None = None  # boldref -> T1 warp that includes the distortion correction
+    boldref_t1: str | None = None  # boldref resampled into T1 space (for QC and the viewer)
+    boldref_distorted_t1: str | None = None  # the same without distortion correction
 
 
 def native_folder_name(bold_relpath: str) -> str:
@@ -138,7 +140,7 @@ def _explain_failure(feat_dir: Path, stderr_path: Path) -> StepError:
 @register_step
 class FeatPreprocStep(Step[FeatPreprocInput, FeatPreprocParams, FeatPreprocOutput]):
     name = "feat_preproc"
-    version = "1"
+    version = "2"  # 2: also exposes the example volume in T1 space (and its distorted twin)
     InputSpec, ParamSpec, OutputSpec = FeatPreprocInput, FeatPreprocParams, FeatPreprocOutput
     requires_fsl = True
     datatype = "func"
@@ -166,6 +168,14 @@ class FeatPreprocStep(Step[FeatPreprocInput, FeatPreprocParams, FeatPreprocOutpu
             ),
             to_t1_affine=xfm("affine", ".mat") if registered else None,
             to_t1_warp=xfm("warp", ".nii.gz") if registered and unwarped else None,
+            boldref_t1=n("boldref", space="T1w", desc=self.desc(ctx, "feat"))
+            if registered
+            else None,
+            boldref_distorted_t1=(
+                n("boldref", space="T1w", desc=self.desc(ctx, "distorted"))
+                if registered and unwarped
+                else None
+            ),
         )
 
     def _design(
@@ -400,6 +410,10 @@ class FeatPreprocStep(Step[FeatPreprocInput, FeatPreprocParams, FeatPreprocOutpu
             links[out.to_t1_affine] = "reg/example_func2highres.mat"
         if out.to_t1_warp:
             links[out.to_t1_warp] = "reg/example_func2highres_warp.nii.gz"
+        if out.boldref_t1:
+            links[out.boldref_t1] = "reg/example_func2highres.nii.gz"
+        if out.boldref_distorted_t1:
+            links[out.boldref_distorted_t1] = "reg/unwarp/example_func_distorted2highres.nii.gz"
         for target_name, native_name in links.items():
             source = native / native_name
             if not source.is_file():

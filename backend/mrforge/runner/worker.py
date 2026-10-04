@@ -30,7 +30,7 @@ from mrforge.provenance import (
 )
 from mrforge.runner.jobs import build_context, get_job, kill_orphans, now, update_job
 from mrforge.steps import builtin  # noqa: F401  (registers built-in steps)
-from mrforge.steps.base import execute_step, input_relpaths
+from mrforge.steps.base import StepResult, execute_step, input_relpaths
 from mrforge.workspace import Workspace
 
 
@@ -71,6 +71,7 @@ def run_job(ws: Workspace, job_id: int) -> JobStatus:
         if ws.abspath(rel).is_file()
     ]
     error: StepError | None = None
+    result: StepResult | None = None
     status = JobStatus.COMPLETED
     versions = {"mrforge": __version__}
     try:
@@ -79,7 +80,7 @@ def run_job(ws: Workspace, job_id: int) -> JobStatus:
             ctx.env = fsl.env
             versions["fsl"] = fsl.version
         try:
-            execute_step(step, ctx)
+            result = execute_step(step, ctx)
         finally:
             # A tool that was killed can leave its own children running (fsl_anat starts many).
             kill_orphans(me.pid)
@@ -115,6 +116,8 @@ def run_job(ws: Workspace, job_id: int) -> JobStatus:
             return_code=0 if error is None else 1,
             error_code=error.code if error else None,
             error_message=error.format() if error else None,
+            warnings=result.warnings if result else [],
+            qc=result.qc if result else [],
         ),
     )
     if error is None:

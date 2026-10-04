@@ -11,7 +11,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from mrforge.steps.base import CommandRecord
+from mrforge.steps.base import CommandRecord, Problem, QCItem
 
 PROVENANCE_FILENAME = "provenance.json"
 SCHEMA_VERSION = 1
@@ -45,6 +45,8 @@ class Provenance(BaseModel):
     return_code: int | None = None
     error_code: str | None = None
     error_message: str | None = None
+    warnings: list[Problem] = []  # things worth knowing that did not stop the step
+    qc: list[QCItem] = []  # QC results for human review (flag, never decide)
 
 
 def write_provenance(output_dir: Path, prov: Provenance) -> Path:
