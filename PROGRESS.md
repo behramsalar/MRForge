@@ -1,6 +1,8 @@
 # Progress
 
-**Current stage:** Stage 5 (functional preprocessing, built on FEAT) accepted by the user (tag `stage5-accepted`). Stages 0-3 and 5 accepted (tags `stage0-accepted` ... `stage5-accepted`). Next: a UI overhaul (planned in plan mode), then Stage 4 (lab usability test) on the new design.
+**Current stage:** Stage 4 UI overhaul in progress (branch `stage-4-ui-overhaul`). Stages 0-3 and 5 accepted (tags up to `stage5-accepted`). Built so far: O1 app shell (dark sidebar with a Process tree, top bar, activity bell, light/dark switch, Forge amber theme), O2 light researcher profiles (a name, not a login; who created workspaces and imports, who started jobs), O3 Dashboard, O4 Data section, O5 global Viewer, and full processing (stage registry: Anatomical, Functional, Standard space; confirmation dialog). Still to do: O6 Jobs history and Settings polish, O7 polish and `docs/design-system.md`, then the lab user test.
+
+Last test status: `pytest -m "not fsl"` 427 passed; frontend `npm test` 22 passed, `tsc` clean; ruff and mypy clean. Full processing was run end to end once from the UI on `func-e2e` (about 15 minutes, including a fresh `fsl_anat`): all steps completed. The `-m fsl` suite was not re-run after these changes.
 
 ## Stage 5 (Functional preprocessing, on FEAT)
 | Sub-step | Status |
@@ -78,4 +80,4 @@ Demo workspace with your real session imported: `~/Documents/mrforge-workspaces/
 - Fieldmap handling: your DICOM set contains gradient-echo field maps; types to confirm before Stage 5c.
 
 ## Next action
-Plan the UI overhaul (sidebar navigation, themed light/dark look, global viewer, dashboard, full-processing flow with a confirmation dialog). The Stage 5 REVIEW(domain) items are still open for the user. Pictures for the report page are improved in Stage 7 (user decision).
+O6 (Jobs history, Settings, bell and failure screens) and O7 (polish, design-system document, manual checklist), then the lab user test. Later stages that plug into full processing: artifact rejection, WM/CSF regression, ROI-to-ROI correlation (add to the stage registry in `backend/mrforge/processing.py`). The Stage 5 REVIEW(domain) items are still open for the user.
