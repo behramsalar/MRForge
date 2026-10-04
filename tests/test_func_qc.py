@@ -140,7 +140,7 @@ def test_step_makes_pictures_numbers_and_records_qc(
     )
 
     # QC results are part of the permanent record of the run
-    prov = read_provenance(func / "_runs" / "func_qc")
+    prov = read_provenance(func / "_runs" / "func_qc_task-rest")
     assert prov is not None
     qc = {item.name: item for item in prov.qc}
     assert qc["Largest framewise displacement (mm)"].value == pytest.approx(0.1)
