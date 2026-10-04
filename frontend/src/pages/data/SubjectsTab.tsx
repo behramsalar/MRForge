@@ -78,7 +78,7 @@ export function SubjectsTab({ ws }: { ws: string }) {
                   <Table.Cell>{humanSize(f.size_bytes)}</Table.Cell>
                   <Table.Cell>
                     <Button asChild size="1" variant="soft" color="gray">
-                      <a href={href(ws, "viewer", label)}>View</a>
+                      <a href={href(ws, "viewer", label, f.relpath)}>View</a>
                     </Button>
                   </Table.Cell>
                 </Table.Row>

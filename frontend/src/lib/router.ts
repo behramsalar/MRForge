@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
  * "#/w/<workspace>/<page>/<extra>" where the extra part means different things per page
  * (an import for data, a tab for process, a subject for viewer). Reload-safe, no server rules.
  */
-export type Route = { workspace?: string; page: string; extra?: string };
+export type Route = { workspace?: string; page: string; extra?: string; extra2?: string };
 
 /** Addresses used before the sidebar existed keep working. */
 const LEGACY: Record<string, { page: string; extra?: string; keepExtra?: boolean }> = {
@@ -25,13 +25,14 @@ export function parse(hash: string): Route {
     if (legacy) {
       return { workspace: parts[1], page: legacy.page, extra: legacy.keepExtra ? parts[3] : legacy.extra };
     }
-    return { workspace: parts[1], page: raw, extra: parts[3] };
+    return { workspace: parts[1], page: raw, extra: parts[3], extra2: parts[4] };
   }
   return { page: "workspaces" };
 }
 
-export function href(workspace: string, page: string, extra?: string): string {
-  return `#/w/${encodeURIComponent(workspace)}/${page}${extra ? `/${encodeURIComponent(extra)}` : ""}`;
+export function href(workspace: string, page: string, extra?: string, extra2?: string): string {
+  const tail = [extra, extra2].filter(Boolean).map((p) => `/${encodeURIComponent(p!)}`).join("");
+  return `#/w/${encodeURIComponent(workspace)}/${page}${tail}`;
 }
 
 export function useRoute(): Route {

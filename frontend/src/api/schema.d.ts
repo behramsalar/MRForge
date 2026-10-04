@@ -504,7 +504,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Viewer Images */
+        /**
+         * Viewer Images
+         * @description Every raw image and result of a subject that the viewer can show.
+         */
         get: operations["viewer_images_api_workspaces__ws_id__subjects__label__images_get"];
         put?: never;
         post?: never;
@@ -1192,6 +1195,8 @@ export interface components {
         ViewerImage: {
             /** Name */
             name: string;
+            /** Group */
+            group: string;
             /**
              * Role
              * @enum {string}
@@ -1203,6 +1208,13 @@ export interface components {
             url: string;
             /** Colormap */
             colormap?: string | null;
+            /** Volumes */
+            volumes?: number | null;
+            /**
+             * Size Bytes
+             * @default 0
+             */
+            size_bytes: number;
         };
         /** WorkspaceCreate */
         WorkspaceCreate: {

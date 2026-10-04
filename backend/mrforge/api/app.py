@@ -22,7 +22,6 @@ from sse_starlette.sse import EventSourceResponse
 
 from mrforge import __version__, accounts
 from mrforge.api import schemas as S
-from mrforge.bids import parse_bids_name
 from mrforge.config import load_config
 from mrforge.datafiles import SubjectData, subject_data
 from mrforge.engine import latest_pipeline_run
@@ -46,6 +45,7 @@ from mrforge.overview import Overview, build_overview
 from mrforge.pipeline import PipelineSpec, PipelineStep
 from mrforge.provenance import read_provenance
 from mrforge.runner.jobs import get_job, list_jobs, process_alive, recover_stale_jobs
+from mrforge.viewerimages import find_images
 from mrforge.workspace import Workspace, WorkspaceError
 
 SAFE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
@@ -697,56 +697,26 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
 
     @app.get("/api/workspaces/{ws_id}/subjects/{label}/images", response_model=list[S.ViewerImage])
     def viewer_images(ws_id: str, label: str) -> list[S.ViewerImage]:
+        """Every raw image and result of a subject that the viewer can show."""
         ws = ws_of(ws_id)
         if not SAFE_NAME.fullmatch(label):
             raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
-        specs: list[tuple[str, str, str, str | None]] = [
-            # (file name ending, display name, role, colormap)
-            ("_desc-biascorr_T1w.nii.gz", "T1, bias-corrected", "underlay", None),
-            ("_desc-brain_T1w.nii.gz", "T1, brain only", "underlay", None),
-            ("_desc-brain_mask.nii.gz", "Brain mask", "overlay", "red"),
-            ("_dseg.nii.gz", "Tissue segmentation (CSF, GM, WM)", "overlay", "winter"),
-            ("_label-GM_probseg.nii.gz", "Grey matter probability", "overlay", "green"),
-            ("_label-WM_probseg.nii.gz", "White matter probability", "overlay", "blue"),
-            ("_label-CSF_probseg.nii.gz", "CSF probability", "overlay", "cool"),
-            ("_desc-bet_T1w.nii.gz", "T1, brain-extracted with bet", "underlay", None),
-            ("_desc-bet_mask.nii.gz", "bet brain mask", "overlay", "red"),
-        ]
-        found: list[S.ViewerImage] = []
-
-        def add(path: Path, name: str, role: Any, cmap: str | None) -> None:
-            rel = ws.relpath(path)
-            found.append(
+        out: list[S.ViewerImage] = []
+        for f in find_images(ws, label):
+            rel = ws.relpath(f.path)
+            out.append(
                 S.ViewerImage(
-                    name=name,
-                    role=role,
+                    name=f.described.name,
+                    group=f.described.group,
+                    role=f.described.role,  # type: ignore[arg-type]
                     relpath=rel,
                     url=f"/api/workspaces/{ws_id}/file/{rel}",
-                    colormap=cmap,
+                    colormap=f.described.colormap,
+                    volumes=f.volumes,
+                    size_bytes=f.size_bytes,
                 )
             )
-
-        for raw in sorted((ws.root / "rawbids" / label).glob("**/anat/*_T1w.nii.gz")):
-            add(raw, "T1, original", "underlay", None)
-        anat_dirs = sorted((ws.derivatives_dir / label).glob("**/anat"))
-        for ending, name, role, cmap in specs:
-            for d in anat_dirs:
-                for f in sorted(d.glob(f"*{ending}")):
-                    if "space-" not in f.name:
-                        add(f, name, role, cmap)
-
-        # functional example volume in T1 space: an overlay to judge the registration
-        def run_name(f: Path) -> str:
-            entities = parse_bids_name(f.name)[0]
-            skip = ("sub", "ses", "space", "desc")
-            return " ".join(f"{k}-{v}" for k, v in entities.items() if k not in skip)
-
-        for d in sorted((ws.derivatives_dir / label).glob("**/func")):
-            for f in sorted(d.glob("*_space-T1w_desc-distorted_boldref.nii.gz")):
-                add(f, f"Functional {run_name(f)}, before distortion correction", "overlay", "gray")
-            for f in sorted(d.glob("*_space-T1w_desc-feat_boldref.nii.gz")):
-                add(f, f"Functional {run_name(f)}, aligned to the T1", "overlay", "gray")
-        return found
+        return out
 
     @app.get("/api/workspaces/{ws_id}/file/{relpath:path}")
     def serve_file(ws_id: str, relpath: str) -> FileResponse:

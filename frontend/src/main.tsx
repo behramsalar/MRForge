@@ -24,7 +24,7 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: true, staleTime: 2000 } },
 });
 
-function WorkspacePage({ page, extra }: { page: string; extra?: string }) {
+function WorkspacePage({ page, extra, extra2 }: { page: string; extra?: string; extra2?: string }) {
   const { ws, state } = useWorkspace();
   switch (page) {
     case "data":
@@ -34,7 +34,7 @@ function WorkspacePage({ page, extra }: { page: string; extra?: string }) {
     case "viewer":
       return (
         <Suspense fallback={<p>Loading the viewer…</p>}>
-          <ViewerPage ws={ws} subject={extra} />
+          <ViewerPage ws={ws} subject={extra} image={extra2} />
         </Suspense>
       );
     case "jobs":
@@ -50,7 +50,7 @@ function App() {
   const route = useRoute();
   if (route.page === "design") return <DesignSystem />;
   let body: ReactNode;
-  if (route.workspace) body = <WorkspacePage page={route.page} extra={route.extra} />;
+  if (route.workspace) body = <WorkspacePage page={route.page} extra={route.extra} extra2={route.extra2} />;
   else if (route.page === "settings") body = <Settings />;
   else body = <Workspaces />;
   const shell = <AppShell route={route}>{body}</AppShell>;

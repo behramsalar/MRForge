@@ -201,11 +201,14 @@ class AnatRequest(BaseModel):
 
 
 class ViewerImage(BaseModel):
-    name: str
-    role: Literal["underlay", "overlay"]
+    name: str  # plain-language name
+    group: str  # "Raw data", "Anatomical results", "Functional results", "Fieldmap results"
+    role: Literal["underlay", "overlay"]  # what it is usually shown as
     relpath: str
     url: str
     colormap: str | None = None
+    volumes: int | None = None  # for time series
+    size_bytes: int = 0
 
 
 class WorkspaceState(BaseModel):

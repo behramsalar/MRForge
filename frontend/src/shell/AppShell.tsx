@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { ActivityPanel } from "../components/ActivityPanel";
 import type { Route } from "../lib/router";
 import "./shell.css";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { useWorkspace } from "./WorkspaceContext";
@@ -40,7 +41,7 @@ export function AppShell({ route, children }: { route: Route; children: ReactNod
         <TopBar route={route} />
         <main className="content">
           {route.workspace && <Banner ws={route.workspace} />}
-          {children}
+          <ErrorBoundary resetKey={`${route.workspace}/${route.page}/${route.extra}`}>{children}</ErrorBoundary>
         </main>
       </div>
     </div>
