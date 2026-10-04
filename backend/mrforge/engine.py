@@ -107,7 +107,7 @@ def run_pipeline(
                 f"step '{upstream_dirty[0]}', which it uses, was just run" if upstream_dirty else ""
             ),
             pipeline_run_id=run_id,
-            label=st.id,
+            label=st.label or st.id,
             started_by=started_by,
         )
         outcomes.append(outcome)
@@ -117,7 +117,9 @@ def run_pipeline(
             failed = True
             continue
         # Outputs of this step, for later steps to refer to.
-        step, ctx = build_context(ws, st.step, subject, st.session, inputs, st.params, st.id)
+        step, ctx = build_context(
+            ws, st.step, subject, st.session, inputs, st.params, st.label or st.id
+        )
         outputs[st.id] = {
             name: ws.relpath(ctx.output_dir / value)
             for name, value in step.expected_outputs(ctx)

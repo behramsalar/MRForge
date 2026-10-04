@@ -43,6 +43,7 @@ from mrforge.operations import (
 )
 from mrforge.overview import Overview, build_overview
 from mrforge.pipeline import PipelineSpec, PipelineStep
+from mrforge.processing import FullOptions, FullPlan, plan_full_processing
 from mrforge.provenance import read_provenance
 from mrforge.runner.jobs import get_job, list_jobs, process_alive, recover_stale_jobs
 from mrforge.viewerimages import find_images
@@ -641,6 +642,32 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         spec = build_pipeline(ws, req)
         run = Path(req.bold).name.removesuffix("_bold.nii.gz").split("_", 1)[-1]
         return _start_pipeline(ws, spec, f"Functional preprocessing of {req.subject} ({run})", who)
+
+    @app.post("/api/workspaces/{ws_id}/process/plan", response_model=FullPlan)
+    def process_plan(ws_id: str, req: FullOptions) -> FullPlan:
+        """What full processing would do for a subject (for the confirmation dialog)."""
+        ws = ws_of(ws_id)
+        if not SAFE_NAME.fullmatch(req.subject):
+            raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
+        return plan_full_processing(ws, req)[0]
+
+    @app.post("/api/workspaces/{ws_id}/process", response_model=S.OperationStarted)
+    def process(
+        ws_id: str, req: FullOptions, who: accounts.Researcher | None = Researcher
+    ) -> S.OperationStarted:
+        """Run the confirmed plan: every enabled stage, in order, as one pipeline."""
+        ws = ws_of(ws_id)
+        if not SAFE_NAME.fullmatch(req.subject):
+            raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
+        plan, spec = plan_full_processing(ws, req)
+        if spec is None or not plan.can_start:
+            raise StepError(
+                "NOTHING_TO_RUN",
+                "There is nothing to run with these choices.",
+                probable_cause="Every stage is switched off, or the needed images are missing.",
+                suggested_action="Tick a stage that can run, or import the missing scans.",
+            )
+        return _start_pipeline(ws, spec, f"Full processing of {req.subject}", who)
 
     @app.get("/api/workspaces/{ws_id}/subjects/{label}/qc", response_model=list[S.QcGroup])
     def subject_qc(ws_id: str, label: str) -> list[S.QcGroup]:
