@@ -162,3 +162,4 @@ class ImportManifest(BaseModel):
     commands: list[CommandRecord] = []
     warnings: list[str] = []
     created_by: str | None = None  # researcher profile that started this import
+    undone: datetime | None = None  # when this import was last undone (data removed again)

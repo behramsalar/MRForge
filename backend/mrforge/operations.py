@@ -32,6 +32,7 @@ from mrforge.importing.manifest import load_manifest, save_manifest
 from mrforge.importing.organize import organize
 from mrforge.importing.scan import scan_source
 from mrforge.importing.sourcedata import remove_dicom
+from mrforge.importing.undo import undo_import
 from mrforge.models import JobStatus, Operation
 from mrforge.pipeline import parse_pipeline
 from mrforge.runner.jobs import get_job, kill_orphans, list_jobs, now, process_alive
@@ -98,6 +99,13 @@ def _remove_dicom(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, An
     return {"import_id": manifest.id, "freed_bytes": plan.size_bytes}
 
 
+def _undo_import(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
+    manifest = load_manifest(ws, args.get("import_id"))
+    log("Removing the files this import wrote into the data folder...")
+    plan = undo_import(ws, manifest, args.get("started_by"))
+    return {"import_id": manifest.id, "files_removed": len(plan.files)}
+
+
 def _pipeline(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
     spec = parse_pipeline(args["spec"])
     queue = LocalJobQueue(ws, max_concurrency=args.get("max_concurrency", 2))
@@ -123,6 +131,7 @@ HANDLERS: dict[str, Handler] = {
     "scan": _scan,
     "import_run": _import_run,
     "remove_dicom": _remove_dicom,
+    "undo_import": _undo_import,
     "pipeline": _pipeline,
 }
 

@@ -34,6 +34,7 @@ from mrforge.importing.organize import OrganizeSummary, build_plan, organize
 from mrforge.importing.report import describe_plan, format_manifest
 from mrforge.importing.scan import scan_source
 from mrforge.importing.sourcedata import removal_plan, remove_dicom
+from mrforge.importing.undo import undo_import, undo_plan
 from mrforge.models import JobStatus
 from mrforge.pipeline import PipelineSpec, load_pipeline, parse_pipeline
 from mrforge.runner.jobs import get_job, list_jobs, recover_stale_jobs
@@ -481,6 +482,37 @@ def import_remove_dicom(
     ws = Workspace.open(workspace)
     manifest = load_manifest(ws, import_id)
     _remove_dicom_flow(ws, manifest, load_rules(ws), yes)
+
+
+@import_app.command("undo")
+@friendly
+def import_undo(
+    import_id: Annotated[
+        str | None, typer.Argument(help="e.g. import-001 (default: latest).")
+    ] = None,
+    workspace: WorkspaceOption = Path("."),
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Do not ask for confirmation.")] = False,
+) -> None:
+    """Remove what an import wrote into rawbids/, so you can change your decisions and import
+    it again. The converted copies and the scanner files are kept."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    plan = undo_plan(ws, manifest)
+    typer.echo(
+        f"Undoing {manifest.id} removes {len(plan.files)} file(s) ({_human(plan.bytes)}) of "
+        f"{manifest.subject} from rawbids/."
+    )
+    if plan.stale_steps:
+        typer.echo("Results made from them stay but are no longer up to date: "
+                   + ", ".join(plan.stale_steps) + ".")  # fmt: skip
+    typer.echo("Converted copies and the scanner files are kept.")
+    if not yes and not typer.confirm("Undo this import?"):
+        typer.echo("Nothing was removed.")
+        raise typer.Exit(1)
+    undo_import(ws, manifest)
+    typer.echo(
+        "Done. Change your decisions with 'mrforge import set', then run 'mrforge import run'."
+    )
 
 
 @import_app.command("validate")

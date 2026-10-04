@@ -146,7 +146,9 @@ def test_existing_anatomical_results_can_be_used_instead_of_running_again(tmp_pa
     assert not p.stages[0].enabled and p.stages[0].can_run
 
 
-def test_earlier_results_without_a_record_are_made_again_and_the_user_is_told(tmp_path: Path) -> None:
+def test_earlier_results_without_a_record_are_made_again_and_the_user_is_told(
+    tmp_path: Path,
+) -> None:
     p, spec = plan(workspace(tmp_path, anat_done=True))  # files exist, but MRForge has no record
     anatomical = p.stages[0]
     assert not anatomical.already_done

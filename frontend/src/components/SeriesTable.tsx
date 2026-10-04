@@ -150,7 +150,6 @@ export function SeriesTable({
   selected?: string;
   onSelect?: (uid: string) => void;
 }) {
-  const locked = detail.organized > 0 && detail.needs_input === 0;
   const compact = !!onSelect; // the details panel next to the table shows size and the Change button
   return (
     <Card style={{ overflowX: "auto" }}>
@@ -209,12 +208,6 @@ export function SeriesTable({
           ))}
         </Table.Body>
       </Table.Root>
-      {locked && (
-        <Text size={type.caption} color="gray" as="p" mt="2">
-          Changes made now apply the next time you press Import; files already imported are never
-          overwritten.
-        </Text>
-      )}
     </Card>
   );
 }

@@ -32,7 +32,7 @@ The UI looks linear (Import → Anatomical → Functional → Denoising → QC �
 
 1. **The UI never builds shell commands.** The path is UI → API → Step objects → job runner. Only Step classes know FSL command lines.
 2. **No monolithic `preprocess_subject()`.** Every operation is a separate `Step` with declared inputs, parameters, outputs, dependencies, validation, logs and QC. An established FSL tool that itself bundles several operations (`fsl_anat`, FEAT pre-stats) is wrapped as ONE Step whose complete settings are recorded (for FEAT: the `design.fsf`); everything around it stays separate Steps. (Amended in Stage 5 with the user's approval.)
-3. **Raw data is immutable.** `sourcedata/` and `rawbids/` are never modified after creation. All results go to `derivatives/`.
+3. **Raw data is immutable.** `sourcedata/` and `rawbids/` are never modified after creation. All results go to `derivatives/`. The one exception is the user's explicit **undo of a whole import** (confirmed in the UI or CLI): it removes only the files that import wrote into `rawbids/` (checked against their recorded hashes); converted copies and scanner files stay. (Amended after Stage 5 with the user's approval.)
 4. **Provenance for every run.** Record command, parameters, input files (with hashes), output files, tool versions, return code, stdout, stderr, start and finish times.
 5. **Resume, don't redo.** A completed and valid step is never rerun. A failed pipeline resumes at the failed step.
 6. **Flag, don't decide.** QC can warn, but only the researcher accepts or excludes a subject, with a recorded reason.

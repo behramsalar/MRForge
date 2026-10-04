@@ -29,3 +29,4 @@ export type FullPlan = S["FullPlan"];
 export type StagePlan = S["StagePlan"];
 export type PlanItem = S["PlanItem"];
 export type FullOptions = S["FullOptions"];
+export type UndoPlanInfo = S["UndoPlanInfo"];

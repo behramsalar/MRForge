@@ -33,6 +33,7 @@ from mrforge.importing.classify import effective_all, load_rules, set_override
 from mrforge.importing.manifest import list_manifests, load_manifest, save_manifest
 from mrforge.importing.models import ImportManifest
 from mrforge.importing.sourcedata import removal_plan
+from mrforge.importing.undo import undo_plan
 from mrforge.models import Job, JobStatus, Subject
 from mrforge.operations import (
     cancel_operation,
@@ -146,6 +147,7 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             dicom_removed=m.dicom_removed is not None,
             created=m.created,
             created_by=m.created_by,
+            undone=m.undone,
         )
 
     def job_info(job: Job, subject: str | None) -> S.JobInfo:
@@ -448,6 +450,38 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             not_safe=plan.not_safe,
             only_in_dicom=plan.only_in_dicom,
         )
+
+    @app.get("/api/workspaces/{ws_id}/imports/{import_id}/undo-plan", response_model=S.UndoPlanInfo)
+    def get_undo_plan(ws_id: str, import_id: str) -> S.UndoPlanInfo:
+        ws = ws_of(ws_id)
+        m = load_manifest(ws, import_id)
+        plan = undo_plan(ws, m)
+        return S.UndoPlanInfo(
+            subject=plan.subject,
+            series=plan.series,
+            files=len(plan.files),
+            size_bytes=plan.bytes,
+            only_copy=plan.only_copy,
+            stale_steps=plan.stale_steps,
+            problems=plan.problems,
+        )
+
+    @app.post("/api/workspaces/{ws_id}/imports/{import_id}/undo", response_model=S.OperationStarted)
+    def undo_import_route(
+        ws_id: str, import_id: str, who: accounts.Researcher | None = Researcher
+    ) -> S.OperationStarted:
+        """Remove what an import wrote into the data folder so it can be decided and imported
+        again. Only done on purpose: the page asks for confirmation first."""
+        ws = ws_of(ws_id)
+        m = load_manifest(ws, import_id)
+        op = start_operation(
+            ws,
+            "undo_import",
+            f"Undoing {m.id} ({m.subject})",
+            {"import_id": m.id},
+            started_by=who.name if who else None,
+        )
+        return S.OperationStarted(operation_id=op)
 
     @app.post(
         "/api/workspaces/{ws_id}/imports/{import_id}/remove-dicom",

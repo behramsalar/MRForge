@@ -94,6 +94,7 @@ class ImportSummary(BaseModel):
     dicom_removed: bool
     created: datetime
     created_by: str | None = None
+    undone: datetime | None = None  # when the import was last undone
 
 
 class ImportKind(BaseModel):
@@ -246,3 +247,15 @@ class ResearcherInfo(BaseModel):
 
 class ResearcherCreate(BaseModel):
     name: str = Field(min_length=1, max_length=60)
+
+
+class UndoPlanInfo(BaseModel):
+    """What undoing an import would do (shown before the user confirms)."""
+
+    subject: str
+    series: int  # series the import wrote
+    files: int  # files that would be removed from the data folder
+    size_bytes: int
+    only_copy: int  # images that have no other copy in the workspace
+    stale_steps: list[str]  # processing steps whose inputs would be gone
+    problems: list[str]  # files changed since the import (undo is refused)

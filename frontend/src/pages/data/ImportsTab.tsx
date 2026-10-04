@@ -8,6 +8,7 @@ import type { ImportSummary, OperationInfo, WorkspaceState } from "../../api/typ
 import { ErrorCallout } from "../../components/ErrorCallout";
 import { SeriesDetail } from "../../components/SeriesDetail";
 import { SeriesTable } from "../../components/SeriesTable";
+import { UndoImportDialog } from "../../components/UndoImportDialog";
 import { EmptyState } from "../../components/ui/Layout";
 import { when } from "../../lib/labels";
 import { href } from "../../lib/router";
@@ -142,6 +143,24 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
             {d.warnings.length > 0 && (
               <Callout.Root color="gray">
                 <Callout.Text>{d.warnings.join(" ")}</Callout.Text>
+              </Callout.Root>
+            )}
+            {d.organized > 0 && (
+              <Callout.Root color="gray">
+                <Flex align="center" justify="between" gap={space.group} wrap="wrap" style={{ width: "100%" }}>
+                  <Callout.Text>
+                    This import is in the data folder, so its series are locked. To change a decision (skip a
+                    series, rename a task), undo the import, change it, and import again.
+                  </Callout.Text>
+                  <UndoImportDialog ws={ws} importId={d.id} subject={d.subject} />
+                </Flex>
+              </Callout.Root>
+            )}
+            {d.organized === 0 && d.undone && (
+              <Callout.Root color="green">
+                <Callout.Text>
+                  This import was undone. Change your decisions in the table, then import again.
+                </Callout.Text>
               </Callout.Root>
             )}
             <SeriesTable ws={ws} detail={d} selected={row?.uid} onSelect={setUid} />

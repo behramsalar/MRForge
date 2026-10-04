@@ -250,6 +250,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/imports/{import_id}/undo-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Undo Plan */
+        get: operations["get_undo_plan_api_workspaces__ws_id__imports__import_id__undo_plan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/imports/{import_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo Import Route
+         * @description Remove what an import wrote into the data folder so it can be decided and imported
+         *     again. Only done on purpose: the page asks for confirmation first.
+         */
+        post: operations["undo_import_route_api_workspaces__ws_id__imports__import_id__undo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/imports/{import_id}/remove-dicom": {
         parameters: {
             query?: never;
@@ -835,6 +873,8 @@ export interface components {
             created: string;
             /** Created By */
             created_by?: string | null;
+            /** Undone */
+            undone?: string | null;
             /** Series */
             series: components["schemas"]["SeriesRow"][];
             /** Kinds */
@@ -893,6 +933,8 @@ export interface components {
             created: string;
             /** Created By */
             created_by?: string | null;
+            /** Undone */
+            undone?: string | null;
         };
         /** JobInfo */
         JobInfo: {
@@ -1281,6 +1323,26 @@ export interface components {
             last_activity?: string | null;
             /** Last Activity By */
             last_activity_by?: string | null;
+        };
+        /**
+         * UndoPlanInfo
+         * @description What undoing an import would do (shown before the user confirms).
+         */
+        UndoPlanInfo: {
+            /** Subject */
+            subject: string;
+            /** Series */
+            series: number;
+            /** Files */
+            files: number;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Only Copy */
+            only_copy: number;
+            /** Stale Steps */
+            stale_steps: string[];
+            /** Problems */
+            problems: string[];
         };
         /** ValidationError */
         ValidationError: {
@@ -1897,6 +1959,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RemovalPlanInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_undo_plan_api_workspaces__ws_id__imports__import_id__undo_plan_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UndoPlanInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    undo_import_route_api_workspaces__ws_id__imports__import_id__undo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationStarted"];
                 };
             };
             /** @description Validation Error */
