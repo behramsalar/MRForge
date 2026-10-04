@@ -31,7 +31,7 @@ The UI looks linear (Import → Anatomical → Functional → Denoising → QC �
 ## 2. Non-negotiable principles
 
 1. **The UI never builds shell commands.** The path is UI → API → Step objects → job runner. Only Step classes know FSL command lines.
-2. **No monolithic `preprocess_subject()`.** Every operation is a separate `Step` with declared inputs, parameters, outputs, dependencies, validation, logs and QC.
+2. **No monolithic `preprocess_subject()`.** Every operation is a separate `Step` with declared inputs, parameters, outputs, dependencies, validation, logs and QC. An established FSL tool that itself bundles several operations (`fsl_anat`, FEAT pre-stats) is wrapped as ONE Step whose complete settings are recorded (for FEAT: the `design.fsf`); everything around it stays separate Steps. (Amended in Stage 5 with the user's approval.)
 3. **Raw data is immutable.** `sourcedata/` and `rawbids/` are never modified after creation. All results go to `derivatives/`.
 4. **Provenance for every run.** Record command, parameters, input files (with hashes), output files, tool versions, return code, stdout, stderr, start and finish times.
 5. **Resume, don't redo.** A completed and valid step is never rerun. A failed pipeline resumes at the failed step.
@@ -281,20 +281,19 @@ Each stage lists what to build, then **how the user tests it**. Do not skip ahea
 
 ### Stage 5 — Functional preprocessing (one step at a time)
 
-Each sub-step is its own `Step` with its own QC output, tests, and a **comparison against a manual FSL run on the same data**. Verify every command against FSL documentation and `--help` before writing it.
+Core preprocessing is done by FSL's own FEAT (pre-stats only), driven from a `design.fsf` that MRForge writes; the steps around it are separate. Each step has its own QC output, tests, and a **comparison against a manual FSL run on the same data** (for FEAT: running `feat` by hand on the same design file). Verify every command against FSL documentation, `--help` or FEAT's own scripts before writing it.
 
 **Build**
-- 5a. Discard initial volumes (default proposal: 5; user confirms).
-- 5b. Motion correction (MCFLIRT) with motion parameters, absolute/relative displacement and framewise displacement, plus a motion plot.
-- 5c. Fieldmap preparation and distortion correction. Confirm with the user which fieldmap type(s) their scanner produces before implementing.
-- 5d. Spatial smoothing (default proposal: 5 mm FWHM).
-- 5e. Temporal filtering (default proposal: 150 s high-pass).
-- 5f. Functional → T1 registration (BBR) with a registration QC mosaic (axial/coronal slices with outline overlay) and **Open interactively** button into the viewer.
-- 5g. Apply the T1 → MNI nonlinear warp from `fsl_anat` to produce analysis-ready BOLD.
-- 5h. Functional preprocessing screen: a clean parameter form with defaults, advanced options hidden, and only valid choices shown (for example, "Use fieldmap" disabled if no fieldmap exists).
-- 5i. Optional slice-timing correction (off by default).
+- 5-0. Spike: confirm FEAT runs headless with a written design file (done; see `docs/DECISIONS.md`).
+- 5a. `design.fsf` writer (delete 5 volumes, 5 mm smoothing, 150 s high-pass: proposals the user confirms; smoothing and high-pass inside FEAT, before cleanup).
+- 5b. `fieldmap_prep` (Siemens gradient-echo field maps: `bet` + `fsl_prepare_fieldmap`); skipped when no fieldmap exists. Philips B0 maps later.
+- 5c. `feat_preproc`: motion correction, brain extraction, B0 unwarping, smoothing, temporal filtering, registration to the `fsl_anat` T1 (BBR); standard-space registration is left to 5e.
+- 5d. `func_qc`: motion plot and metrics (framewise displacement; reported only), registration QC mosaic with an **Open interactively** button into the viewer, fieldmap before/after view.
+- 5e. `func_to_mni`: combine the functional → T1 transform with the `fsl_anat` T1 → MNI warp and resample any native-space 4D input once with `applywarp` (default input: the FEAT result; later the cleaned data, so cleanup comes before MNI).
+- 5f. Functional preprocessing screen and pipeline builder: a clean parameter form with defaults, advanced options hidden, and only valid choices shown (for example, "Use fieldmap" disabled if no fieldmap exists).
+- 5g. Optional slice-timing correction (off by default; FEAT option).
 
-**Manual test checklist** (after each of 5a–5g, then once at the end)
+**Manual test checklist** (after each of 5a–5e, then once at the end)
 1. Run the step in the app and the same operation manually with FSL on the same data. Outputs match (identical, or differences explained and documented).
 2. Check the QC image or plot by eye. It should make an obvious failure obvious (try a deliberately bad input).
 3. Run the whole functional pipeline from the UI on the test dataset and open the final result in the viewer.
