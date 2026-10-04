@@ -210,3 +210,21 @@ class WorkspaceState(BaseModel):
     operations: list[OperationInfo]
     imports: list[ImportSummary]
     subjects: list[str]
+
+
+class QcEntry(BaseModel):
+    name: str  # plain-language title, e.g. "Mean framewise displacement (mm)"
+    kind: Literal["image", "plot", "metric"]
+    value: str | None = None  # for metrics
+    image_url: str | None = None  # for pictures and plots
+    warning: str | None = None
+
+
+class QcGroup(BaseModel):
+    """The QC results of one step on one recording (for example the motion and registration
+    results of the 'task-rest' run)."""
+
+    run: str
+    step: str
+    title: str
+    items: list[QcEntry]
