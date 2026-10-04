@@ -155,6 +155,12 @@ def test_two_runs_of_a_subject_keep_separate_records(tmp_path: Path) -> None:
         ws, "fsl_anat", "sub-001", None, {"t1": "rawbids/sub-001/anat/sub-001_T1w.nii.gz"}, {}
     )
     assert anat.run_dir.name == "fsl_anat"  # nothing changes for steps without entities
+    # results of an earlier step (desc-, space-) do not change which recording a run belongs to
+    _, qc = build_context(
+        ws, "fieldmap_prep", "sub-001", None,
+        {"magnitude1": "x/sub-001_task-rest_desc-brain_bold.nii.gz", "phasediff": "y"}, {},
+    )  # fmt: skip
+    assert qc.run_dir.name == "fieldmap_prep_task-rest"
 
 
 # -- API ----------------------------------------------------------------------------------------

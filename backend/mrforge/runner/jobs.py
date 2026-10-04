@@ -28,6 +28,10 @@ def param_hash(params: dict[str, Any]) -> str:
     return "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
 
 
+# BIDS entities that tell recordings of one subject apart (not processing history like desc-).
+RECORDING_ENTITIES = ("task", "acq", "ce", "dir", "rec", "run", "echo", "part")
+
+
 def run_folder_name(label: str, inputs: dict[str, Any]) -> str:
     """Name of a run's record folder: the label, plus the BIDS entities of the first input
     (task, run, acq, ...). Two runs of one step on different recordings of a subject (for
@@ -36,7 +40,7 @@ def run_folder_name(label: str, inputs: dict[str, Any]) -> str:
     if first is None:
         return label
     entities = parse_bids_name(first)[0]
-    extra = [f"{k}-{v}" for k, v in entities.items() if k not in ("sub", "ses")]
+    extra = [f"{k}-{v}" for k, v in entities.items() if k in RECORDING_ENTITIES]
     return "_".join([label, *extra])
 
 

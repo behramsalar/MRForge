@@ -8,7 +8,8 @@ import { ActivityPanel } from "./ActivityPanel";
 const steps = [
   { page: "import", label: "1. Import" },
   { page: "anat", label: "2. Anatomical" },
-  { page: "view", label: "3. View" },
+  { page: "func", label: "3. Functional" },
+  { page: "view", label: "4. View" },
 ] as const;
 
 /** Header with the linear flow (Import, Anatomical, View) and the live activity panel. */

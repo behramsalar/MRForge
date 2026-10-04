@@ -145,10 +145,13 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         )
 
     def job_info(job: Job, subject: str | None) -> S.JobInfo:
+        folder = (job.run_dir or "").rsplit("/", 1)[-1]
+        run = folder.removeprefix(job.label or job.step_name).lstrip("_").replace("_", " ")
         return S.JobInfo(
             id=job.id,
             step=job.step_name,
             label=job.label or job.step_name,
+            run=run,
             subject=subject,
             status=job.status,
             pipeline_run_id=job.pipeline_run_id,

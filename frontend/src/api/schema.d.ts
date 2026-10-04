@@ -365,6 +365,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/subjects/{label}/functional": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Functional Readiness
+         * @description What can be run for this subject, and why something is not possible.
+         */
+        get: operations["functional_readiness_api_workspaces__ws_id__subjects__label__functional_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/functional": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Functional */
+        post: operations["run_functional_api_workspaces__ws_id__functional_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/subjects/{label}/qc": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Subject Qc
+         * @description QC results recorded by the latest completed functional QC steps of a subject.
+         */
+        get: operations["subject_qc_api_workspaces__ws_id__subjects__label__qc_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/subjects/{label}/images": {
         parameters: {
             query?: never;
@@ -490,6 +547,17 @@ export interface components {
             /** Log Path */
             log_path?: string | null;
         };
+        /** FieldmapStatus */
+        FieldmapStatus: {
+            /** Available */
+            available: boolean;
+            /** Reason */
+            reason?: string | null;
+            /** Magnitude1 */
+            magnitude1?: string | null;
+            /** Phasediff */
+            phasediff?: string | null;
+        };
         /** FsEntry */
         FsEntry: {
             /** Name */
@@ -512,6 +580,40 @@ export interface components {
             home: string;
             /** Entries */
             entries: components["schemas"]["FsEntry"][];
+        };
+        /** FunctionalOptions */
+        FunctionalOptions: {
+            /** Subject */
+            subject: string;
+            /** Bold */
+            bold: string;
+            /** Session */
+            session?: string | null;
+            /**
+             * Delete Volumes
+             * @default 5
+             */
+            delete_volumes: number;
+            /**
+             * Smoothing Fwhm Mm
+             * @default 5
+             */
+            smoothing_fwhm_mm: number;
+            /**
+             * Highpass Cutoff S
+             * @default 150
+             */
+            highpass_cutoff_s: number | null;
+            /**
+             * Use Fieldmap
+             * @default true
+             */
+            use_fieldmap: boolean;
+            /**
+             * To Mni
+             * @default true
+             */
+            to_mni: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -626,6 +728,11 @@ export interface components {
             step: string;
             /** Label */
             label: string;
+            /**
+             * Run
+             * @default
+             */
+            run: string;
             /** Subject */
             subject: string | null;
             /** Status */
@@ -680,6 +787,48 @@ export interface components {
             /** Operation Id */
             operation_id: number;
         };
+        /** QcEntry */
+        QcEntry: {
+            /** Name */
+            name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "image" | "plot" | "metric";
+            /** Value */
+            value?: string | null;
+            /** Image Url */
+            image_url?: string | null;
+            /** Warning */
+            warning?: string | null;
+        };
+        /**
+         * QcGroup
+         * @description The QC results of one step on one recording (for example the motion and registration
+         *     results of the 'task-rest' run).
+         */
+        QcGroup: {
+            /** Run */
+            run: string;
+            /** Step */
+            step: string;
+            /** Title */
+            title: string;
+            /** Items */
+            items: components["schemas"]["QcEntry"][];
+        };
+        /** Readiness */
+        Readiness: {
+            /** Subject */
+            subject: string;
+            /** Anat Ready */
+            anat_ready: boolean;
+            /** Anat Reason */
+            anat_reason?: string | null;
+            /** Runs */
+            runs: components["schemas"]["RunStatus"][];
+        };
         /** RemovalPlanInfo */
         RemovalPlanInfo: {
             /** Path */
@@ -690,6 +839,16 @@ export interface components {
             not_safe: string[];
             /** Only In Dicom */
             only_in_dicom: string[];
+        };
+        /** RunStatus */
+        RunStatus: {
+            /** Bold */
+            bold: string;
+            /** Name */
+            name: string;
+            /** Volumes */
+            volumes?: number | null;
+            fieldmap: components["schemas"]["FieldmapStatus"];
         };
         /** ScanRequest */
         ScanRequest: {
@@ -1550,6 +1709,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OperationStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    functional_readiness_api_workspaces__ws_id__subjects__label__functional_get: {
+        parameters: {
+            query?: {
+                session?: string | null;
+            };
+            header?: never;
+            path: {
+                ws_id: string;
+                label: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Readiness"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_functional_api_workspaces__ws_id__functional_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FunctionalOptions"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    subject_qc_api_workspaces__ws_id__subjects__label__qc_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                label: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QcGroup"][];
                 };
             };
             /** @description Validation Error */

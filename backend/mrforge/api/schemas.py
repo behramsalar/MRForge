@@ -172,6 +172,7 @@ class JobInfo(BaseModel):
     id: int
     step: str
     label: str
+    run: str = ""  # which recording, e.g. "task-rest run-1" (empty for anatomical steps)
     subject: str | None
     status: str
     pipeline_run_id: int | None
