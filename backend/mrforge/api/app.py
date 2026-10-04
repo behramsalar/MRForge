@@ -14,13 +14,13 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sse_starlette.sse import EventSourceResponse
 
-from mrforge import __version__
+from mrforge import __version__, accounts
 from mrforge.api import schemas as S
 from mrforge.bids import parse_bids_name
 from mrforge.config import load_config
@@ -177,6 +177,41 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             finished=op.finished,
             result=op.result,
             error=_body(op.error, "", None),
+            started_by=op.started_by,
+        )
+
+    # -- researcher profiles ------------------------------------------------------------------
+
+    def current_researcher(request: Request) -> accounts.Researcher | None:
+        """The researcher this request is for, from the profile the page picked (header
+        ``X-MRForge-User``). This is the ONE place that decides who is acting: a login system
+        would replace this function with a session check and nothing else would change."""
+        raw = request.headers.get("x-mrforge-user", "")
+        if not raw.isdigit():
+            return None
+        return accounts.get_researcher(int(raw))
+
+    Researcher = Depends(current_researcher)
+
+    @app.get("/api/researchers", response_model=list[S.ResearcherInfo])
+    def list_researchers() -> list[S.ResearcherInfo]:
+        return [
+            S.ResearcherInfo(id=r.id, name=r.name, last_seen=r.last_seen)
+            for r in accounts.list_researchers()
+        ]
+
+    @app.post("/api/researchers", response_model=S.ResearcherInfo)
+    def create_researcher(req: S.ResearcherCreate) -> S.ResearcherInfo:
+        r = accounts.create_researcher(req.name)
+        return S.ResearcherInfo(id=r.id, name=r.name, last_seen=r.last_seen)
+
+    @app.get("/api/me", response_model=S.ResearcherInfo | None)
+    def me(researcher: accounts.Researcher | None = Researcher) -> S.ResearcherInfo | None:
+        if researcher is None:
+            return None
+        accounts.touch(researcher.id)
+        return S.ResearcherInfo(
+            id=researcher.id, name=researcher.name, last_seen=researcher.last_seen
         )
 
     # -- health and workspaces ----------------------------------------------------------------
@@ -335,7 +370,9 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         return import_detail(ws, m)
 
     @app.post("/api/workspaces/{ws_id}/imports/scan", response_model=S.OperationStarted)
-    def scan(ws_id: str, req: S.ScanRequest) -> S.OperationStarted:
+    def scan(
+        ws_id: str, req: S.ScanRequest, who: accounts.Researcher | None = Researcher
+    ) -> S.OperationStarted:
         ws = ws_of(ws_id)
         source = _inside_home(req.source)
         if not source.exists():
@@ -349,11 +386,17 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             "scan",
             f"Reading scanner files from {source.name}",
             {"source": str(source), "subject": req.subject, "session": req.session},
+            started_by=who.name if who else None,
         )
         return S.OperationStarted(operation_id=op)
 
     @app.post("/api/workspaces/{ws_id}/imports/{import_id}/run", response_model=S.OperationStarted)
-    def run_import(ws_id: str, import_id: str, req: S.ImportRunRequest) -> S.OperationStarted:
+    def run_import(
+        ws_id: str,
+        import_id: str,
+        req: S.ImportRunRequest,
+        who: accounts.Researcher | None = Researcher,
+    ) -> S.OperationStarted:
         ws = ws_of(ws_id)
         m = load_manifest(ws, import_id)
         op = start_operation(
@@ -361,6 +404,7 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             "import_run",
             f"Importing {m.id} into {m.subject}",
             {"import_id": m.id, "remove_dicom": req.remove_dicom},
+            started_by=who.name if who else None,
         )
         return S.OperationStarted(operation_id=op)
 
@@ -382,11 +426,17 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         "/api/workspaces/{ws_id}/imports/{import_id}/remove-dicom",
         response_model=S.OperationStarted,
     )
-    def remove_dicom_copy(ws_id: str, import_id: str) -> S.OperationStarted:
+    def remove_dicom_copy(
+        ws_id: str, import_id: str, who: accounts.Researcher | None = Researcher
+    ) -> S.OperationStarted:
         ws = ws_of(ws_id)
         m = load_manifest(ws, import_id)
         op = start_operation(
-            ws, "remove_dicom", f"Removing the DICOM copy of {m.id}", {"import_id": m.id}
+            ws,
+            "remove_dicom",
+            f"Removing the DICOM copy of {m.id}",
+            {"import_id": m.id},
+            started_by=who.name if who else None,
         )
         return S.OperationStarted(operation_id=op)
 
@@ -479,7 +529,12 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
 
     # -- anatomical preprocessing -------------------------------------------------------------
 
-    def _start_pipeline(ws: Workspace, spec: PipelineSpec, title: str) -> S.OperationStarted:
+    def _start_pipeline(
+        ws: Workspace,
+        spec: PipelineSpec,
+        title: str,
+        who: accounts.Researcher | None = None,
+    ) -> S.OperationStarted:
         refresh(ws)
         if any(j.status == JobStatus.RUNNING.value for j in list_jobs(ws)):
             raise StepError(
@@ -488,11 +543,19 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
                 probable_cause="It was started earlier and has not finished yet.",
                 suggested_action="Wait for it to finish, or cancel it, then try again.",
             )
-        op = start_operation(ws, "pipeline", title, {"spec": spec.model_dump(mode="json")})
+        op = start_operation(
+            ws,
+            "pipeline",
+            title,
+            {"spec": spec.model_dump(mode="json")},
+            started_by=who.name if who else None,
+        )
         return S.OperationStarted(operation_id=op)
 
     @app.post("/api/workspaces/{ws_id}/anat", response_model=S.OperationStarted)
-    def run_anat(ws_id: str, req: S.AnatRequest) -> S.OperationStarted:
+    def run_anat(
+        ws_id: str, req: S.AnatRequest, who: accounts.Researcher | None = Researcher
+    ) -> S.OperationStarted:
         ws = ws_of(ws_id)
         if not (ws.abspath(req.t1)).is_file() or not req.t1.startswith("rawbids/"):
             raise StepError(
@@ -517,10 +580,10 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         for st in steps:
             st.session = req.session
         spec = PipelineSpec(name=f"anatomical-{req.subject}", subject=req.subject, steps=steps)
-        return _start_pipeline(ws, spec, f"Anatomical preprocessing of {req.subject}")
+        return _start_pipeline(ws, spec, f"Anatomical preprocessing of {req.subject}", who)
 
     @app.post("/api/workspaces/{ws_id}/resume", response_model=S.OperationStarted)
-    def resume(ws_id: str) -> S.OperationStarted:
+    def resume(ws_id: str, who: accounts.Researcher | None = Researcher) -> S.OperationStarted:
         """Continue the latest pipeline where it stopped; finished steps are not repeated."""
         from mrforge.pipeline import parse_pipeline
 
@@ -532,7 +595,7 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
                 "There is nothing to resume yet.",
                 suggested_action="Start the processing first.",
             )
-        return _start_pipeline(ws, parse_pipeline(last.spec), f"Resuming {last.name}")
+        return _start_pipeline(ws, parse_pipeline(last.spec), f"Resuming {last.name}", who)
 
     # -- functional preprocessing -------------------------------------------------------------
 
@@ -545,11 +608,13 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         return check_ready(ws, label, session)
 
     @app.post("/api/workspaces/{ws_id}/functional", response_model=S.OperationStarted)
-    def run_functional(ws_id: str, req: FunctionalOptions) -> S.OperationStarted:
+    def run_functional(
+        ws_id: str, req: FunctionalOptions, who: accounts.Researcher | None = Researcher
+    ) -> S.OperationStarted:
         ws = ws_of(ws_id)
         spec = build_pipeline(ws, req)
         run = Path(req.bold).name.removesuffix("_bold.nii.gz").split("_", 1)[-1]
-        return _start_pipeline(ws, spec, f"Functional preprocessing of {req.subject} ({run})")
+        return _start_pipeline(ws, spec, f"Functional preprocessing of {req.subject} ({run})", who)
 
     @app.get("/api/workspaces/{ws_id}/subjects/{label}/qc", response_model=list[S.QcGroup])
     def subject_qc(ws_id: str, label: str) -> list[S.QcGroup]:

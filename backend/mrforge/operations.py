@@ -160,7 +160,9 @@ def active_operation(ws: Workspace) -> Operation | None:
     return None
 
 
-def start_operation(ws: Workspace, kind: str, title: str, args: dict[str, Any]) -> int:
+def start_operation(
+    ws: Workspace, kind: str, title: str, args: dict[str, Any], started_by: str | None = None
+) -> int:
     """Create an operation and start its worker. Refuses while another one is running."""
     if kind not in HANDLERS:
         raise StepError(
@@ -177,7 +179,13 @@ def start_operation(ws: Workspace, kind: str, title: str, args: dict[str, Any]) 
             suggested_action="Wait for it to finish (or cancel it), then try again.",
         )
     with ws.session() as s:
-        op = Operation(kind=kind, title=title, args=args, status=JobStatus.QUEUED.value)
+        op = Operation(
+            kind=kind,
+            title=title,
+            args=args,
+            status=JobStatus.QUEUED.value,
+            started_by=started_by,
+        )
         s.add(op)
         s.flush()
         op_id = op.id

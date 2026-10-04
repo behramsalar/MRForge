@@ -339,7 +339,7 @@ Each follows the same pattern: backend step with tests and a comparison against 
 ## 9. Out of scope until told otherwise
 
 - Group-level statistics, task fMRI first-level analysis, diffusion processing.
-- Celery, PostgreSQL, multi-node compute, user accounts and authentication.
+- Celery, PostgreSQL, multi-node compute, and login/authentication (passwords, sessions, permissions). Light researcher profiles (a name picked on a shared computer, no password, used to tag and resume one's own work) are allowed since the UI overhaul; see `docs/DECISIONS.md`.
 - Any LLM-written scientific text.
 - Automatic subject exclusion.
 - Styling work during engine stages (Stages 0–2).

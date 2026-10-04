@@ -38,7 +38,7 @@ export function ActivityPanel({ ws, state }: { ws: string; state: WorkspaceState
         </Callout.Icon>
         <Flex align="center" justify="between" gap={space.group} wrap="wrap" style={{ width: "100%" }}>
           <Text size={type.body}>
-            {running.title}…{" "}
+            {running.title}…{running.started_by ? ` (started by ${running.started_by})` : ""}{" "}
             <Text color="gray" size={type.help}>
               ({elapsed(running.started ?? running.created, null)})
               {runningJob ? ` Step: ${runningJob.label}` : ""}

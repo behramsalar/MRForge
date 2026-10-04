@@ -6,10 +6,12 @@ import { ApiError, call } from "../api/call";
 import { useWorkspaces } from "../api/hooks";
 import { ErrorCallout } from "../components/ErrorCallout";
 import { href } from "../lib/router";
+import { useResearcher } from "../shell/ResearcherProvider";
 import { space, type } from "../theme/tokens";
 
 export function Workspaces() {
   const list = useWorkspaces();
+  const { researcher, lastWork } = useResearcher();
   const client = useQueryClient();
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
@@ -65,6 +67,23 @@ export function Workspaces() {
         </Dialog.Root>
       </Flex>
 
+      {researcher && lastWork && (
+        <Card size="3">
+          <Flex justify="between" align="center" gap={space.group} wrap="wrap">
+            <Flex direction="column">
+              <Text weight="bold" size={type.body}>
+                Welcome back, {researcher.name}
+              </Text>
+              <Text color="gray" size={type.help}>
+                You were last in {lastWork.label}.
+              </Text>
+            </Flex>
+            <Button asChild>
+              <a href={lastWork.hash}>Continue where you left off</a>
+            </Button>
+          </Flex>
+        </Card>
+      )}
       {list.error && <ErrorCallout error={(list.error as ApiError).body} />}
       {list.data?.length === 0 && (
         <Callout.Root>

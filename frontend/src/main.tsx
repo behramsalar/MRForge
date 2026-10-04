@@ -13,6 +13,7 @@ import { ProcessPage } from "./pages/ProcessPage";
 import { Settings } from "./pages/Settings";
 import { Workspaces } from "./pages/Workspaces";
 import { AppShell } from "./shell/AppShell";
+import { ResearcherProvider } from "./shell/ResearcherProvider";
 import { ThemeProvider } from "./shell/ThemeProvider";
 import { WorkspaceProvider, useWorkspace } from "./shell/WorkspaceContext";
 
@@ -60,7 +61,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <ResearcherProvider>
+          <App />
+        </ResearcherProvider>
       </QueryClientProvider>
     </ThemeProvider>
   </StrictMode>,

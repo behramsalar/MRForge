@@ -162,6 +162,7 @@ class OperationInfo(BaseModel):
     finished: datetime | None
     result: dict[str, Any] | None
     error: ErrorBody | None
+    started_by: str | None = None
 
 
 class OperationStarted(BaseModel):
@@ -229,3 +230,13 @@ class QcGroup(BaseModel):
     step: str
     title: str
     items: list[QcEntry]
+
+
+class ResearcherInfo(BaseModel):
+    id: int
+    name: str
+    last_seen: datetime | None = None
+
+
+class ResearcherCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=60)

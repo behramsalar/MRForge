@@ -1,10 +1,11 @@
 import { BellIcon, MoonIcon, SunIcon } from "@radix-ui/react-icons";
-import { Badge, Flex, IconButton, Popover, Text } from "@radix-ui/themes";
+import { Avatar, Badge, DropdownMenu, Flex, IconButton, Popover, Text } from "@radix-ui/themes";
 import { latestJobs, stepName } from "../components/JobsPanel";
 import { StatusBadge } from "../components/ui/Badges";
 import { href, type Route } from "../lib/router";
 import { space, type } from "../theme/tokens";
 import { pageLabel } from "./nav";
+import { useResearcher } from "./ResearcherProvider";
 import { useAppTheme } from "./ThemeProvider";
 import { useWorkspace } from "./WorkspaceContext";
 
@@ -72,6 +73,30 @@ function Activity({ ws }: { ws: string }) {
   );
 }
 
+function initials(name: string): string {
+  const parts = name.split(" ").filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "")).toUpperCase();
+}
+
+/** Who is working. Not a login: switching the profile only changes whose work is shown. */
+function ResearcherMenu() {
+  const { researcher, researchers, openPicker } = useResearcher();
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger>
+        <IconButton variant="ghost" color="gray" radius="full" aria-label="Researcher">
+          <Avatar size="2" radius="full" fallback={researcher ? initials(researcher.name) : "?"} color="orange" />
+        </IconButton>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Content align="end">
+        <DropdownMenu.Label>{researcher ? `Working as ${researcher.name}` : "No researcher chosen"}</DropdownMenu.Label>
+        {researchers.length > 0 && <DropdownMenu.Separator />}
+        <DropdownMenu.Item onSelect={openPicker}>{researcher ? "Switch researcher" : "Choose your name"}</DropdownMenu.Item>
+      </DropdownMenu.Content>
+    </DropdownMenu.Root>
+  );
+}
+
 export function TopBar({ route }: { route: Route }) {
   const { appearance, toggle } = useAppTheme();
   return (
@@ -103,6 +128,7 @@ export function TopBar({ route }: { route: Route }) {
         >
           {appearance === "dark" ? <SunIcon width={18} height={18} /> : <MoonIcon width={18} height={18} />}
         </IconButton>
+        <ResearcherMenu />
       </Flex>
     </header>
   );

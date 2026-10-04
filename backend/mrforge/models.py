@@ -132,3 +132,5 @@ class Operation(Base):
     result: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
     error: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
     log: Mapped[str | None] = mapped_column(String(1000), nullable=True)  # workspace-relative
+    # Who started it: the researcher profile name at that time (not a login; see accounts.py).
+    started_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
