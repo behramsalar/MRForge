@@ -27,11 +27,10 @@ from mrforge.errors import StepError
 from mrforge.niftiutil import is_readable_nifti
 from mrforge.steps.base import Problem, QCItem, Step, StepContext, StepResult
 from mrforge.steps.feat_preproc import WM_LABEL
+from mrforge.steps.qcpics import slice_row, stack_rows
 from mrforge.steps.registry import register_step
 
 MOTION_COLUMNS = ["rot_x", "rot_y", "rot_z", "trans_x", "trans_y", "trans_z"]
-FRACTIONS = (0.35, 0.45, 0.55, 0.65)  # the same slice positions FEAT shows
-SLICE_FRACTIONS = {"x": FRACTIONS, "y": FRACTIONS, "z": FRACTIONS}  # sagittal, coronal, axial
 
 
 class FuncQcInput(BaseModel):
@@ -173,28 +172,6 @@ class FuncQcStep(Step[FuncQcInput, FuncQcParams, FuncQcOutput]):
 
     # -- pictures -----------------------------------------------------------
 
-    def _row(
-        self, ctx: StepContext[FuncQcInput, FuncQcParams], base: Path, outline: Path, out: Path
-    ) -> None:
-        """One row of slices (sagittal, coronal, axial) of ``base`` with the edges of
-        ``outline`` in red, drawn by FSL ``slicer``."""
-        pieces: list[str] = []
-        argv = ["slicer", str(base), str(outline), "-s", "2"]
-        for axis, fractions in SLICE_FRACTIONS.items():
-            for k, fraction in enumerate(fractions):
-                piece = out.with_name(f"{out.stem}_{axis}{k}.png")
-                argv += [f"-{axis}", f"{fraction}", str(piece)]
-                pieces.append(str(piece))
-        ctx.run_command(argv)
-        joined = [arg for piece in pieces for arg in (piece, "+")][:-1]
-        ctx.run_command(["pngappend", *joined, str(out)])
-
-    def _stack(
-        self, ctx: StepContext[FuncQcInput, FuncQcParams], rows: list[Path], out: Path
-    ) -> None:
-        joined = [arg for row in rows for arg in (str(row), "-")][:-1]
-        ctx.run_command(["pngappend", *joined, str(out)])
-
     def run(self, ctx: StepContext[FuncQcInput, FuncQcParams]) -> StepResult:
         i, p = ctx.inputs, ctx.params
         work = ctx.run_dir / "work"
@@ -222,13 +199,13 @@ class FuncQcStep(Step[FuncQcInput, FuncQcParams, FuncQcOutput]):
             ]
         )
         ref, t1 = ctx.input_path(i.boldref_t1), ctx.input_path(i.t1_head)
-        self._row(ctx, ref, wm, work / "func.png")  # functional with the white-matter boundary
-        self._row(ctx, t1, ref, work / "t1.png")  # T1 with the edges of the functional image
-        self._stack(ctx, [work / "func.png", work / "t1.png"], ctx.output_dir / out.registration)
+        slice_row(ctx, ref, wm, work / "func.png")  # functional with the white-matter boundary
+        slice_row(ctx, t1, ref, work / "t1.png")  # T1 with the edges of the functional image
+        stack_rows(ctx, [work / "func.png", work / "t1.png"], ctx.output_dir / out.registration)
         if out.unwarping and i.boldref_distorted_t1:
-            self._row(ctx, ctx.input_path(i.boldref_distorted_t1), wm, work / "before.png")
-            self._row(ctx, ref, wm, work / "after.png")
-            self._stack(
+            slice_row(ctx, ctx.input_path(i.boldref_distorted_t1), wm, work / "before.png")
+            slice_row(ctx, ref, wm, work / "after.png")
+            stack_rows(
                 ctx, [work / "before.png", work / "after.png"], ctx.output_dir / out.unwarping
             )
         shutil.rmtree(work, ignore_errors=True)

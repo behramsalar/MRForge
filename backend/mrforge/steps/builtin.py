@@ -7,4 +7,5 @@ from mrforge.steps import (  # noqa: F401
     fieldmap_prep,
     fsl_anat,
     func_qc,
+    func_to_mni,
 )

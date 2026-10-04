@@ -295,3 +295,7 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 - **What happened:** FEAT stopped before it finished. The first three are recognised causes (the fieldmap magnitude still contains the skull; FEAT could not use an input image; a file FEAT needs is missing); FEAT_FAILED is anything else, with the last line of FEAT's own log quoted.
 - **Suggested action:** Follow the message; the raw log is one click away.
 
+
+### BOLD_NOT_4D / MNI_TEMPLATE_MISSING / MNI_RESULT_UNEXPECTED
+- **What happened:** The standard-space step was given something that is not a time series, FSL's MNI template was not found, or the result had an unexpected size.
+- **Suggested action:** Choose the preprocessed (or cleaned) functional run; check the FSL installation; open the raw log and run the step again.
