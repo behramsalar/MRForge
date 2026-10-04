@@ -1,6 +1,6 @@
 # Progress
 
-**Current stage:** Stage 5 (functional preprocessing, built on FEAT) built on branch `stage-5-functional`; waiting for the user's manual test and "stage accepted". Stages 0-3 accepted (tags `stage0-accepted` ... `stage3-accepted`); Stage 4 (lab usability test) is user-led and not started.
+**Current stage:** Stage 5 (functional preprocessing, built on FEAT) accepted by the user (tag `stage5-accepted`). Stages 0-3 and 5 accepted (tags `stage0-accepted` ... `stage5-accepted`). Next: a UI overhaul (planned in plan mode), then Stage 4 (lab usability test) on the new design.
 
 ## Stage 5 (Functional preprocessing, on FEAT)
 | Sub-step | Status |
@@ -78,4 +78,4 @@ Demo workspace with your real session imported: `~/Documents/mrforge-workspaces/
 - Fieldmap handling: your DICOM set contains gradient-echo field maps; types to confirm before Stage 5c.
 
 ## Next action
-The user runs the Stage 5 manual checklist and answers the REVIEW(domain) items, then "stage accepted". Pictures for the report page are improved in Stage 7 (user decision).
+Plan the UI overhaul (sidebar navigation, themed light/dark look, global viewer, dashboard, full-processing flow with a confirmation dialog). The Stage 5 REVIEW(domain) items are still open for the user. Pictures for the report page are improved in Stage 7 (user decision).
