@@ -169,3 +169,82 @@ def test_leftover_feat_folder_is_removed_before_a_run(tmp_path: Path) -> None:
     step.prepare(ctx)
     assert not leftover.exists()
     shutil.rmtree(ctx.run_dir, ignore_errors=True)
+
+
+# -- slice timing (5g) -----------------------------------------------------------------------
+
+
+def test_slice_timing_values_are_negative_fractions_of_tr_about_mid_tr() -> None:
+    from mrforge.steps.feat_preproc import slice_timing_fractions
+
+    assert slice_timing_fractions([0.0, 1.0, 0.5, 1.5], 2.0) == [0.5, 0.0, 0.25, -0.25]
+
+
+def test_slice_timing_needs_the_scans_slice_times(tmp_path: Path) -> None:
+    ws = make_ws(tmp_path)  # sidecar without SliceTiming
+    found = problems(ws, {}, {"slice_timing": True})
+    assert [p.code for p in found] == ["SLICE_TIMING_MISSING"]
+    assert "without slice timing" in found[0].suggested_action
+
+
+def test_slice_timing_must_match_the_slices(tmp_path: Path) -> None:
+    ws = make_ws(tmp_path, sidecar={**SIDECAR, "SliceTiming": [0.0, 1.0, 0.5]})  # image has 4
+    assert [p.code for p in problems(ws, {}, {"slice_timing": True})] == ["SLICE_TIMING_MISMATCH"]
+
+
+def test_slice_timing_is_written_into_the_design(tmp_path: Path) -> None:
+    ws = make_ws(tmp_path, sidecar={**SIDECAR, "SliceTiming": [0.0, 1.0, 0.5, 1.5]})
+    assert problems(ws, {}, {"slice_timing": True}) == []
+    step, ctx = build_context(
+        ws, "feat_preproc", "sub-001", None, {"bold": BOLD}, {"slice_timing": True}
+    )
+    design = step._design(ctx, ctx.run_dir / "work" / "stage")  # type: ignore[attr-defined]
+    assert design.slice_timing == "file" and design.slice_timing_file.endswith("slice_timing.txt")
+
+
+@pytest.mark.fsl
+def test_the_slice_timing_file_really_aligns_the_slices(tmp_path: Path) -> None:
+    """On synthetic data with a known delay per slice, the values we write make slicetimer
+    bring every slice onto the same time (the sign was found this way, not assumed)."""
+    import subprocess
+
+    from mrforge.errors import StepError
+    from mrforge.fsl_env import find_fsl
+    from mrforge.steps.feat_preproc import slice_timing_fractions
+
+    try:
+        fsl = find_fsl()
+    except StepError as err:
+        pytest.skip(f"FSL not found: {err.message}")
+    tr, nz, nv, freq = 2.0, 8, 80, 0.04
+    times = [k / nz * tr for k in range(nz)]
+    vols = np.arange(nv) * tr
+    data = np.zeros((4, 4, nz, nv), dtype="float32")
+    for k in range(nz):
+        data[:, :, k, :] = 1000 + 100 * np.sin(2 * np.pi * freq * (vols + times[k]))
+    img = nib.Nifti1Image(data, np.diag([3.0, 3.0, 3.0, 1.0]))
+    img.header.set_zooms((3.0, 3.0, 3.0, tr))
+    nib.save(img, tmp_path / "syn.nii.gz")
+    (tmp_path / "tc.txt").write_text(
+        "".join(f"{v:.6f}\n" for v in slice_timing_fractions(times, tr))
+    )
+    subprocess.run(
+        ["slicetimer", "-i", str(tmp_path / "syn"), "-o", str(tmp_path / "out"), "-r", str(tr),
+         f"--tcustom={tmp_path / 'tc.txt'}"],
+        env=fsl.env, check=True,
+    )  # fmt: skip
+
+    def delays(path: Path) -> list[float]:
+        d = nib.load(path).get_fdata()  # type: ignore[attr-defined]
+        x = vols[10:70]
+        design = np.c_[np.sin(2 * np.pi * freq * x), np.cos(2 * np.pi * freq * x)]
+        out = []
+        for k in range(nz):
+            y = d[0, 0, k, 10:70] - d[0, 0, k, 10:70].mean()
+            a, b = np.linalg.lstsq(design, y, rcond=None)[0]
+            out.append(float(np.arctan2(b, a) / (2 * np.pi * freq)))
+        return out
+
+    before, after = delays(tmp_path / "syn.nii.gz"), delays(tmp_path / "out.nii.gz")
+    assert max(before) - min(before) > 1.0  # the slices really were out of step
+    assert max(after) - min(after) < 0.05  # and now they are on the same time

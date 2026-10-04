@@ -41,6 +41,7 @@ class FunctionalOptions(BaseModel):
     highpass_cutoff_s: float | None = Field(default=150.0, gt=0)  # None: no temporal filtering
     use_fieldmap: bool = True  # only honoured when a usable fieldmap exists
     to_mni: bool = True  # also resample the result into MNI space
+    slice_timing: bool = False  # slice timing correction (off by default)
 
 
 class FieldmapStatus(BaseModel):
@@ -50,11 +51,17 @@ class FieldmapStatus(BaseModel):
     phasediff: str | None = None
 
 
+class SliceTimingStatus(BaseModel):
+    available: bool
+    reason: str | None = None
+
+
 class RunStatus(BaseModel):
     bold: str
     name: str  # e.g. "task-rest" or "task-rest run-1"
     volumes: int | None = None
     fieldmap: FieldmapStatus
+    slice_timing: SliceTimingStatus
 
 
 class Readiness(BaseModel):
@@ -151,6 +158,27 @@ def fieldmap_status(ws: Workspace, bold_rel: str) -> FieldmapStatus:
     return FieldmapStatus(available=True, magnitude1=ws.relpath(mag), phasediff=ws.relpath(phase))
 
 
+def slice_timing_status(ws: Workspace, bold_rel: str) -> SliceTimingStatus:
+    """Slice timing correction needs one acquisition time per slice in the scan's sidecar."""
+    from mrforge.niftiutil import image_info
+
+    side = read_sidecar(ws, bold_rel)
+    times = side.get("SliceTiming")
+    if not isinstance(times, list) or not times:
+        return SliceTimingStatus(
+            available=False, reason="This scan does not record its slice times."
+        )
+    try:
+        slices = image_info(ws.abspath(bold_rel))[0][2]
+    except Exception:
+        return SliceTimingStatus(available=False, reason="The image could not be read.")
+    if len(times) != slices or side.get("SliceEncodingDirection", "k") not in ("k", "k-"):
+        return SliceTimingStatus(
+            available=False, reason="The recorded slice times do not match the image layout."
+        )
+    return SliceTimingStatus(available=True)
+
+
 def check_ready(ws: Workspace, subject: str, session: str | None = None) -> Readiness:
     func_dir = _subject_dir(ws, "rawbids", subject, session) / "func"
     runs: list[RunStatus] = []
@@ -159,7 +187,11 @@ def check_ready(ws: Workspace, subject: str, session: str | None = None) -> Read
         label = image.name.removesuffix("_bold.nii.gz").split("_", 1)[-1].replace("_", " ")
         runs.append(
             RunStatus(
-                bold=rel, name=label, volumes=_volumes(ws, rel), fieldmap=fieldmap_status(ws, rel)
+                bold=rel,
+                name=label,
+                volumes=_volumes(ws, rel),
+                fieldmap=fieldmap_status(ws, rel),
+                slice_timing=slice_timing_status(ws, rel),
             )
         )
     anat = anat_results(ws, subject, session)
@@ -196,6 +228,13 @@ def build_pipeline(ws: Workspace, opts: FunctionalOptions) -> PipelineSpec:
             probable_cause=fmap.reason or "",
             suggested_action="Turn distortion correction off, or add the missing information.",
         )
+    if opts.slice_timing and not slice_timing_status(ws, opts.bold).available:
+        raise StepError(
+            code="SLICE_TIMING_UNAVAILABLE",
+            message="Slice timing correction was requested, but it is not possible here.",
+            probable_cause=slice_timing_status(ws, opts.bold).reason or "",
+            suggested_action="Turn slice timing correction off.",
+        )
     stem = Path(opts.bold).name.removesuffix("_bold.nii.gz")
     steps: list[PipelineStep] = []
 
@@ -227,6 +266,7 @@ def build_pipeline(ws: Workspace, opts: FunctionalOptions) -> PipelineSpec:
             "delete_volumes": opts.delete_volumes,
             "smoothing_fwhm_mm": opts.smoothing_fwhm_mm,
             "highpass_cutoff_s": opts.highpass_cutoff_s,
+            "slice_timing": opts.slice_timing,
         },
     )
     qc_inputs: dict[str, Any] = {

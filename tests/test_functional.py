@@ -121,7 +121,12 @@ def test_full_pipeline_is_valid_and_ordered(tmp_path: Path) -> None:
     assert [s.id for s in spec.steps] == ["fieldmap_prep", "feat_preproc", "func_qc", "func_to_mni"]
     parse_pipeline(spec.model_dump(mode="json"))  # references only point at earlier steps
     feat = next(s for s in spec.steps if s.id == "feat_preproc")
-    assert feat.params == {"delete_volumes": 3, "smoothing_fwhm_mm": 6.0, "highpass_cutoff_s": None}
+    assert feat.params == {
+        "delete_volumes": 3,
+        "smoothing_fwhm_mm": 6.0,
+        "highpass_cutoff_s": None,
+        "slice_timing": False,
+    }
     assert feat.inputs["fieldmap"] == "${fieldmap_prep.fieldmap}"
     assert spec.name == "functional-sub-001_task-rest"
     # the standard-space step is optional
@@ -185,3 +190,16 @@ def test_api_reports_readiness_and_refuses_what_is_impossible(
     )
     assert refused.status_code == 400 and refused.json()["code"] == "ANAT_NOT_READY"
     assert client.get(f"/api/workspaces/{created}/subjects/sub-001/qc").json() == []
+
+
+def test_slice_timing_is_offered_only_when_the_scan_has_slice_times(tmp_path: Path) -> None:
+    plain = check_ready(workspace(tmp_path), "sub-001").runs[0].slice_timing
+    assert not plain.available and "slice times" in (plain.reason or "")
+    with pytest.raises(StepError) as err:
+        build_pipeline(workspace(tmp_path / "again"), options(slice_timing=True))
+    assert err.value.code == "SLICE_TIMING_UNAVAILABLE"
+    facts = {**BOLD_FACTS, "SliceTiming": [0.0, 1.0, 0.5, 1.5]}  # the image has 4 slices
+    ws = workspace(tmp_path / "ok", bold_facts=facts)
+    assert check_ready(ws, "sub-001").runs[0].slice_timing.available
+    spec = build_pipeline(ws, options(slice_timing=True))
+    assert next(s for s in spec.steps if s.id == "feat_preproc").params["slice_timing"] is True

@@ -40,6 +40,7 @@ export function FunctionalPage({ ws, state }: { ws: string; state: WorkspaceStat
   const [cutoff, setCutoff] = useState("150");
   const [fieldmap, setFieldmap] = useState(true);
   const [toMni, setToMni] = useState(true);
+  const [sliceTiming, setSliceTiming] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const busy = !!state?.operations.some((o) => o.status === "Queued" || o.status === "Running");
 
@@ -69,6 +70,7 @@ export function FunctionalPage({ ws, state }: { ws: string; state: WorkspaceStat
             highpass_cutoff_s: drift ? numbers.cutoff : null,
             use_fieldmap: useFieldmap,
             to_mni: toMni,
+            slice_timing: sliceTiming && !!run!.slice_timing.available,
           },
         }),
       ),
@@ -190,6 +192,23 @@ export function FunctionalPage({ ws, state }: { ws: string; state: WorkspaceStat
                       0 turns smoothing off.
                     </Text>
                   </Flex>
+                </Flex>
+                <Flex direction="column" gap="1">
+                  <Text as="label" size={type.help}>
+                    <Flex gap={space.inline} align="center">
+                      <Switch
+                        checked={sliceTiming && run.slice_timing.available}
+                        disabled={!run.slice_timing.available}
+                        onCheckedChange={setSliceTiming}
+                      />
+                      Correct for the time each slice was taken (slice timing)
+                    </Flex>
+                  </Text>
+                  <Text size={type.caption} color="gray">
+                    {run.slice_timing.available
+                      ? "Off by default. With fast multiband scans it usually changes little."
+                      : `Not possible for this run: ${run.slice_timing.reason}`}
+                  </Text>
                 </Flex>
                 <Flex direction="column" gap="1">
                   <Text as="label" size={type.help}>

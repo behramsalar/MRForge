@@ -614,6 +614,11 @@ export interface components {
              * @default true
              */
             to_mni: boolean;
+            /**
+             * Slice Timing
+             * @default false
+             */
+            slice_timing: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -849,6 +854,7 @@ export interface components {
             /** Volumes */
             volumes?: number | null;
             fieldmap: components["schemas"]["FieldmapStatus"];
+            slice_timing: components["schemas"]["SliceTimingStatus"];
         };
         /** ScanRequest */
         ScanRequest: {
@@ -941,6 +947,13 @@ export interface components {
              * @default []
              */
             warnings: string[];
+        };
+        /** SliceTimingStatus */
+        SliceTimingStatus: {
+            /** Available */
+            available: boolean;
+            /** Reason */
+            reason?: string | null;
         };
         /** SubjectFile */
         SubjectFile: {

@@ -52,6 +52,9 @@ class FeatPreprocParams(BaseModel):
     highpass_cutoff_s: float | None = Field(default=150.0, gt=0)  # None = no temporal filtering
     motion_correction: bool = True
     brain_extraction: bool = True
+    # Off by default. Needs the scan's slice times (BIDS SliceTiming); REVIEW(domain): with
+    # fast multiband acquisitions it usually changes little.
+    slice_timing: bool = False
     intensity_normalisation: bool = False  # REVIEW(domain): FEAT's 4D grand-mean scaling
     signal_loss_threshold_pct: int = Field(default=10, ge=0, le=100)  # REVIEW(domain)
     registration_dof: str = "BBR"  # REVIEW(domain): BBR, or 3/6/7/9/12 degrees of freedom
@@ -71,6 +74,18 @@ class FeatPreprocOutput(BaseModel):
     to_t1_warp: str | None = None  # boldref -> T1 warp that includes the distortion correction
     boldref_t1: str | None = None  # boldref resampled into T1 space (for QC and the viewer)
     boldref_distorted_t1: str | None = None  # the same without distortion correction
+
+
+def slice_timing_fractions(times_s: list[float], tr_s: float) -> list[float]:
+    """The value per slice that FSL's ``slicetimer --tcustom`` (and FEAT's "slice timings
+    file") expects, from BIDS ``SliceTiming`` (seconds after the start of the volume).
+
+    Checked on synthetic data with known per-slice delays: the file must hold the NEGATIVE of
+    each slice's acquisition time as a fraction of TR (a slice taken later is shifted back).
+    The reference is the middle of the TR (0.5 minus t/TR), as for FEAT's other options.
+    REVIEW(domain): the reference time (middle of the TR) is a choice.
+    """
+    return [0.5 - t / tr_s for t in times_s]
 
 
 def native_folder_name(bold_relpath: str) -> str:
@@ -140,7 +155,7 @@ def _explain_failure(feat_dir: Path, stderr_path: Path) -> StepError:
 @register_step
 class FeatPreprocStep(Step[FeatPreprocInput, FeatPreprocParams, FeatPreprocOutput]):
     name = "feat_preproc"
-    version = "2"  # 2: also exposes the example volume in T1 space (and its distorted twin)
+    version = "3"  # 3: optional slice timing; 2: example volume in T1 space (and distorted twin)
     InputSpec, ParamSpec, OutputSpec = FeatPreprocInput, FeatPreprocParams, FeatPreprocOutput
     requires_fsl = True
     datatype = "func"
@@ -178,16 +193,22 @@ class FeatPreprocStep(Step[FeatPreprocInput, FeatPreprocParams, FeatPreprocOutpu
             ),
         )
 
+    def _tr_s(self, ctx: StepContext[FeatPreprocInput, FeatPreprocParams]) -> float:
+        """Repetition time in seconds: the sidecar value, else the NIfTI header's."""
+        tr = read_sidecar(ctx.workspace, ctx.inputs.bold).get("RepetitionTime")
+        if isinstance(tr, int | float):
+            return float(tr)
+        return image_info(ctx.input_path(ctx.inputs.bold))[1][3]
+
     def _design(
         self, ctx: StepContext[FeatPreprocInput, FeatPreprocParams], stage: Path
     ) -> FeatDesign:
         """The FEAT design for this run; ``stage`` holds the renamed structural/fieldmap files."""
         i, p = ctx.inputs, ctx.params
         bold = ctx.input_path(i.bold)
-        shape, zooms = image_info(bold)
+        shape, _ = image_info(bold)
         side = read_sidecar(ctx.workspace, i.bold)
-        tr = side.get("RepetitionTime")
-        tr_s = float(tr) if isinstance(tr, int | float) else zooms[3]
+        tr_s = self._tr_s(ctx)
         kw: dict[str, object] = {}
         if i.t1_brain is not None:
             kw["highres_brain"] = str(stage / "T1_brain")
@@ -202,6 +223,8 @@ class FeatPreprocStep(Step[FeatPreprocInput, FeatPreprocParams, FeatPreprocOutpu
                 epi_te_ms=float(te) * 1000.0 if isinstance(te, int | float) else None,
                 unwarp_direction=direction,
             )
+        if p.slice_timing:
+            kw.update(slice_timing="file", slice_timing_file=str(stage / "slice_timing.txt"))
         return FeatDesign(
             outputdir=str(ctx.run_dir / "work" / "feat" / "result"),
             func=str(bold).removesuffix(".gz").removesuffix(".nii"),
@@ -309,6 +332,30 @@ class FeatPreprocStep(Step[FeatPreprocInput, FeatPreprocParams, FeatPreprocOutpu
                         "from your scan protocol.",
                     )
                 ]
+        if ctx.params.slice_timing:
+            side = read_sidecar(ctx.workspace, i.bold)
+            times = side.get("SliceTiming")
+            slices = shape[2]
+            if not isinstance(times, list) or not times:
+                return [
+                    Problem(
+                        code="SLICE_TIMING_MISSING",
+                        message="Slice timing correction needs the time each slice was taken, "
+                        "and this scan does not record it.",
+                        probable_cause="The scanner headers do not contain the slice times.",
+                        suggested_action="Run without slice timing correction.",
+                    )
+                ]
+            if len(times) != slices or side.get("SliceEncodingDirection", "k") not in ("k", "k-"):
+                return [
+                    Problem(
+                        code="SLICE_TIMING_MISMATCH",
+                        message=f"The scan lists {len(times)} slice times, but the image has "
+                        f"{slices} slices along the slice axis.",
+                        probable_cause="The slice times belong to a different image layout.",
+                        suggested_action="Run without slice timing correction.",
+                    )
+                ]
         return []
 
     def validate_outputs(
@@ -366,6 +413,16 @@ class FeatPreprocStep(Step[FeatPreprocInput, FeatPreprocParams, FeatPreprocOutpu
                     str(stage / "T1_wmseg"),
                 ]
             )  # fmt: skip
+        if ctx.params.slice_timing:
+            side = read_sidecar(ctx.workspace, i.bold)
+            tr = side.get("RepetitionTime")
+            tr_s = (
+                float(tr)
+                if isinstance(tr, int | float)
+                else image_info(ctx.input_path(i.bold))[1][3]
+            )
+            fractions = slice_timing_fractions([float(t) for t in side["SliceTiming"]], tr_s)
+            (stage / "slice_timing.txt").write_text("".join(f"{v:.6f}\n" for v in fractions))
         if i.fieldmap and i.fieldmap_magnitude_brain and i.fieldmap_magnitude:
             link(i.fieldmap, "fmap_rads")
             link(i.fieldmap_magnitude_brain, "fmap_mag_brain")
