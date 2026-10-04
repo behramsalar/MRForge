@@ -85,6 +85,7 @@ export function EmptyState({
   onAction,
   href,
   icon,
+  children,
 }: {
   title: string;
   text: string;
@@ -92,6 +93,7 @@ export function EmptyState({
   onAction?: () => void;
   href?: string;
   icon?: ReactNode;
+  children?: ReactNode;
 }) {
   return (
     <Card size="4">
@@ -106,6 +108,7 @@ export function EmptyState({
             {href ? <a href={href}>{action}</a> : action}
           </Button>
         )}
+        {children}
       </Flex>
     </Card>
   );

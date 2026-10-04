@@ -19,3 +19,21 @@ describe("labels", () => {
     }
   });
 });
+
+import { describeShape, humanSize, seconds } from "./labels";
+
+describe("data formatting", () => {
+  it("removes float noise from times", () => {
+    expect(seconds(0.6500000965625)).toBe("0.65 s");
+    expect(seconds(2)).toBe("2 s");
+    expect(seconds(null)).toBe("-");
+  });
+  it("describes images and sizes in plain words", () => {
+    expect(describeShape([74, 74, 62, 360])).toBe("74 x 74 x 62, 360 volumes");
+    expect(describeShape([256, 256, 192])).toBe("256 x 256 x 192");
+    expect(describeShape(null)).toBe("-");
+    expect(humanSize(127_000_000)).toBe("127 MB");
+    expect(humanSize(1_500_000_000)).toBe("1.5 GB");
+    expect(humanSize(100)).toBe("1 kB");
+  });
+});

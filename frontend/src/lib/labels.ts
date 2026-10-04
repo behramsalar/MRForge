@@ -31,3 +31,28 @@ export function elapsed(start: string | null | undefined, end: string | null | u
   const m = Math.floor(secs / 60);
   return m < 60 ? `${m} min ${secs % 60} s` : `${Math.floor(m / 60)} h ${m % 60} min`;
 }
+
+export const datatypeLabel: Record<string, string> = {
+  anat: "Anatomical",
+  func: "Functional",
+  fmap: "Fieldmap",
+  dwi: "Diffusion",
+};
+
+export function humanSize(bytes: number): string {
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
+  if (bytes >= 1e6) return `${Math.round(bytes / 1e6)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1e3))} kB`;
+}
+
+/** "74 x 74 x 62, 360 volumes" from an image shape. */
+export function describeShape(shape: number[] | null | undefined): string {
+  if (!shape || shape.length < 3) return "-";
+  const grid = shape.slice(0, 3).join(" x ");
+  return shape.length > 3 && shape[3] > 1 ? `${grid}, ${shape[3]} volumes` : grid;
+}
+
+/** Seconds without float noise: 0.6500000965 -> "0.65 s". */
+export function seconds(value: number | null | undefined): string {
+  return value ? `${Number(value.toFixed(3))} s` : "-";
+}

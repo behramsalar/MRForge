@@ -91,6 +91,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/subjects/{label}/data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Subject Files
+         * @description The raw images of a subject, for the Data page.
+         */
+        get: operations["subject_files_api_workspaces__ws_id__subjects__label__data_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/overview": {
         parameters: {
             query?: never;
@@ -594,6 +614,25 @@ export interface components {
              */
             subcortical_segmentation: boolean;
         };
+        /** DataFile */
+        DataFile: {
+            /** Relpath */
+            relpath: string;
+            /** Name */
+            name: string;
+            /** Datatype */
+            datatype: string;
+            /** Suffix */
+            suffix: string;
+            /** Recording */
+            recording: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Shape */
+            shape?: number[] | null;
+            /** Repetition Time S */
+            repetition_time_s?: number | null;
+        };
         /**
          * ErrorBody
          * @description A plain-language error: what happened, why, and what to do next.
@@ -1095,6 +1134,15 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** SubjectData */
+        SubjectData: {
+            /** Label */
+            label: string;
+            /** Files */
+            files: components["schemas"]["DataFile"][];
+            /** Bytes Total */
+            bytes_total: number;
+        };
         /** SubjectFile */
         SubjectFile: {
             /** Relpath */
@@ -1369,6 +1417,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    subject_files_api_workspaces__ws_id__subjects__label__data_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                label: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubjectData"];
                 };
             };
             /** @description Validation Error */

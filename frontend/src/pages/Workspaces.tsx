@@ -20,7 +20,7 @@ export function Workspaces() {
     mutationFn: () => call(api.POST("/api/workspaces", { body: { name } })),
     onSuccess: (made) => {
       client.invalidateQueries({ queryKey: ["workspaces"] });
-      location.hash = href(made.id, "import");
+      location.hash = href(made.id, "dashboard");
     },
   });
   return (
@@ -105,7 +105,7 @@ export function Workspaces() {
       <Grid columns={{ initial: "1", sm: "2", md: "3" }} gap={space.group}>
         {list.data?.filter((w) => only === "all" || w.created_by === researcher?.name).map((w) => (
           <Card key={w.id} asChild size="3">
-            <a href={href(w.id, "import")} style={{ textDecoration: "none" }}>
+            <a href={href(w.id, "dashboard")} style={{ textDecoration: "none" }}>
               <Flex direction="column" gap="1">
                 <Text weight="bold" size={type.body}>
                   {w.name}

@@ -7,7 +7,7 @@ import { useRoute } from "./lib/router";
 import { AnatomicalPage } from "./pages/AnatomicalPage";
 import { Dashboard } from "./pages/Dashboard";
 import { DesignSystem } from "./pages/DesignSystem";
-import { ImportPage } from "./pages/ImportPage";
+import { DataPage } from "./pages/DataPage";
 import { JobsPage } from "./pages/JobsPage";
 import { ProcessPage } from "./pages/ProcessPage";
 import { Settings } from "./pages/Settings";
@@ -28,7 +28,7 @@ function WorkspacePage({ page, extra }: { page: string; extra?: string }) {
   const { ws, state } = useWorkspace();
   switch (page) {
     case "data":
-      return <ImportPage ws={ws} importId={extra} state={state} />;
+      return <DataPage ws={ws} extra={extra} state={state} />;
     case "process":
       return <ProcessPage ws={ws} tab={extra} state={state} />;
     case "viewer":

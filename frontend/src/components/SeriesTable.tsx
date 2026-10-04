@@ -9,12 +9,12 @@ import { space, type } from "../theme/tokens";
 import { ErrorCallout } from "./ErrorCallout";
 import { ActionBadge, ConfidenceBadge } from "./ui/Badges";
 
-function size(s: SeriesRow): string {
+export function size(s: SeriesRow): string {
   const vols = s.volumes && s.volumes > 1 ? ` × ${s.volumes}` : "";
   return `${s.matrix}${vols}`;
 }
 
-function detected(s: SeriesRow): string {
+export function detected(s: SeriesRow): string {
   const extra = Object.entries(s.entities)
     .map(([k, v]) => `${k} ${v}`)
     .join(", ");
@@ -22,7 +22,7 @@ function detected(s: SeriesRow): string {
 }
 
 /** The user's decision about one series: what it is, its task name, or leave it out. */
-function DecisionDialog({ ws, detail, row }: { ws: string; detail: ImportDetail; row: SeriesRow }) {
+export function DecisionDialog({ ws, detail, row }: { ws: string; detail: ImportDetail; row: SeriesRow }) {
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState(row.action === "skip" ? "" : row.kind);
@@ -139,28 +139,47 @@ function DecisionDialog({ ws, detail, row }: { ws: string; detail: ImportDetail;
 }
 
 /** The confirm-series table: what was found, what MRForge will do, and a way to change it. */
-export function SeriesTable({ ws, detail }: { ws: string; detail: ImportDetail }) {
+export function SeriesTable({
+  ws,
+  detail,
+  selected,
+  onSelect,
+}: {
+  ws: string;
+  detail: ImportDetail;
+  selected?: string;
+  onSelect?: (uid: string) => void;
+}) {
   const locked = detail.organized > 0 && detail.needs_input === 0;
+  const compact = !!onSelect; // the details panel next to the table shows size and the Change button
   return (
-    <Card>
+    <Card style={{ overflowX: "auto" }}>
       <Table.Root size="2">
         <Table.Header>
           <Table.Row>
             <Table.ColumnHeaderCell>#</Table.ColumnHeaderCell>
             <Table.ColumnHeaderCell>Name</Table.ColumnHeaderCell>
-            <Table.ColumnHeaderCell>Size</Table.ColumnHeaderCell>
+            {!compact && <Table.ColumnHeaderCell>Size</Table.ColumnHeaderCell>}
             <Table.ColumnHeaderCell>Detected as</Table.ColumnHeaderCell>
             <Table.ColumnHeaderCell>Confidence</Table.ColumnHeaderCell>
             <Table.ColumnHeaderCell>What happens</Table.ColumnHeaderCell>
-            <Table.ColumnHeaderCell />
+            {!compact && <Table.ColumnHeaderCell />}
           </Table.Row>
         </Table.Header>
         <Table.Body>
           {detail.series.map((s) => (
-            <Table.Row key={s.uid} style={s.action === "ask" ? { background: "var(--amber-3)" } : undefined}>
+            <Table.Row
+              key={s.uid}
+              onClick={() => onSelect?.(s.uid)}
+              style={{
+                cursor: onSelect ? "pointer" : undefined,
+                background:
+                  s.uid === selected ? "var(--accent-a3)" : s.action === "ask" ? "var(--amber-3)" : undefined,
+              }}
+            >
               <Table.RowHeaderCell>{s.number}</Table.RowHeaderCell>
               <Table.Cell>{s.label}</Table.Cell>
-              <Table.Cell>{size(s)}</Table.Cell>
+              {!compact && <Table.Cell>{size(s)}</Table.Cell>}
               <Table.Cell>
                 {detected(s)}
                 {s.decided_by === "user" && (
@@ -181,9 +200,11 @@ export function SeriesTable({ ws, detail }: { ws: string; detail: ImportDetail }
                   <ActionBadge action={s.action} />
                 )}
               </Table.Cell>
-              <Table.Cell>
-                <DecisionDialog ws={ws} detail={detail} row={s} key={`${s.uid}-${s.action}-${s.kind}`} />
-              </Table.Cell>
+              {!compact && (
+                <Table.Cell>
+                  <DecisionDialog ws={ws} detail={detail} row={s} key={`${s.uid}-${s.action}-${s.kind}`} />
+                </Table.Cell>
+              )}
             </Table.Row>
           ))}
         </Table.Body>

@@ -24,6 +24,7 @@ from mrforge import __version__, accounts
 from mrforge.api import schemas as S
 from mrforge.bids import parse_bids_name
 from mrforge.config import load_config
+from mrforge.datafiles import SubjectData, subject_data
 from mrforge.engine import latest_pipeline_run
 from mrforge.errors import StepError
 from mrforge.fsl_env import find_fsl
@@ -282,6 +283,14 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             imports=len(list_manifests(ws)),
             created_by=ws.created_by,
         )
+
+    @app.get("/api/workspaces/{ws_id}/subjects/{label}/data", response_model=SubjectData)
+    def subject_files(ws_id: str, label: str) -> SubjectData:
+        """The raw images of a subject, for the Data page."""
+        ws = ws_of(ws_id)
+        if not SAFE_NAME.fullmatch(label):
+            raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
+        return subject_data(ws, label)
 
     @app.get("/api/workspaces/{ws_id}/overview", response_model=Overview)
     def overview(ws_id: str) -> Overview:
