@@ -83,3 +83,14 @@ user's approval to update section 3 accordingly. Viewer default layout: three sl
 
 ## 2026-10-04: Tailwind confirmed not used
 User approved skipping Tailwind; CLAUDE.md section 3 updated. Revisit only if Radix layout props prove insufficient.
+
+## 2026-10-04: Stage 5 is built on FEAT (design.fsf), not on separate re-implemented steps
+User decision (they asked why FEAT's own design file is not used, and described their previous workflow: FEAT, then cleanup, then `applywarp` to MNI). Spike results: `feat design.fsf` runs headless and without a queue; a 60-key pre-stats design gives bit-identical output to the full GUI-generated design; FEAT writes `<name>+.feat` if the folder exists, so the step clears its own leftover first; with a fieldmap FEAT's `mainfeatreg` runs `epi_reg --fmap` and unwarps the 4D data itself (after motion correction, before smoothing); FEAT finds the whole-head T1 and fieldmap magnitude by stripping `_brain` from the file name and the white-matter image as `<name>_wmseg`, so the step stages renamed hard links (white matter = label 3 of the `fsl_anat` segmentation). FEAT is deterministic here: a manual `feat` run on MRForge's saved design gives an identical `filtered_func_data`.
+Smoothing (5 mm) and high-pass (150 s) are inside FEAT, before cleanup (user's choice); standard space reuses the `fsl_anat` warp in a later step (user's choice).
+
+## 2026-10-04: QC results are stored in provenance.json
+`StepResult.qc` and warnings were computed but never saved. The worker now writes them into `provenance.json` (`qc`, `warnings`), so reports and the UI can show them later. QC images live next to the results (`*_qc.png`, listed in `.bidsignore`).
+
+## 2026-10-04: Framewise displacement is computed by MRForge
+Power et al. 2012 formula (head radius 50 mm) from FEAT's six realignment parameters. `fsl_motion_outliers --fd` gives similar but not identical numbers on the same data (it runs its own `mcflirt`, so its parameters differ slightly: on the 20-volume test cut the values differed by up to about 10 percent), so it is not used as an exact reference. Only metrics are reported; thresholds and decisions belong to Stage 6c.
+

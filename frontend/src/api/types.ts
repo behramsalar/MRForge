@@ -15,3 +15,7 @@ export type FsListing = S["FsListing"];
 export type ViewerImageInfo = S["ViewerImage"];
 export type RemovalPlanInfo = S["RemovalPlanInfo"];
 export type LogText = S["LogText"];
+export type Readiness = S["Readiness"];
+export type RunStatus = S["RunStatus"];
+export type QcGroup = S["QcGroup"];
+export type QcEntry = S["QcEntry"];

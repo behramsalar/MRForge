@@ -7,6 +7,7 @@ import { WorkspaceLayout } from "./components/WorkspaceLayout";
 import { useRoute } from "./lib/router";
 import { AnatomicalPage } from "./pages/AnatomicalPage";
 import { DesignSystem } from "./pages/DesignSystem";
+import { FunctionalPage } from "./pages/FunctionalPage";
 import { ImportPage } from "./pages/ImportPage";
 import { Workspaces } from "./pages/Workspaces";
 import { theme } from "./theme/tokens";
@@ -28,6 +29,8 @@ function App() {
       {(state) =>
         route.page === "anat" ? (
           <AnatomicalPage ws={ws} state={state} />
+        ) : route.page === "func" ? (
+          <FunctionalPage ws={ws} state={state} />
         ) : route.page === "view" ? (
           <Suspense fallback={<p>Loading the viewer…</p>}>
             <ViewerPage ws={ws} subject={route.extra} />

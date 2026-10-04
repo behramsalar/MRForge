@@ -22,10 +22,12 @@ from sse_starlette.sse import EventSourceResponse
 
 from mrforge import __version__
 from mrforge.api import schemas as S
+from mrforge.bids import parse_bids_name
 from mrforge.config import load_config
 from mrforge.engine import latest_pipeline_run
 from mrforge.errors import StepError
 from mrforge.fsl_env import find_fsl
+from mrforge.functional import FunctionalOptions, Readiness, build_pipeline, check_ready
 from mrforge.importing.bids_validate import find_validator
 from mrforge.importing.classify import effective_all, load_rules, set_override
 from mrforge.importing.manifest import list_manifests, load_manifest, save_manifest
@@ -40,6 +42,7 @@ from mrforge.operations import (
     start_operation,
 )
 from mrforge.pipeline import PipelineSpec, PipelineStep
+from mrforge.provenance import read_provenance
 from mrforge.runner.jobs import get_job, list_jobs, process_alive, recover_stale_jobs
 from mrforge.workspace import Workspace, WorkspaceError
 
@@ -142,10 +145,13 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         )
 
     def job_info(job: Job, subject: str | None) -> S.JobInfo:
+        folder = (job.run_dir or "").rsplit("/", 1)[-1]
+        run = folder.removeprefix(job.label or job.step_name).lstrip("_").replace("_", " ")
         return S.JobInfo(
             id=job.id,
             step=job.step_name,
             label=job.label or job.step_name,
+            run=run,
             subject=subject,
             status=job.status,
             pipeline_run_id=job.pipeline_run_id,
@@ -528,6 +534,74 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             )
         return _start_pipeline(ws, parse_pipeline(last.spec), f"Resuming {last.name}")
 
+    # -- functional preprocessing -------------------------------------------------------------
+
+    @app.get("/api/workspaces/{ws_id}/subjects/{label}/functional", response_model=Readiness)
+    def functional_readiness(ws_id: str, label: str, session: str | None = None) -> Readiness:
+        """What can be run for this subject, and why something is not possible."""
+        ws = ws_of(ws_id)
+        if not SAFE_NAME.fullmatch(label):
+            raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
+        return check_ready(ws, label, session)
+
+    @app.post("/api/workspaces/{ws_id}/functional", response_model=S.OperationStarted)
+    def run_functional(ws_id: str, req: FunctionalOptions) -> S.OperationStarted:
+        ws = ws_of(ws_id)
+        spec = build_pipeline(ws, req)
+        run = Path(req.bold).name.removesuffix("_bold.nii.gz").split("_", 1)[-1]
+        return _start_pipeline(ws, spec, f"Functional preprocessing of {req.subject} ({run})")
+
+    @app.get("/api/workspaces/{ws_id}/subjects/{label}/qc", response_model=list[S.QcGroup])
+    def subject_qc(ws_id: str, label: str) -> list[S.QcGroup]:
+        """QC results recorded by the latest completed functional QC steps of a subject."""
+        ws = ws_of(ws_id)
+        if not SAFE_NAME.fullmatch(label):
+            raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
+        titles = {
+            "func_qc": "Head motion and registration",
+            "func_to_mni": "Alignment to standard space",
+        }
+        latest: dict[str, Job] = {}
+        with ws.session() as s:
+            subject_id = s.scalar(select(Subject.id).where(Subject.label == label))
+            jobs = list(
+                s.scalars(
+                    select(Job)
+                    .where(Job.subject_id == subject_id)
+                    .where(Job.step_name.in_(list(titles)))
+                    .where(Job.status == JobStatus.COMPLETED.value)
+                    .order_by(Job.id)
+                )
+            )
+        for job in jobs:
+            latest[job.run_dir or ""] = job
+        groups: list[S.QcGroup] = []
+        for job in latest.values():
+            prov = read_provenance(ws.abspath(job.run_dir or ""))
+            if prov is None or not prov.qc:
+                continue
+            entries: list[S.QcEntry] = []
+            for item in prov.qc:
+                url = None
+                if item.path:
+                    rel = ws.relpath(ws.abspath(job.output_dir or "") / item.path)
+                    url = f"/api/workspaces/{ws_id}/file/{rel}"
+                entries.append(
+                    S.QcEntry(
+                        name=item.name,
+                        kind=item.kind,
+                        value=None if item.value is None else str(item.value),
+                        image_url=url,
+                        warning=item.warning,
+                    )
+                )
+            folder = (job.run_dir or "").rsplit("/", 1)[-1]
+            run = folder.removeprefix(job.label or job.step_name).lstrip("_").replace("_", " ")
+            groups.append(
+                S.QcGroup(run=run, step=job.step_name, title=titles[job.step_name], items=entries)
+            )
+        return groups
+
     # -- viewer -------------------------------------------------------------------------------
 
     @app.get("/api/workspaces/{ws_id}/subjects/{label}/images", response_model=list[S.ViewerImage])
@@ -569,6 +643,18 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
                 for f in sorted(d.glob(f"*{ending}")):
                     if "space-" not in f.name:
                         add(f, name, role, cmap)
+
+        # functional example volume in T1 space: an overlay to judge the registration
+        def run_name(f: Path) -> str:
+            entities = parse_bids_name(f.name)[0]
+            skip = ("sub", "ses", "space", "desc")
+            return " ".join(f"{k}-{v}" for k, v in entities.items() if k not in skip)
+
+        for d in sorted((ws.derivatives_dir / label).glob("**/func")):
+            for f in sorted(d.glob("*_space-T1w_desc-distorted_boldref.nii.gz")):
+                add(f, f"Functional {run_name(f)}, before distortion correction", "overlay", "gray")
+            for f in sorted(d.glob("*_space-T1w_desc-feat_boldref.nii.gz")):
+                add(f, f"Functional {run_name(f)}, aligned to the T1", "overlay", "gray")
         return found
 
     @app.get("/api/workspaces/{ws_id}/file/{relpath:path}")

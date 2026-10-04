@@ -129,6 +129,9 @@ def test_ctrl_c_cancels_the_running_job(wsdir: Path) -> None:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        # A test run started in the background inherits "ignore Ctrl-C"; Python then never
+        # installs its own handler. Restore the default so this test means the same everywhere.
+        preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_DFL),
     )  # fmt: skip
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline:

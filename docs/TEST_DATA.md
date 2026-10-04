@@ -23,3 +23,11 @@ Notes:
 ## Per-dataset description (fill in)
 
 For each dataset record: source/link, license, subjects, modalities present, fieldmap type (if any), voxel size, TR, number of volumes.
+
+## Stage 5 working copies (created by us, never committed)
+Workspaces under `~/Documents/mrforge-workspaces/` built from the Siemens session in `test.zip`:
+- `func-test`: the full session imported (T1, resting BOLD with 360 volumes, a gradient-echo fieldmap) with `fsl_anat` and `fieldmap_prep` run. The source for everything below.
+- `func-e2e`: the first 20 volumes of the resting run with the fieldmap and the `fsl_anat` results, made by `scripts/make_func_demo.py`. Open the Functional page and press Start to run the whole functional pipeline in about 3 minutes.
+- `func-quick`: an older small copy with the step results produced by hand (used by the real-FSL test of `func_to_mni`).
+The real-FSL tests that need them are marked `realdata` and skip, with the reason, when they are missing.
+

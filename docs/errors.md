@@ -266,3 +266,36 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 ### PIPELINE_STEP_FAILED
 - **What happened:** A step of the pipeline did not finish. The step's own error holds the details.
 - **Suggested action:** Fix the cause, then resume; finished steps are not repeated.
+
+## Functional preprocessing codes (Stage 5)
+
+### FIELDMAP_TE_MISSING
+- **What happened:** The echo time difference of the fieldmap is not known.
+- **Probable cause:** The phase-difference image has no EchoTime1/EchoTime2 in its sidecar.
+- **Suggested action:** Enter the echo time difference in milliseconds (often 2.46 on Siemens).
+
+### FEAT_INPUTS_INCOMPLETE / FEAT_FIELDMAP_NEEDS_T1
+- **What happened:** Only some of the structural (T1) or fieldmap images were given, or distortion correction was requested without the T1 result.
+- **Suggested action:** Provide all of them (or none); run anatomical processing first.
+
+### UNWARP_INFO_MISSING
+- **What happened:** Distortion correction needs facts the scan does not record (phase-encoding direction, effective echo spacing or echo time).
+- **Probable cause:** The scanner headers do not contain them (typical for some vendors).
+- **Suggested action:** Run without distortion correction, or supply the values from your scan protocol.
+
+### BOLD_TOO_SHORT / VOLUME_COUNT_MISMATCH
+- **What happened:** Too few volumes remain after discarding the first ones, or the result has an unexpected number of volumes.
+- **Suggested action:** Check the scan or reduce the number of discarded volumes; run the step again.
+
+### FEAT_PATH_HAS_SPACES
+- **What happened:** FEAT cannot work in a folder whose path contains spaces.
+- **Suggested action:** Create the workspace in a folder without spaces in its path.
+
+### FEAT_FIELDMAP_NOT_BRAIN_EXTRACTED / FEAT_BAD_INPUT / FEAT_FILE_MISSING / FEAT_FAILED
+- **What happened:** FEAT stopped before it finished. The first three are recognised causes (the fieldmap magnitude still contains the skull; FEAT could not use an input image; a file FEAT needs is missing); FEAT_FAILED is anything else, with the last line of FEAT's own log quoted.
+- **Suggested action:** Follow the message; the raw log is one click away.
+
+
+### BOLD_NOT_4D / MNI_TEMPLATE_MISSING / MNI_RESULT_UNEXPECTED
+- **What happened:** The standard-space step was given something that is not a time series, FSL's MNI template was not found, or the result had an unexpected size.
+- **Suggested action:** Choose the preprocessed (or cleaned) functional run; check the FSL installation; open the raw log and run the step again.

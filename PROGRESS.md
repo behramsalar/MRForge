@@ -1,6 +1,22 @@
 # Progress
 
-**Current stage:** Stage 3 (first vertical slice) built on branch `stage-3-api-ui`; accepted by the user (tag `stage3-accepted`). Stages 0, 1 and 2 accepted (tags `stage0-accepted`, `stage1-accepted`, `stage2-accepted`).
+**Current stage:** Stage 5 (functional preprocessing, built on FEAT) accepted by the user (tag `stage5-accepted`). Stages 0-3 and 5 accepted (tags `stage0-accepted` ... `stage5-accepted`). Next: a UI overhaul (planned in plan mode), then Stage 4 (lab usability test) on the new design.
+
+## Stage 5 (Functional preprocessing, on FEAT)
+| Sub-step | Status |
+|---|---|
+| 5-0 Spike: FEAT headless from a written design.fsf | done (`docs/DECISIONS.md`) |
+| 5a design.fsf writer | done |
+| 5b `fieldmap_prep` (Siemens gradient-echo) | done |
+| 5c `feat_preproc` (motion, brain extraction, unwarping, smoothing, high-pass, BBR registration to the fsl_anat T1) | done |
+| 5d `func_qc` (motion plot and framewise displacement, registration and unwarping pictures; QC stored in provenance) | done |
+| 5e `func_to_mni` (fsl_anat warp + FEAT affine, one resampling) | done |
+| 5f Functional pipeline builder, API routes, Functional screen with QC and viewer overlays | done |
+| 5g Optional slice timing (off by default) | done |
+
+Last test status: `pytest -m "not fsl"` 378 passed; `pytest -m fsl` (38 min, includes the slow `fsl_anat` and FEAT comparison tests): 13 passed, 2 failed in `tests/test_func_qc.py` because the test looked for the old run-record folder name (fixed afterwards; that file now passes, 9 of 9, but the whole `-m fsl` suite was not run again). Frontend `npm test` 9 passed, `tsc` clean; ruff and mypy clean. Not tested: a full 360-volume run through the UI (the 20-volume example `func-e2e` was run from the UI); killing and resuming the functional pipeline from the UI (the same mechanisms are tested for FEAT and for `fsl_anat`).
+
+Also changed in Stage 5: run records are keyed by recording (`_runs/<step>_task-rest_run-1/`) so two BOLD runs of one subject no longer overwrite each other's provenance; CLAUDE.md principle 2 and the Stage 5 list were amended (FEAT as one Step).
 
 ## Stage 3 (API + first real UI)
 | Sub-step | Status |
@@ -62,4 +78,4 @@ Demo workspace with your real session imported: `~/Documents/mrforge-workspaces/
 - Fieldmap handling: your DICOM set contains gradient-echo field maps; types to confirm before Stage 5c.
 
 ## Next action
-Plan Stage 4/5 in plan mode (Stage 4 needs a lab member to test the Stage 3 flow; Stage 5 is functional preprocessing).
+Plan the UI overhaul (sidebar navigation, themed light/dark look, global viewer, dashboard, full-processing flow with a confirmation dialog). The Stage 5 REVIEW(domain) items are still open for the user. Pictures for the report page are improved in Stage 7 (user decision).

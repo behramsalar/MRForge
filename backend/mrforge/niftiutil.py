@@ -20,3 +20,15 @@ def is_readable_nifti(path: Path) -> bool:
         return False
     sizes = {struct.unpack("<i", head)[0], struct.unpack(">i", head)[0]}
     return bool(sizes & {348, 540})
+
+
+def image_info(path: Path) -> tuple[tuple[int, ...], tuple[float, ...]]:
+    """(shape, voxel sizes) from the NIfTI header; the fourth voxel size of a time series is
+    its repetition time in seconds."""
+    import nibabel as nib
+
+    header = nib.load(path).header  # type: ignore[attr-defined]
+    return (
+        tuple(int(n) for n in header.get_data_shape()),  # type: ignore[attr-defined]
+        tuple(float(z) for z in header.get_zooms()),  # type: ignore[attr-defined]
+    )

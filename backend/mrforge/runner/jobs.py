@@ -13,6 +13,7 @@ import psutil
 from pydantic import ValidationError
 from sqlalchemy import select
 
+from mrforge.bids import parse_bids_name
 from mrforge.errors import StepError
 from mrforge.models import Job, JobStatus
 from mrforge.steps.base import Step, StepContext
@@ -27,14 +28,36 @@ def param_hash(params: dict[str, Any]) -> str:
     return "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
 
 
+# BIDS entities that tell recordings of one subject apart (not processing history like desc-).
+RECORDING_ENTITIES = ("task", "acq", "ce", "dir", "rec", "run", "echo", "part")
+
+
+def run_folder_name(label: str, inputs: dict[str, Any]) -> str:
+    """Name of a run's record folder: the label, plus the BIDS entities of the first input
+    (task, run, acq, ...). Two runs of one step on different recordings of a subject (for
+    example two BOLD runs) then keep separate provenance, logs and resume state."""
+    first = next((v for v in inputs.values() if isinstance(v, str)), None)
+    if first is None:
+        return label
+    entities = parse_bids_name(first)[0]
+    extra = [f"{k}-{v}" for k, v in entities.items() if k in RECORDING_ENTITIES]
+    return "_".join([label, *extra])
+
+
 def job_dirs(
-    ws: Workspace, subject: str, session: str | None, datatype: str, label: str
+    ws: Workspace,
+    subject: str,
+    session: str | None,
+    datatype: str,
+    label: str,
+    inputs: dict[str, Any] | None = None,
 ) -> tuple[str, str]:
     """Workspace-relative (results folder, run folder) for a job:
-    derivatives/<app>/<sub>/[<ses>/]<datatype>/ and .../<datatype>/_runs/<label>/"""
+    derivatives/<app>/<sub>/[<ses>/]<datatype>/ and .../<datatype>/_runs/<label>[_<entities>]/"""
     parts = [subject] + ([session] if session else []) + [datatype]
     results = ws.derivatives_dir.joinpath(*parts)
-    return ws.relpath(results), ws.relpath(results / "_runs" / label)
+    folder = run_folder_name(label, inputs or {})
+    return ws.relpath(results), ws.relpath(results / "_runs" / folder)
 
 
 def build_context(
@@ -49,7 +72,7 @@ def build_context(
     """The step instance and the context it would run in (used by the worker and resume)."""
     step, inputs, params = normalise_specs(step_name, inputs, params)
     label = label or step_name
-    output_rel, run_rel = job_dirs(ws, subject, session, step.datatype, label)
+    output_rel, run_rel = job_dirs(ws, subject, session, step.datatype, label, inputs)
     ctx = StepContext(
         workspace=ws,
         subject=subject,
@@ -97,7 +120,9 @@ def create_job(
     """Validate inputs/params against the step's specs and queue a job. Returns the job id."""
     step, inputs_dict, params_dict = normalise_specs(step_name, inputs, params)
     subject_id = ws.get_or_create_subject(subject)
-    output_rel, run_rel = job_dirs(ws, subject, session, step.datatype, label or step_name)
+    output_rel, run_rel = job_dirs(
+        ws, subject, session, step.datatype, label or step_name, inputs_dict
+    )
     with ws.session() as s:
         job = Job(
             step_name=step_name,

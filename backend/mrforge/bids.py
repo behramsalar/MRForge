@@ -27,7 +27,8 @@ NOT_INHERITED = {
 EXTENSIONS = (".nii.gz", ".nii", ".json", ".tsv", ".mat", ".txt", ".h5")
 
 BIDS_VERSION = "1.9.0"  # REVIEW(domain): BIDS specification version written to the dataset
-BIDSIGNORE = "_runs/\n*.anat/\n"  # MRForge-only folders that are not part of BIDS
+# MRForge-only folders and QC files that are not part of BIDS
+BIDSIGNORE = "_runs/\n*.anat/\n*.feat/\n*_qc.png\n*_qc.json\n"
 TOOL_DISPLAY_NAMES = {"mrforge": "MRForge", "fsl": "FSL"}
 
 
