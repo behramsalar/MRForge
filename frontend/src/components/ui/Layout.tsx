@@ -1,0 +1,112 @@
+import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import type { ReactNode } from "react";
+import { space, type } from "../../theme/tokens";
+
+/** Title, one explaining sentence and the page's main buttons. */
+export function PageHeader({
+  title,
+  description,
+  actions,
+}: {
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+}) {
+  return (
+    <Flex justify="between" align="end" gap={space.group} wrap="wrap">
+      <Flex direction="column" gap="1" style={{ minWidth: 0 }}>
+        <Heading size={type.pageTitle}>{title}</Heading>
+        {description && (
+          <Text color="gray" size={type.body}>
+            {description}
+          </Text>
+        )}
+      </Flex>
+      {actions && <Flex gap={space.inline}>{actions}</Flex>}
+    </Flex>
+  );
+}
+
+/** A number with a label, for the dashboard. */
+export function StatCard({
+  label,
+  value,
+  hint,
+  color,
+  icon,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: string;
+  color?: "green" | "amber" | "red" | "orange" | "gray";
+  icon?: ReactNode;
+}) {
+  return (
+    <Card size="3">
+      <Flex gap={space.group} align="center">
+        {icon && (
+          <Flex
+            align="center"
+            justify="center"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: "var(--radius-4)",
+              background: color ? `var(--${color}-a3)` : "var(--gray-a3)",
+              color: color ? `var(--${color}-11)` : "var(--gray-11)",
+            }}
+          >
+            {icon}
+          </Flex>
+        )}
+        <Flex direction="column">
+          <Text size={type.help} color="gray">
+            {label}
+          </Text>
+          <Text size="7" weight="bold" style={{ lineHeight: 1.1 }}>
+            {value}
+          </Text>
+          {hint && (
+            <Text size={type.caption} color="gray">
+              {hint}
+            </Text>
+          )}
+        </Flex>
+      </Flex>
+    </Card>
+  );
+}
+
+/** An invitation instead of an apology: what this space is for, and the button to start. */
+export function EmptyState({
+  title,
+  text,
+  action,
+  onAction,
+  href,
+  icon,
+}: {
+  title: string;
+  text: string;
+  action?: string;
+  onAction?: () => void;
+  href?: string;
+  icon?: ReactNode;
+}) {
+  return (
+    <Card size="4">
+      <Flex direction="column" align="center" gap={space.group} py="6">
+        {icon && <Text color="gray">{icon}</Text>}
+        <Heading size={type.sectionTitle}>{title}</Heading>
+        <Text color="gray" size={type.body} align="center" style={{ maxWidth: 460 }}>
+          {text}
+        </Text>
+        {action && (
+          <Button size="3" asChild={!!href} onClick={onAction}>
+            {href ? <a href={href}>{action}</a> : action}
+          </Button>
+        )}
+      </Flex>
+    </Card>
+  );
+}

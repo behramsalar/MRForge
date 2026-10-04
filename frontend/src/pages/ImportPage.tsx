@@ -58,7 +58,7 @@ export function ImportPage({ ws, importId, state }: { ws: string; importId?: str
     if (op?.status === "Completed" && typeof op.result?.import_id === "string") {
       setScanOp(null);
       setSource(null);
-      location.hash = href(ws, "import", op.result.import_id);
+      location.hash = href(ws, "data", op.result.import_id);
     } else if (op && op.status !== "Queued" && op.status !== "Running") setScanOp(null);
   }, [state, scanOp, ws]);
 
@@ -114,7 +114,7 @@ export function ImportPage({ ws, importId, state }: { ws: string; importId?: str
       {imports.length > 1 && (
         <Flex align="center" gap={space.group}>
           <Text size={type.help}>Showing</Text>
-          <Select.Root value={selected} onValueChange={(v) => (location.hash = href(ws, "import", v))}>
+          <Select.Root value={selected} onValueChange={(v) => (location.hash = href(ws, "data", v))}>
             <Select.Trigger />
             <Select.Content>
               {imports.map((i) => (
@@ -196,7 +196,7 @@ export function ImportPage({ ws, importId, state }: { ws: string; importId?: str
                 )}
                 <Flex>
                   <Button asChild>
-                    <a href={href(ws, "anat")}>Next: anatomical processing</a>
+                    <a href={href(ws, "process", "anat")}>Next: anatomical processing</a>
                   </Button>
                 </Flex>
               </Flex>

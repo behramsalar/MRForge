@@ -6,7 +6,7 @@ import { ApiError, call } from "../api/call";
 import { useWorkspaces } from "../api/hooks";
 import { ErrorCallout } from "../components/ErrorCallout";
 import { href } from "../lib/router";
-import { layout, space, type } from "../theme/tokens";
+import { space, type } from "../theme/tokens";
 
 export function Workspaces() {
   const list = useWorkspaces();
@@ -21,7 +21,7 @@ export function Workspaces() {
     },
   });
   return (
-    <Flex direction="column" gap={space.section} p={space.page} maxWidth={layout.contentWidth} mx="auto">
+    <Flex direction="column" gap={space.section}>
       <Flex justify="between" align="end">
         <Flex direction="column" gap="1">
           <Heading size={type.pageTitle}>MRForge</Heading>

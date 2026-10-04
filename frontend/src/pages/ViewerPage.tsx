@@ -38,7 +38,7 @@ export function ViewerPage({ ws, subject }: { ws: string; subject?: string }) {
       {subjects.data?.length === 0 && (
         <Callout.Root>
           <Callout.Text>
-            Nothing to view yet. <a href={href(ws, "import")}>Import scans first.</a>
+            Nothing to view yet. <a href={href(ws, "data")}>Import scans first.</a>
           </Callout.Text>
         </Callout.Root>
       )}
@@ -49,7 +49,7 @@ export function ViewerPage({ ws, subject }: { ws: string; subject?: string }) {
             <Text size={type.help} weight="medium">
               Subject
             </Text>
-            <Select.Root value={label} onValueChange={(v) => (location.hash = href(ws, "view", v))}>
+            <Select.Root value={label} onValueChange={(v) => (location.hash = href(ws, "viewer", v))}>
               <Select.Trigger />
               <Select.Content>
                 {(subjects.data ?? []).map((s) => (

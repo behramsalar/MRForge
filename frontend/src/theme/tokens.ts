@@ -8,15 +8,21 @@ import type { ThemeProps } from "@radix-ui/themes";
 
 type RadixColor = NonNullable<ThemeProps["accentColor"]>;
 
-/** Global look, passed to <Theme>. */
+/**
+ * Global look, passed to <Theme>. Light or dark comes from ThemeProvider (the user's switch).
+ * The accent is "Forge amber": Radix orange, tuned in theme/forge.css, which also holds the
+ * charcoal sidebar colours. Tokens.ts and forge.css together are the one place for the look.
+ */
 export const theme = {
-  appearance: "light",
-  accentColor: "indigo",
-  grayColor: "slate",
+  accentColor: "orange",
+  grayColor: "gray",
   radius: "large", // soft, rounded corners everywhere
   scaling: "100%", // 90% denser, 110% roomier
   panelBackground: "solid",
 } as const satisfies ThemeProps;
+
+/** Size of the app shell. */
+export const shell = { sidebar: "232px", sidebarCollapsed: "64px", topbar: "56px" } as const;
 
 /** Page layout. Values are Radix spacing steps (1 = 4px ... 9 = 64px), never raw pixels. */
 export const space = {
@@ -36,7 +42,7 @@ export const type = {
 } as const;
 
 /** Max width of reading content, so lines stay short and calm. */
-export const layout = { contentWidth: "1100px", narrowWidth: "640px" } as const;
+export const layout = { contentWidth: "1400px", narrowWidth: "640px" } as const;
 
 /** Colour meaning. The same word always has the same colour everywhere. */
 export const confidenceColor: Record<"High" | "Medium" | "Low", RadixColor> = {
