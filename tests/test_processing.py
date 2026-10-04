@@ -143,7 +143,15 @@ def test_existing_anatomical_results_can_be_used_instead_of_running_again(tmp_pa
     assert spec is not None and "fsl_anat" not in ids(spec)
     feat = next(s for s in spec.steps if s.step == "feat_preproc")
     assert feat.inputs["t1_head"].endswith("_desc-biascorr_T1w.nii.gz")  # the earlier file
-    assert p.stages[0].already_done and not p.stages[0].enabled
+    assert not p.stages[0].enabled and p.stages[0].can_run
+
+
+def test_earlier_results_without_a_record_are_made_again_and_the_user_is_told(tmp_path: Path) -> None:
+    p, spec = plan(workspace(tmp_path, anat_done=True))  # files exist, but MRForge has no record
+    anatomical = p.stages[0]
+    assert not anatomical.already_done
+    assert anatomical.items[0].note and "made again" in anatomical.items[0].note
+    assert spec is not None and ids(spec)[0] == "fsl_anat"
 
 
 def test_missing_anatomical_results_block_the_functional_stage(tmp_path: Path) -> None:

@@ -25,13 +25,13 @@ import { crumbs, defaultChild } from "./nav";
 describe("sidebar tree", () => {
   it("shows the kinds of processing under Process", () => {
     const process = WORKSPACE_NAV.find((n) => n.id === "process");
-    expect(process?.children?.map((c) => c.id)).toEqual(["anat", "func"]);
-    expect(defaultChild("process")).toBe("anat");
+    expect(process?.children?.map((c) => c.id)).toEqual(["full", "anat", "func"]);
+    expect(defaultChild("process")).toBe("full");
     expect(defaultChild("viewer")).toBeUndefined();
   });
   it("names the trail in the top bar", () => {
     expect(crumbs("process", "func")).toEqual(["Process", "Functional"]);
-    expect(crumbs("process")).toEqual(["Process", "Anatomical"]);
+    expect(crumbs("process")).toEqual(["Process", "Full processing"]);
     expect(crumbs("viewer")).toEqual(["Viewer"]);
   });
 });

@@ -25,3 +25,7 @@ export type SubjectOverview = S["SubjectOverview"];
 export type StageStatus = S["StageStatus"];
 export type SubjectData = S["SubjectData"];
 export type DataFile = S["DataFile"];
+export type FullPlan = S["FullPlan"];
+export type StagePlan = S["StagePlan"];
+export type PlanItem = S["PlanItem"];
+export type FullOptions = S["FullOptions"];

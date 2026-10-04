@@ -266,15 +266,20 @@ Each stage lists what to build, then **how the user tests it**. Do not skip ahea
 5. Open the viewer on the T1 with the brain-extraction or segmentation overlay, and check that overlays align.
 6. Check that the UI only uses components and tokens from the design system (no one-off styles).
 
-### Stage 4 — Lab user test and design pass (user-led)
+### Stage 4 — UI overhaul and design pass, then lab user test
+
+The Stage 3 UI was a vertical slice. This stage (planned with the user, built after Stage 5) replaces it with the real design: a dark sidebar of functions (a tree for groups such as Process), a top bar with activity and the light/dark switch, a themed look (Forge amber, light and dark), a Dashboard, a Data section, a global Viewer, Jobs and Settings, and **full processing as the default way to start work**, with a confirmation dialog. Light researcher profiles (a name, no login) tag who started what. Plans and decisions: `docs/DECISIONS.md`.
+
+**Claude Code tasks (built)**
+- O1 app shell and theme, O2 researcher profiles, O3 Dashboard, O4 Data section, O5 global Viewer, full processing (stage registry: anatomical, functional, standard space; further stages such as artifact rejection, WM/CSF regression and ROI-to-ROI correlation are added to the registry), O6 Jobs and Settings, O7 polish and `docs/design-system.md`.
 
 **User tasks**
-- Have a less experienced lab member run the Stage 3 flow with no help from you. Watch silently and write down every hesitation and confusion in `docs/ux-findings.md`.
+- Have a less experienced lab member run the full flow with no help from you. Watch silently and write down every hesitation and confusion in `docs/ux-findings.md`.
 
-**Claude Code tasks**
+**Claude Code tasks (after the test)**
 - 4a. Turn `docs/ux-findings.md` into a prioritized fix list and propose it to the user.
 - 4b. Apply the approved fixes and refine the design system (tokens, components, copy, empty states, error wording).
-- 4c. Finalize `docs/design-system.md` and add a "UI rules" section to this file.
+- 4c. Finalize `docs/design-system.md` and the "UI rules" section of this file.
 
 **Manual test checklist**
 - A second, different lab member completes the flow with fewer or no stumbles than the first.
@@ -364,12 +369,17 @@ Regenerate typed client:     cd frontend && npm run gen:api   (API must be runni
 Frontend tests / types:      cd frontend && npm test ; npx tsc --noEmit
 ```
 
-## 11. Design system (set in Stage 3; refined in Stage 4)
+## 11. Design system (set in Stage 3; overhauled in Stage 4)
 
 ```text
-Component library:   Radix Themes (soft, rounded; indigo accent, slate grey)
-Design tokens file:  frontend/src/theme/tokens.ts   (only place for colours, spacing, text sizes)
-Reference page:      /?page=design  (see docs/design-system.md)
+Component library:   Radix Themes (no Tailwind)
+Look:                Forge: charcoal sidebar (dark in light and dark mode), amber accent,
+                     light / dark / follow-the-computer switch
+Design tokens:       frontend/src/theme/tokens.ts and frontend/src/theme/forge.css
+                     (the only places for colours, spacing, text sizes, status colours)
+App shell:           frontend/src/shell/  (sidebar items in nav.ts: one line per new function)
+Reference page:      #/design  (see docs/design-system.md)
 Rules:               reuse existing components; no one-off styles; plain-language copy;
                      advanced options collapsed by default; colours chosen by meaning
+                     (the same word always has the same colour); empty states invite an action
 ```

@@ -33,6 +33,7 @@ export const WORKSPACE_NAV: NavItem[] = [
     icon: MixerHorizontalIcon,
     // New kinds of processing are added here (and a page for them in ProcessPage).
     children: [
+      { id: "full", label: "Full processing" },
       { id: "anat", label: "Anatomical" },
       { id: "func", label: "Functional" },
     ],

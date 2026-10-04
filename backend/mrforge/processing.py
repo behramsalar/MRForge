@@ -30,6 +30,7 @@ from mrforge.functional import (
 )
 from mrforge.niftiutil import image_info
 from mrforge.pipeline import PipelineSpec, PipelineStep
+from mrforge.resume import check_reusable
 from mrforge.workspace import Workspace
 
 # -- what the user can choose ---------------------------------------------------------------
@@ -164,12 +165,13 @@ class AnatomicalStage(Stage):
 
     def plan(self, ctx: PlanContext, enabled: bool) -> StagePlan:
         existing = anat_results(ctx.ws, ctx.subject, None)
+        recorded = False  # finished by MRForge with the same inputs and settings
         t1s = [
             f
             for f in subject_data(ctx.ws, ctx.subject).files
             if f.datatype == "anat" and f.suffix == "T1w"
         ]
-        stage = self.blank(enabled, already_done=existing is not None)
+        stage = self.blank(enabled)
         if not t1s:
             if existing is not None:
                 ctx.anat = existing
@@ -179,7 +181,22 @@ class AnatomicalStage(Stage):
             return stage
         t1 = t1s[0]
         opts = ctx.opts.anatomical
-        note = f"{len(t1s)} T1 images found; the first one is used." if len(t1s) > 1 else None
+        params = {
+            "strong_bias": opts.strong_bias,
+            "subcortical_segmentation": opts.subcortical_segmentation,
+        }
+        recorded = check_reusable(
+            ctx.ws, "fsl_anat", ctx.subject, {"t1": t1.relpath}, params
+        ).reusable
+        stage.already_done = recorded
+        notes = [f"{len(t1s)} T1 images found; the first one is used."] if len(t1s) > 1 else []
+        if existing is not None and not recorded and enabled:
+            notes.append(
+                "Results from an earlier run exist, but MRForge has no record of making them with "
+                "these settings, so they are made again (this takes a while). Untick Anatomical "
+                "to use the existing results as they are."
+            )
+        note = " ".join(notes) or None
         stage.items = [
             PlanItem(
                 title=f"Process {Path(t1.relpath).name}",
@@ -208,10 +225,7 @@ class AnatomicalStage(Stage):
                 id="fsl_anat",
                 step="fsl_anat",
                 inputs={"t1": t1.relpath},
-                params={
-                    "strong_bias": opts.strong_bias,
-                    "subcortical_segmentation": opts.subcortical_segmentation,
-                },
+                params=params,
             )
         )
         ctx.anat = {

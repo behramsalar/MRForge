@@ -477,6 +477,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/process/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process Plan
+         * @description What full processing would do for a subject (for the confirmation dialog).
+         */
+        post: operations["process_plan_api_workspaces__ws_id__process_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process
+         * @description Run the confirmed plan: every enabled stage, in order, as one pipeline.
+         */
+        post: operations["process_api_workspaces__ws_id__process_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/subjects/{label}/qc": {
         parameters: {
             query?: never;
@@ -617,6 +657,19 @@ export interface components {
              */
             subcortical_segmentation: boolean;
         };
+        /** AnatomicalOptions */
+        AnatomicalOptions: {
+            /**
+             * Strong Bias
+             * @default false
+             */
+            strong_bias: boolean;
+            /**
+             * Subcortical Segmentation
+             * @default false
+             */
+            subcortical_segmentation: boolean;
+        };
         /** DataFile */
         DataFile: {
             /** Relpath */
@@ -692,44 +745,45 @@ export interface components {
             /** Entries */
             entries: components["schemas"]["FsEntry"][];
         };
-        /** FunctionalOptions */
-        FunctionalOptions: {
+        /** FullOptions */
+        FullOptions: {
             /** Subject */
             subject: string;
-            /** Bold */
-            bold: string;
-            /** Session */
-            session?: string | null;
             /**
-             * Delete Volumes
-             * @default 5
+             * Stages
+             * @default {}
              */
-            delete_volumes: number;
+            stages: {
+                [key: string]: boolean;
+            };
             /**
-             * Smoothing Fwhm Mm
-             * @default 5
+             * @default {
+             *       "strong_bias": false,
+             *       "subcortical_segmentation": false
+             *     }
              */
-            smoothing_fwhm_mm: number;
+            anatomical: components["schemas"]["AnatomicalOptions"];
             /**
-             * Highpass Cutoff S
-             * @default 150
+             * @default {
+             *       "delete_volumes": 5,
+             *       "smoothing_fwhm_mm": 5,
+             *       "highpass_cutoff_s": 150,
+             *       "use_fieldmap": true,
+             *       "slice_timing": false
+             *     }
              */
-            highpass_cutoff_s: number | null;
-            /**
-             * Use Fieldmap
-             * @default true
-             */
-            use_fieldmap: boolean;
-            /**
-             * To Mni
-             * @default true
-             */
-            to_mni: boolean;
-            /**
-             * Slice Timing
-             * @default false
-             */
-            slice_timing: boolean;
+            functional: components["schemas"]["mrforge__processing__FunctionalOptions"];
+        };
+        /** FullPlan */
+        FullPlan: {
+            /** Subject */
+            subject: string;
+            /** Stages */
+            stages: components["schemas"]["StagePlan"][];
+            /** Steps */
+            steps: number;
+            /** Can Start */
+            can_start: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -930,6 +984,29 @@ export interface components {
             /** Recent */
             recent: components["schemas"]["ActivityItem"][];
         };
+        /**
+         * PlanItem
+         * @description One thing a stage will do (for the anatomical stage the subject's T1; for the
+         *     functional stage one recording).
+         */
+        PlanItem: {
+            /** Title */
+            title: string;
+            /** Note */
+            note?: string | null;
+            /**
+             * Settings
+             * @default []
+             */
+            settings: components["schemas"]["PlanSetting"][];
+        };
+        /** PlanSetting */
+        PlanSetting: {
+            /** Name */
+            name: string;
+            /** Value */
+            value: string;
+        };
         /** QcEntry */
         QcEntry: {
             /** Name */
@@ -1116,6 +1193,33 @@ export interface components {
             /** Reason */
             reason?: string | null;
         };
+        /** StagePlan */
+        StagePlan: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Description */
+            description: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Default Enabled */
+            default_enabled: boolean;
+            /** Can Run */
+            can_run: boolean;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Already Done
+             * @default false
+             */
+            already_done: boolean;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["PlanItem"][];
+        };
         /** StageStatus */
         StageStatus: {
             /**
@@ -1255,6 +1359,73 @@ export interface components {
             imports: components["schemas"]["ImportSummary"][];
             /** Subjects */
             subjects: string[];
+        };
+        /** FunctionalOptions */
+        mrforge__functional__FunctionalOptions: {
+            /** Subject */
+            subject: string;
+            /** Bold */
+            bold: string;
+            /** Session */
+            session?: string | null;
+            /**
+             * Delete Volumes
+             * @default 5
+             */
+            delete_volumes: number;
+            /**
+             * Smoothing Fwhm Mm
+             * @default 5
+             */
+            smoothing_fwhm_mm: number;
+            /**
+             * Highpass Cutoff S
+             * @default 150
+             */
+            highpass_cutoff_s: number | null;
+            /**
+             * Use Fieldmap
+             * @default true
+             */
+            use_fieldmap: boolean;
+            /**
+             * To Mni
+             * @default true
+             */
+            to_mni: boolean;
+            /**
+             * Slice Timing
+             * @default false
+             */
+            slice_timing: boolean;
+        };
+        /** FunctionalOptions */
+        mrforge__processing__FunctionalOptions: {
+            /**
+             * Delete Volumes
+             * @default 5
+             */
+            delete_volumes: number;
+            /**
+             * Smoothing Fwhm Mm
+             * @default 5
+             */
+            smoothing_fwhm_mm: number;
+            /**
+             * Highpass Cutoff S
+             * @default 150
+             */
+            highpass_cutoff_s: number | null;
+            /**
+             * Use Fieldmap
+             * @default true
+             */
+            use_fieldmap: boolean;
+            /**
+             * Slice Timing
+             * @default false
+             */
+            slice_timing: boolean;
         };
     };
     responses: never;
@@ -2131,7 +2302,77 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["FunctionalOptions"];
+                "application/json": components["schemas"]["mrforge__functional__FunctionalOptions"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    process_plan_api_workspaces__ws_id__process_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FullOptions"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FullPlan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    process_api_workspaces__ws_id__process_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FullOptions"];
             };
         };
         responses: {
