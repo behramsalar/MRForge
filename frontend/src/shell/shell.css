@@ -130,6 +130,49 @@ body {
   padding-inline: 0;
 }
 
+.nav-group[data-here="true"] {
+  color: var(--forge-sidebar-fg);
+}
+.nav-chevron {
+  margin-left: auto;
+  flex: none;
+  transition: transform 0.15s ease;
+}
+.nav-chevron[data-open="true"] {
+  transform: rotate(90deg);
+}
+.nav-children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 4px 18px; /* lines up under the icon of the group */
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--forge-sidebar-border);
+}
+.nav-child {
+  display: block;
+  padding: var(--space-1) var(--space-3);
+  min-height: 32px;
+  line-height: 24px;
+  border-radius: var(--radius-3);
+  color: var(--forge-sidebar-muted);
+  text-decoration: none;
+  font-size: var(--font-size-2);
+}
+.nav-child:hover {
+  background: var(--forge-sidebar-hover);
+  color: var(--forge-sidebar-fg);
+}
+.nav-child[aria-current="page"] {
+  background: var(--accent-9);
+  color: var(--accent-contrast);
+  font-weight: 500;
+}
+.shell[data-collapsed="true"] .nav-children,
+.shell[data-collapsed="true"] .nav-chevron {
+  display: none;
+}
+
 .sidebar-foot {
   border-top: 1px solid var(--forge-sidebar-border);
   padding-top: var(--space-3);

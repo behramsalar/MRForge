@@ -4,7 +4,7 @@ import { latestJobs, stepName } from "../components/JobsPanel";
 import { StatusBadge } from "../components/ui/Badges";
 import { href, type Route } from "../lib/router";
 import { space, type } from "../theme/tokens";
-import { pageLabel } from "./nav";
+import { crumbs } from "./nav";
 import { useResearcher } from "./ResearcherProvider";
 import { useAppTheme } from "./ThemeProvider";
 import { useWorkspace } from "./WorkspaceContext";
@@ -118,9 +118,18 @@ export function TopBar({ route }: { route: Route }) {
             </Text>
           </>
         )}
-        <Text size={type.body} weight="bold">
-          {pageLabel(route.page)}
-        </Text>
+        {crumbs(route.page, route.extra).map((c, i, all) => (
+          <Flex key={c} align="center" gap={space.inline}>
+            {i > 0 && (
+              <Text size={type.help} color="gray">
+                /
+              </Text>
+            )}
+            <Text size={type.body} weight={i === all.length - 1 ? "bold" : "regular"}>
+              {c}
+            </Text>
+          </Flex>
+        ))}
       </Flex>
       <Flex align="center" gap={space.group}>
         {route.workspace && <Activity ws={route.workspace} />}

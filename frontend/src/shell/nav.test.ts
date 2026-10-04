@@ -19,3 +19,19 @@ describe("sidebar", () => {
     expect(pageLabel("unknown-page")).toBe("unknown-page");
   });
 });
+
+import { crumbs, defaultChild } from "./nav";
+
+describe("sidebar tree", () => {
+  it("shows the kinds of processing under Process", () => {
+    const process = WORKSPACE_NAV.find((n) => n.id === "process");
+    expect(process?.children?.map((c) => c.id)).toEqual(["anat", "func"]);
+    expect(defaultChild("process")).toBe("anat");
+    expect(defaultChild("viewer")).toBeUndefined();
+  });
+  it("names the trail in the top bar", () => {
+    expect(crumbs("process", "func")).toEqual(["Process", "Functional"]);
+    expect(crumbs("process")).toEqual(["Process", "Anatomical"]);
+    expect(crumbs("viewer")).toEqual(["Viewer"]);
+  });
+});
