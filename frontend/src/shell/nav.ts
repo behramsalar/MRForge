@@ -38,6 +38,7 @@ export const WORKSPACE_NAV: NavItem[] = [
       { id: "pipelines", label: "Pipelines" },
       { id: "anat", label: "Anatomical", section: "Single steps" },
       { id: "func", label: "Functional" },
+      { id: "ica", label: "Artifact rejection" },
     ],
   },
   { id: "viewer", label: "Viewer", icon: EyeOpenIcon },

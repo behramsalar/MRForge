@@ -39,6 +39,38 @@ def _overlay(ax: Any, background: Arr, zmap: Arr, lo: float, hi: float) -> None:
     ax.set_axis_off()
 
 
+def draw_plots(
+    time_course: Arr, power: Arr, tr_s: float, number: int, total: int, out: Path,
+    variance_pct: float | None = None,
+) -> None:  # fmt: skip
+    """Only the time course and the power spectrum (the review screen shows the brain maps
+    in its interactive viewer)."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    fig, (ax_t, ax_f) = plt.subplots(
+        1, 2, figsize=(11, 2.6), dpi=90, gridspec_kw={"width_ratios": [2, 1]}
+    )
+    t = np.arange(len(time_course)) * tr_s
+    ax_t.plot(t, time_course, color="black", linewidth=0.8)
+    ax_t.set_xlabel("Time (s)")
+    ax_t.set_ylabel("Component strength")
+    ax_t.set_title("Time course", fontsize=10)
+    freqs = np.linspace(0, 0.5 / tr_s, len(power))
+    ax_f.plot(freqs, power, color="tab:blue", linewidth=0.9)
+    ax_f.set_xlabel("Frequency (Hz)")
+    ax_f.set_ylabel("Power")
+    ax_f.set_title("Frequencies", fontsize=10)
+    for ax in (ax_t, ax_f):
+        ax.margins(x=0)
+        ax.grid(alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(out)
+    plt.close(fig)
+
+
 def draw_component(
     ic_map: Arr,  # 3D z-map of this component
     background: Arr,  # 3D mean functional image

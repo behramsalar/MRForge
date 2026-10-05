@@ -29,6 +29,7 @@ from mrforge.engine import latest_pipeline_run
 from mrforge.errors import StepError
 from mrforge.fsl_env import find_fsl
 from mrforge.functional import FunctionalOptions, Readiness, build_pipeline, check_ready
+from mrforge.icareview import IcaRecording, find_ica_results
 from mrforge.importing.bids_validate import find_validator
 from mrforge.importing.classify import effective_all, load_rules, set_override
 from mrforge.importing.manifest import list_manifests, load_manifest, save_manifest
@@ -818,6 +819,14 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
                 )
             )
         return out
+
+    @app.get("/api/workspaces/{ws_id}/subjects/{label}/ica", response_model=list[IcaRecording])
+    def ica_results(ws_id: str, label: str) -> list[IcaRecording]:
+        """The MELODIC components of every recording of a subject (for the review screen)."""
+        ws = ws_of(ws_id)
+        if not SAFE_NAME.fullmatch(label):
+            raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
+        return find_ica_results(ws, ws_id, label)
 
     @app.get("/api/workspaces/{ws_id}/file/{relpath:path}")
     def serve_file(ws_id: str, relpath: str) -> FileResponse:

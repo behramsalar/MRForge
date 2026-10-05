@@ -7,6 +7,11 @@ export type ViewerLayer = {
   url: string;
   colormap?: string | null;
   opacity: number; // 0 to 1
+  // For statistical maps: show only values beyond calMin (up to calMax), and negative values
+  // in their own colour.
+  calMin?: number;
+  calMax?: number;
+  colormapNegative?: string;
 };
 
 /** "row": the three slices in one line. "grid": 2x2 with the 3D view. */
@@ -29,6 +34,7 @@ export function Viewer({
   layout = "row",
   frame = 0,
   height = "70vh",
+  crosshairMm,
   onLoaded,
   onError,
 }: {
@@ -37,6 +43,7 @@ export function Viewer({
   layout?: ViewerLayout;
   frame?: number; // volume of a time series (0 = first)
   height?: string;
+  crosshairMm?: number[]; // put the crosshair here (scanner coordinates in mm) once loaded
   onLoaded?: (volumes: number) => void;
   onError?: (message: string) => void;
 }) {
@@ -44,11 +51,13 @@ export function Viewer({
   const viewer = useRef<Niivue | null>(null);
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(true);
-  const key = [underlay, ...overlays.map((o) => `${o.url}|${o.colormap ?? ""}`)].join("\n");
+  const key = [underlay, ...overlays.map((o) => `${o.url}|${o.colormap ?? ""}|${o.calMin ?? ""}|${o.calMax ?? ""}`)].join("\n");
   const onLoadedRef = useRef(onLoaded);
   const onErrorRef = useRef(onError);
   onLoadedRef.current = onLoaded;
   onErrorRef.current = onError;
+  const crosshairRef = useRef(crosshairMm);
+  crosshairRef.current = crosshairMm;
   const latest = useRef(overlays);
   latest.current = overlays;
 
@@ -67,10 +76,17 @@ export function Viewer({
         name: `overlay${i}.nii.gz`,
         colormap: o.colormap ?? "red",
         opacity: o.opacity,
+        ...(o.calMin !== undefined ? { cal_min: o.calMin, cal_max: o.calMax, cal_minNeg: -(o.calMin), cal_maxNeg: -(o.calMax ?? o.calMin * 3) } : {}),
+        ...(o.colormapNegative ? { colormapNegative: o.colormapNegative } : {}),
       })),
     ])
       .then(() => {
         if (cancelled) return;
+        const at = crosshairRef.current;
+        if (at && at.length === 3) {
+          nv.scene.crosshairPos = nv.mm2frac([at[0], at[1], at[2]]);
+          nv.drawScene();
+        }
         setReady(true);
         setLoading(false);
         onLoadedRef.current?.(nv.volumes[0]?.nFrame4D ?? 1);

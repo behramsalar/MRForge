@@ -21,7 +21,7 @@ from mrforge.bids import split_extension
 from mrforge.errors import StepError
 from mrforge.niftiutil import image_info, is_readable_nifti
 from mrforge.steps.base import Problem, QCItem, Step, StepContext, StepResult
-from mrforge.steps.icapics import draw_component
+from mrforge.steps.icapics import draw_component, draw_plots, peak_voxel
 from mrforge.steps.registry import register_step
 
 MIN_VOLUMES = 30  # fewer than this is too short for a meaningful decomposition
@@ -54,10 +54,18 @@ def picture_name(number: int) -> str:
     return f"mrforge_report/component-{number:03d}.png"
 
 
+def plots_name(number: int) -> str:
+    return f"mrforge_report/plots-{number:03d}.png"
+
+
+def map_name(number: int) -> str:
+    return f"mrforge_report/ic-{number:03d}.nii.gz"
+
+
 @register_step
 class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
     name = "melodic"
-    version = "2"  # 2: pictures show three planes through the strongest point, vivid colours
+    version = "3"  # 3: per-component 3D maps and plots for the interactive review; 2: new pictures
     InputSpec, ParamSpec, OutputSpec = MelodicInput, MelodicParams, MelodicOutput
     requires_fsl = True
     datatype = "func"
@@ -159,6 +167,9 @@ class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
             except OSError:
                 shutil.copy2(source, target)
 
+        import nibabel as nib
+
+        affine = nib.load(native / "melodic_IC.nii.gz").affine  # type: ignore[attr-defined]
         maps = _load(native / "melodic_IC.nii.gz")
         if maps.ndim == 3:
             maps = maps[..., None]
@@ -176,18 +187,32 @@ class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
                 maps[..., k], mean, mask, mix[:, k], spectra[:, k], tr, k + 1, total,
                 native / picture, variance[k],
             )  # fmt: skip
+            draw_plots(
+                mix[:, k], spectra[:, k], tr, k + 1, total, native / plots_name(k + 1), variance[k]
+            )
+            nib.save(  # type: ignore[attr-defined]
+                nib.Nifti1Image(maps[..., k].astype(np.float32), affine),  # type: ignore[attr-defined,no-untyped-call]
+                native / map_name(k + 1),
+            )
+            px, py, pz = peak_voxel(maps[..., k], mask)
+            peak_mm = [float(v) for v in (affine @ np.array([px, py, pz, 1.0]))[:3]]
             entries.append(
                 {
                     "number": k + 1,
                     "picture": ctx.workspace.relpath(native / picture),
+                    "plots": ctx.workspace.relpath(native / plots_name(k + 1)),
+                    "map": ctx.workspace.relpath(native / map_name(k + 1)),
+                    "peak_mm": peak_mm,
                     "variance_pct": variance[k],
                 }
             )
+        shutil.copy2(native / "mean.nii.gz", native / "mrforge_report" / "mean.nii.gz")
         summary = {
             "n_components": total,
             "n_volumes": int(mix.shape[0]),
             "tr_s": tr,
             "melodic_folder": ctx.workspace.relpath(native),
+            "mean": ctx.workspace.relpath(native / "mrforge_report" / "mean.nii.gz"),
             "components": entries,
         }
         (ctx.output_dir / out.summary).write_text(json.dumps(summary, indent=2) + "\n")

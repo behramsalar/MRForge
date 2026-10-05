@@ -616,6 +616,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/subjects/{label}/ica": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ica Results
+         * @description The MELODIC components of every recording of a subject (for the review screen).
+         */
+        get: operations["ica_results_api_workspaces__ws_id__subjects__label__ica_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/file/{relpath}": {
         parameters: {
             query?: never;
@@ -865,6 +885,36 @@ export interface components {
             disk_total_gb?: number | null;
             /** Cpu Cores */
             cpu_cores?: number | null;
+        };
+        /** IcaComponent */
+        IcaComponent: {
+            /** Number */
+            number: number;
+            /** Variance Pct */
+            variance_pct: number | null;
+            /** Map Url */
+            map_url: string;
+            /** Plots Url */
+            plots_url: string;
+            /** Picture Url */
+            picture_url: string;
+            /** Peak Mm */
+            peak_mm: number[];
+        };
+        /** IcaRecording */
+        IcaRecording: {
+            /** Recording */
+            recording: string;
+            /** N Components */
+            n_components: number;
+            /** N Volumes */
+            n_volumes: number;
+            /** Tr S */
+            tr_s: number;
+            /** Mean Url */
+            mean_url: string;
+            /** Components */
+            components: components["schemas"]["IcaComponent"][];
         };
         /** ImportDetail */
         ImportDetail: {
@@ -2690,6 +2740,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ViewerImage"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ica_results_api_workspaces__ws_id__subjects__label__ica_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                label: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IcaRecording"][];
                 };
             };
             /** @description Validation Error */
