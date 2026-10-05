@@ -770,6 +770,20 @@ export interface components {
              */
             subcortical_segmentation: boolean;
         };
+        /** ArtifactOptions */
+        ArtifactOptions: {
+            /**
+             * Uncertain As
+             * @default signal
+             * @enum {string}
+             */
+            uncertain_as: "signal" | "noise";
+            /**
+             * Aggressive
+             * @default false
+             */
+            aggressive: boolean;
+        };
         /** DataFile */
         DataFile: {
             /** Relpath */
@@ -873,6 +887,13 @@ export interface components {
              *     }
              */
             functional: components["schemas"]["mrforge__processing__FunctionalOptions"];
+            /**
+             * @default {
+             *       "uncertain_as": "signal",
+             *       "aggressive": false
+             *     }
+             */
+            artifact: components["schemas"]["ArtifactOptions"];
         };
         /** FullPlan */
         FullPlan: {

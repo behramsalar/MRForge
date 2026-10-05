@@ -132,3 +132,9 @@ The user could not change an import once written (skipping a series or renaming 
 - MELODIC starts from random values: without a fixed seed, repeated runs on identical data gave different components in a different order (seen on real data: the same pattern was component 5, then 4). The step now passes `--seed` (default 1, a parameter, recorded; REVIEW(domain)). Verified: same seed gives byte-identical mixing matrices; another seed differs.
 - Consequence for Stage 6b: the saved label file must record which decomposition it belongs to (hash of the mixing matrix) and the review screen must refuse or warn if MELODIC was re-run with a different seed or settings, since component numbers then mean something else.
 - Slice summary: a slice every 5 mm through the whole brain in all three planes, cropped to the brain, so small areas are not missed (earlier: 7 slices per plane).
+
+## 2026-10-05 Artifact rejection stage in full processing (6e)
+- `ArtifactStage` sits between Functional and Standard space, off by default (it needs the researcher). Steps per run: `melodic`, `ica_labels` (the pause), `regfilt`; MELODIC for all runs first, then the labelling steps, then the removals, so a researcher is not kept waiting between runs. `ctx.bold[run]` becomes the cleaned image, so Standard space uses it without changes.
+- The plan names the decision file before MELODIC has run, from the raw BOLD file's BIDS entities (the FEAT result has the same ones); a test checks this equals the real path.
+- Known limitation: the standard-space result keeps its name (`desc-preproc`) although it now comes from cleaned data; provenance records the input. To be renamed in a later pass if it confuses.
+- Not yet: the Dashboard stage table does not show the artifact stage; ICA-AROMA (6f) only after approval to install it.

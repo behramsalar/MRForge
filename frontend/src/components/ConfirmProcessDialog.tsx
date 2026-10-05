@@ -18,6 +18,7 @@ const DEFAULTS: FullOptions = {
     use_fieldmap: true,
     slice_timing: false,
   },
+  artifact: { uncertain_as: "signal", aggressive: false },
 };
 
 function StageBlock({
@@ -103,6 +104,8 @@ export function ConfirmProcessDialog({
   const setF = (change: Partial<NonNullable<FullOptions["functional"]>>) =>
     setOpts({ ...opts, functional: { ...f, ...change } });
   const a = opts.anatomical!;
+  const r = opts.artifact!;
+  const artifactOn = opts.stages?.artifact_rejection === true;
   const p = plan.data;
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -188,6 +191,28 @@ export function ConfirmProcessDialog({
                   Slice timing correction (where the scan records it)
                 </Flex>
               </Text>
+              {artifactOn && (
+                <>
+                  <Text as="label" size={type.help}>
+                    <Flex gap={space.inline} align="center">
+                      <Switch
+                        checked={r.uncertain_as === "noise"}
+                        onCheckedChange={(on) => setOpts({ ...opts, artifact: { ...r, uncertain_as: on ? "noise" : "signal" } })}
+                      />
+                      Also remove components I mark "uncertain" (otherwise they are kept)
+                    </Flex>
+                  </Text>
+                  <Text as="label" size={type.help}>
+                    <Flex gap={space.inline} align="center">
+                      <Switch
+                        checked={r.aggressive ?? false}
+                        onCheckedChange={(on) => setOpts({ ...opts, artifact: { ...r, aggressive: on } })}
+                      />
+                      Aggressive removal (removes more; also signal shared with good components)
+                    </Flex>
+                  </Text>
+                </>
+              )}
               <Text as="label" size={type.help}>
                 <Flex gap={space.inline} align="center">
                   <Switch

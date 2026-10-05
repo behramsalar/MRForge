@@ -46,6 +46,7 @@ def workspace(
     runs: tuple[str, ...] = (BOLD,),
     fieldmap: bool = True,
     anat_done: bool = False,
+    volumes: int = 8,
 ) -> Workspace:
     ws = Workspace.create(tmp_path / "ws")
     sid = ws.get_or_create_subject("sub-001")
@@ -54,7 +55,7 @@ def workspace(
             image(ws.root / T1)
             s.add(File(subject_id=sid, relpath=T1, kind="T1w"))
         for run in runs:
-            image(ws.root / run, (4, 4, 4, 8))
+            image(ws.root / run, (4, 4, 4, volumes))
             (ws.root / run.replace(".nii.gz", ".json")).write_text(json.dumps(FACTS))
             s.add(File(subject_id=sid, relpath=run, kind="bold"))
     if fieldmap and runs:
@@ -82,7 +83,12 @@ def ids(spec: PipelineSpec | None) -> list[str]:
 
 
 def test_the_standard_stages_in_order() -> None:
-    assert [s.id for s in STAGES] == ["anatomical", "functional", "standard_space"]
+    assert [s.id for s in STAGES] == [
+        "anatomical",
+        "functional",
+        "artifact_rejection",
+        "standard_space",
+    ]
 
 
 def test_default_plan_covers_everything_and_is_a_valid_pipeline(tmp_path: Path) -> None:
@@ -91,6 +97,7 @@ def test_default_plan_covers_everything_and_is_a_valid_pipeline(tmp_path: Path) 
     assert [(s.id, s.enabled, s.can_run) for s in p.stages] == [
         ("anatomical", True, True),
         ("functional", True, True),
+        ("artifact_rejection", False, False),  # off by default; this 8-volume run is too short
         ("standard_space", True, True),
     ]
     assert ids(spec)[0] == "fsl_anat" and ids(spec)[-1].startswith("func_to_mni__")
@@ -196,11 +203,11 @@ def test_settings_chosen_in_the_dialog_end_up_in_the_steps(tmp_path: Path) -> No
 
 def test_standard_space_needs_the_functional_stage(tmp_path: Path) -> None:
     p, spec = plan(workspace(tmp_path), stages={"functional": False})
-    assert not p.stages[2].can_run
+    assert not p.stages[3].can_run
     assert spec is not None and [s.step for s in spec.steps] == ["fsl_anat"]
     p2, spec2 = plan(workspace(tmp_path / "b"), stages={"standard_space": False})
     assert spec2 is not None and "func_to_mni" not in [s.step for s in spec2.steps]
-    assert p2.stages[2].enabled is False
+    assert p2.stages[3].enabled is False
 
 
 def test_everything_switched_off_cannot_start(tmp_path: Path) -> None:
@@ -234,7 +241,12 @@ def test_the_plan_route_and_a_refusal_when_nothing_can_run(client: TestClient) -
         f"/api/workspaces/{ws_id}/process/plan", json={"subject": "sub-001"}
     ).json()
     assert plan_body["can_start"] is False
-    assert [s["id"] for s in plan_body["stages"]] == ["anatomical", "functional", "standard_space"]
+    assert [s["id"] for s in plan_body["stages"]] == [
+        "anatomical",
+        "functional",
+        "artifact_rejection",
+        "standard_space",
+    ]
     refused = client.post(f"/api/workspaces/{ws_id}/process", json={"subject": "sub-001"})
     assert refused.status_code == 400 and refused.json()["code"] == "NOTHING_TO_RUN"
     assert client.post(
@@ -277,3 +289,98 @@ def test_a_rejected_value_comes_back_as_a_plain_error(client: TestClient) -> Non
     assert r.status_code == 422
     body = r.json()
     assert body["code"] == "INVALID_VALUE" and "delete volumes" in body["message"]
+
+
+def artifact_plan(tmp_path: Path, **kw: object):  # type: ignore[no-untyped-def]
+    ws = workspace(tmp_path, volumes=45)
+    stages = {"artifact_rejection": True}
+    return ws, plan(ws, stages=stages, **kw)
+
+
+def test_artifact_rejection_is_off_unless_chosen(tmp_path: Path) -> None:
+    p, spec = plan(workspace(tmp_path, volumes=45))
+    stage = next(s for s in p.stages if s.id == "artifact_rejection")
+    assert not stage.enabled and stage.can_run
+    assert not any(s.step in ("melodic", "ica_labels", "regfilt") for s in spec.steps)  # type: ignore[union-attr]
+
+
+def test_the_artifact_stage_sits_between_functional_and_standard_space(tmp_path: Path) -> None:
+    _, (p, spec) = artifact_plan(tmp_path)
+    assert [s.step for s in spec.steps] == [  # type: ignore[union-attr]
+        "fsl_anat", "fieldmap_prep", "feat_preproc", "func_qc",
+        "melodic", "ica_labels", "regfilt", "func_to_mni",
+    ]  # fmt: skip
+    parse_pipeline(spec.model_dump(mode="json"))  # type: ignore[union-attr]
+    assert "Labelling" in {
+        s.name for s in next(s for s in p.stages if s.id == "artifact_rejection").items[0].settings
+    }
+
+
+def test_standard_space_uses_the_cleaned_data(tmp_path: Path) -> None:
+    _, (_, spec) = artifact_plan(tmp_path)
+    mni = next(s for s in spec.steps if s.step == "func_to_mni")  # type: ignore[union-attr]
+    assert mni.inputs["bold"] == "${regfilt__task-rest.cleaned_bold}"
+    # Without the stage it still takes the FEAT result.
+    _, spec2 = plan(workspace(tmp_path / "plain", volumes=45))
+    mni2 = next(s for s in spec2.steps if s.step == "func_to_mni")  # type: ignore[union-attr]
+    assert mni2.inputs["bold"] == "${feat_preproc__task-rest.preproc_bold}"
+
+
+def test_the_steps_are_wired_to_each_others_results(tmp_path: Path) -> None:
+    _, (_, spec) = artifact_plan(tmp_path)
+    by = {s.id: s for s in spec.steps}  # type: ignore[union-attr]
+    mel = by["melodic__task-rest"]
+    assert mel.inputs["bold"] == "${feat_preproc__task-rest.preproc_bold}"
+    assert mel.inputs["to_t1_affine"] == "${feat_preproc__task-rest.to_t1_affine}"
+    assert mel.inputs["t1_brain"] == "${fsl_anat.brain}"
+    assert by["ica_labels__task-rest"].inputs["melodic_summary"] == "${melodic__task-rest.summary}"
+    reg = by["regfilt__task-rest"]
+    assert reg.inputs["mixing"] == "${melodic__task-rest.mixing}"
+    assert reg.inputs["labels"] == "${ica_labels__task-rest.labels}"
+
+
+def test_the_decision_file_is_where_the_real_step_will_put_its_result(tmp_path: Path) -> None:
+    """The plan names the decision file before MELODIC has run, from the raw file's name; it
+    must be the place next to the real summary the step will write."""
+    ws, (_, spec) = artifact_plan(tmp_path)
+    labels = next(s for s in spec.steps if s.step == "ica_labels")  # type: ignore[union-attr]
+    feat_bold = "derivatives/mrforge/sub-001/func/sub-001_task-rest_desc-preproc_bold.nii.gz"
+    step, ctx = build_context(
+        ws, "melodic", "sub-001", None, {"bold": feat_bold, "brain_mask": feat_bold}, {}, "melodic"
+    )
+    real = ws.relpath(ctx.output_dir / step.expected_outputs(ctx).summary)
+    assert labels.inputs["decision"] == real.replace(
+        "_desc-melodic_components.json", "_desc-icalabels_decision.json"
+    )
+
+
+def test_a_run_too_short_for_component_analysis_is_explained(tmp_path: Path) -> None:
+    p, spec = plan(workspace(tmp_path, volumes=20), stages={"artifact_rejection": True})
+    stage = next(s for s in p.stages if s.id == "artifact_rejection")
+    assert not stage.can_run and stage.reason and "at least" in stage.reason
+    assert not any(s.step == "melodic" for s in spec.steps)  # type: ignore[union-attr]
+
+
+def test_artifact_settings_reach_the_steps(tmp_path: Path) -> None:
+    from mrforge.processing import ArtifactOptions
+
+    _, (_, spec) = artifact_plan(
+        tmp_path, artifact=ArtifactOptions(uncertain_as="noise", aggressive=True)
+    )
+    by = {s.id: s for s in spec.steps}  # type: ignore[union-attr]
+    assert by["ica_labels__task-rest"].params == {"uncertain_as": "noise"}
+    assert by["regfilt__task-rest"].params == {"aggressive": True}
+
+
+def test_two_recordings_are_analysed_before_the_first_pause(tmp_path: Path) -> None:
+    ws = workspace(tmp_path, runs=(BOLD, BOLD2), volumes=45)
+    _, spec = plan(ws, stages={"artifact_rejection": True})
+    order = [s.id for s in spec.steps if s.step in ("melodic", "ica_labels", "regfilt")]  # type: ignore[union-attr]
+    runs = [i.removeprefix("melodic__") for i in order if i.startswith("melodic__")]
+    assert len(runs) == 2
+    first, second = runs
+    assert order == [
+        f"melodic__{first}", f"ica_labels__{first}",
+        f"melodic__{second}", f"ica_labels__{second}",
+        f"regfilt__{first}", f"regfilt__{second}",
+    ]  # fmt: skip

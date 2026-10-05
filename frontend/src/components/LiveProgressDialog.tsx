@@ -7,6 +7,7 @@ import { ApiError, call } from "../api/call";
 import { useTick } from "../api/hooks";
 import type { ProgressStep } from "../api/types";
 import { elapsed } from "../lib/labels";
+import { href } from "../lib/router";
 import { space, type } from "../theme/tokens";
 import { ErrorCallout } from "./ErrorCallout";
 import { stepName } from "./JobsPanel";
@@ -101,6 +102,13 @@ export function LiveProgressDialog({ ws, operationId, trigger }: { ws: string; o
                   {s.started && (s.state === "running" || s.state === "done") ? ` · ${elapsed(s.started, s.finished)}` : ""}
                 </Text>
               </Flex>
+              {s.state === "review" && (
+                <Flex style={{ paddingLeft: 28 }}>
+                  <Text size={type.help} color="amber">
+                    Waiting for you: <a href={href(ws, "process", "ica")}>open the review</a> to label the components.
+                  </Text>
+                </Flex>
+              )}
               {s.state === "running" && (
                 <Flex direction="column" gap="1" style={{ paddingLeft: 28 }}>
                   {s.now && (

@@ -17,7 +17,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -28,9 +28,12 @@ from mrforge.functional import (
     fieldmap_status,
     slice_timing_status,
 )
+from mrforge.icalabels import SUMMARY_SUFFIX, decision_path
 from mrforge.niftiutil import image_info
 from mrforge.pipeline import PipelineSpec, PipelineStep
 from mrforge.resume import check_reusable
+from mrforge.runner.jobs import build_context
+from mrforge.steps.melodic import MIN_VOLUMES
 from mrforge.workspace import Workspace
 
 # -- what the user can choose ---------------------------------------------------------------
@@ -50,12 +53,20 @@ class FunctionalOptions(BaseModel):
     slice_timing: bool = False  # used for every run whose scan records slice times
 
 
+class ArtifactOptions(BaseModel):
+    # REVIEW(domain): "uncertain" components are kept by default (removes less); partial
+    # (non-aggressive) removal is fsl_regfilt's default and what ICA-AROMA uses.
+    uncertain_as: Literal["signal", "noise"] = "signal"
+    aggressive: bool = False
+
+
 class FullOptions(BaseModel):
     subject: str
     # Stages switched off on purpose; missing means "as planned by default".
     stages: dict[str, bool] = {}
     anatomical: AnatomicalOptions = AnatomicalOptions()
     functional: FunctionalOptions = FunctionalOptions()
+    artifact: ArtifactOptions = ArtifactOptions()
 
 
 # -- the plan shown to the user ------------------------------------------------------------
@@ -374,6 +385,120 @@ class FunctionalStage(Stage):
         return stage
 
 
+class ArtifactStage(Stage):
+    id = "artifact_rejection"
+    label = "Artifact rejection"
+    description = (
+        "Finds independent components in each run (MELODIC), then waits for you to label each "
+        "one as signal or noise, and removes the noise. Standard space then uses the cleaned "
+        "data. The processing pauses at the labelling and continues when you save."
+    )
+    default_enabled = False  # it needs you: the pipeline waits for your decision
+    depends_on = ("functional",)
+
+    def plan(self, ctx: PlanContext, enabled: bool) -> StagePlan:
+        stage = self.blank(enabled)
+        if enabled and self.missing(ctx) is not None:
+            stage.can_run = False
+            stage.reason = "Functional preprocessing has to be included."
+            return stage
+        opts = ctx.opts.artifact
+        slugs = list(ctx.runs) or []
+        discarded = ctx.opts.functional.delete_volumes
+        for slug in slugs:
+            raw = ctx.runs[slug]
+            try:
+                volumes = image_info(ctx.ws.abspath(raw))[0][3] - discarded
+            except Exception:
+                volumes = None
+            if volumes is not None and volumes < MIN_VOLUMES:
+                stage.can_run = False
+                stage.reason = (
+                    f"Run {slug.replace('_', ' ')} would have only {volumes} volumes left; "
+                    f"component analysis needs at least {MIN_VOLUMES}."
+                )
+            stage.items.append(
+                PlanItem(
+                    title=f"Run {slug.replace('_', ' ')}",
+                    settings=[
+                        PlanSetting(name="Components", value="number found by MELODIC"),
+                        PlanSetting(
+                            name="Labelling", value="you (processing pauses until you save)"
+                        ),
+                        PlanSetting(
+                            name="Removal",
+                            value="aggressive" if opts.aggressive else "partial (non-aggressive)",
+                        ),
+                        PlanSetting(
+                            name="Uncertain components", value=f"kept as {opts.uncertain_as}"
+                        ),
+                    ],
+                )
+            )
+        if not stage.items:
+            stage.items = [PlanItem(title="Every functional run of the subject", settings=[])]
+        if not enabled or not stage.can_run:
+            return stage
+        assert ctx.anat is not None
+        for slug in slugs:
+            summary = self._summary_path(ctx, slug)
+            ctx.steps.append(
+                PipelineStep(
+                    id=f"melodic__{slug}",
+                    label="melodic",
+                    step="melodic",
+                    inputs={
+                        "bold": ctx.bold[slug],
+                        "brain_mask": ctx.brain_mask[slug],
+                        "t1_brain": ctx.anat["t1_brain"],
+                        "to_t1_affine": ctx.affine[slug],
+                    },
+                )
+            )
+            ctx.steps.append(
+                PipelineStep(
+                    id=f"ica_labels__{slug}",
+                    label="ica_labels",
+                    step="ica_labels",
+                    inputs={
+                        "melodic_summary": f"${{melodic__{slug}.summary}}",
+                        "decision": decision_path(summary),
+                    },
+                    params={"uncertain_as": opts.uncertain_as},
+                )
+            )
+        for slug in slugs:
+            ctx.steps.append(
+                PipelineStep(
+                    id=f"regfilt__{slug}",
+                    label="regfilt",
+                    step="regfilt",
+                    inputs={
+                        "bold": ctx.bold[slug],
+                        "mixing": f"${{melodic__{slug}.mixing}}",
+                        "labels": f"${{ica_labels__{slug}.labels}}",
+                        "brain_mask": ctx.brain_mask[slug],
+                    },
+                    params={"aggressive": opts.aggressive},
+                )
+            )
+            ctx.bold[slug] = f"${{regfilt__{slug}.cleaned_bold}}"  # the next stage uses this
+        ctx.ready.add(self.id)
+        return stage
+
+    def _summary_path(self, ctx: PlanContext, slug: str) -> str:
+        """Where this run's MELODIC summary will be written. The name depends only on the
+        BIDS entities of the first input, which the raw BOLD file and the FEAT result share,
+        so the raw file stands in for the not yet existing FEAT result."""
+        raw = ctx.runs[slug]
+        step, context = build_context(
+            ctx.ws, "melodic", ctx.subject, None, {"bold": raw, "brain_mask": raw}, {}, "melodic"
+        )
+        name = step.expected_outputs(context).summary
+        assert name.endswith(SUMMARY_SUFFIX)
+        return ctx.ws.relpath(context.output_dir / name)
+
+
 class StandardSpaceStage(Stage):
     id = "standard_space"
     label = "Standard space"
@@ -424,7 +549,12 @@ class StandardSpaceStage(Stage):
 # The order of the stages is the order of the pipeline. Stages that clean the data (artifact
 # rejection, WM/CSF regression) belong between Functional and Standard space; stages that use
 # the finished data (ROI-to-ROI correlation) after it.
-STAGES: list[Stage] = [AnatomicalStage(), FunctionalStage(), StandardSpaceStage()]
+STAGES: list[Stage] = [
+    AnatomicalStage(),
+    FunctionalStage(),
+    ArtifactStage(),
+    StandardSpaceStage(),
+]
 
 
 def plan_full_processing(ws: Workspace, opts: FullOptions) -> tuple[FullPlan, PipelineSpec | None]:
