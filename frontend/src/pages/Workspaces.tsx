@@ -113,7 +113,7 @@ export function Workspaces() {
                     align="center"
                     justify="center"
                     aria-hidden
-                    style={{ width: 32, height: 32, borderRadius: "var(--radius-3)", background: "var(--indigo-a3)", color: "var(--indigo-10)" }}
+                    style={{ width: 32, height: 32, borderRadius: "var(--radius-3)", background: "var(--accent-a3)", color: "var(--accent-10)" }}
                   >
                     <LayersIcon />
                   </Flex>
@@ -127,7 +127,7 @@ export function Workspaces() {
                 </Text>
                 {w.created_by && (
                   <Flex>
-                    <Badge color={w.created_by === researcher?.name ? "indigo" : "gray"} variant="soft" size="2">
+                    <Badge color={w.created_by === researcher?.name ? "orange" : "gray"} variant="soft" size="2">
                       <PersonIcon /> Created by {w.created_by}
                       {w.created_by === researcher?.name ? " (you)" : ""}
                     </Badge>

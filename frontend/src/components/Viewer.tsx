@@ -123,13 +123,13 @@ export function Viewer({
       <canvas ref={canvas} style={{ display: "block" }} />
       {ready && (
         <div style={{ position: "absolute", top: "var(--space-2)", right: "var(--space-2)", display: "flex", gap: "var(--space-1)" }}>
-          <IconButton size="1" variant="soft" color="gray" aria-label="Zoom in" title="Zoom in (the mouse wheel still scrolls through slices)" onClick={() => zoomBy(1.25)}>
+          <IconButton size="1" variant="solid" color="gray" highContrast aria-label="Zoom in" title="Zoom in (the mouse wheel still scrolls through slices)" onClick={() => zoomBy(1.25)}>
             <PlusIcon />
           </IconButton>
-          <IconButton size="1" variant="soft" color="gray" aria-label="Zoom out" title="Zoom out" onClick={() => zoomBy(0.8)}>
+          <IconButton size="1" variant="solid" color="gray" highContrast aria-label="Zoom out" title="Zoom out" onClick={() => zoomBy(0.8)}>
             <MinusIcon />
           </IconButton>
-          <IconButton size="1" variant="soft" color="gray" aria-label="Reset zoom" title="Reset zoom" onClick={() => zoomBy(null)}>
+          <IconButton size="1" variant="solid" color="gray" highContrast aria-label="Reset zoom" title="Reset zoom" onClick={() => zoomBy(null)}>
             <ResetIcon />
           </IconButton>
         </div>

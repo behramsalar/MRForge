@@ -2,7 +2,6 @@ import { ChevronDownIcon, ChevronRightIcon, DoubleArrowLeftIcon, DoubleArrowRigh
 import { DropdownMenu, Theme } from "@radix-ui/themes";
 import { Fragment, useEffect, useState } from "react";
 import { useWorkspaces } from "../api/hooks";
-import { areaColor } from "../theme/tokens";
 import { href, type Route } from "../lib/router";
 import { GLOBAL_NAV, SETTINGS_NAV, WORKSPACE_NAV, defaultChild, type NavItem } from "./nav";
 
@@ -10,7 +9,7 @@ function Item({ item, to, active, collapsed }: { item: NavItem; to: string; acti
   const Icon = item.icon;
   return (
     <a className="nav-item" href={to} aria-current={active ? "page" : undefined} title={collapsed ? item.label : undefined}>
-      <Icon width={18} height={18} style={{ color: `var(--${areaColor[item.id] ?? "gray"}-9)` }} />
+      <Icon width={18} height={18} />
       <span className="nav-label">{item.label}</span>
     </a>
   );
@@ -51,7 +50,7 @@ function Group({ item, ws, route, collapsed }: { item: NavItem; ws: string; rout
   if (collapsed) {
     return (
       <a className="nav-item" href={href(ws, item.id, first)} aria-current={here ? "page" : undefined} title={item.label}>
-        <Icon width={18} height={18} style={{ color: `var(--${areaColor[item.id] ?? "gray"}-9)` }} />
+        <Icon width={18} height={18} />
       </a>
     );
   }
@@ -69,7 +68,7 @@ function Group({ item, ws, route, collapsed }: { item: NavItem; ws: string; rout
           } else toggle();
         }}
       >
-        <Icon width={18} height={18} style={{ color: `var(--${areaColor[item.id] ?? "gray"}-9)` }} />
+        <Icon width={18} height={18} />
         <span className="nav-label">{item.label}</span>
         <ChevronRightIcon className="nav-chevron" data-open={shown} />
       </button>

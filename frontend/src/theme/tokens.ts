@@ -102,23 +102,6 @@ export const stageLabel: Record<string, string> = {
 };
 
 /**
- * Colour of each area of the app (sidebar icon, page header chip). These are deliberately not
- * green, amber or red: those three always mean a state (done, waiting, failed).
+ * One accent (Forge amber) for everything interactive or decorative; green / amber / red /
+ * orange / blue / gray only ever mean a state. No per-area colours: they fought the accent.
  */
-export const areaColor: Record<string, RadixColor> = {
-  dashboard: "blue",
-  data: "cyan",
-  process: "orange",
-  viewer: "violet",
-  jobs: "plum",
-  workspaces: "indigo",
-  settings: "gray",
-};
-
-/** Colour of each processing stage (pipeline overview). Same rule: never a state colour. */
-export const stageAccent: Record<string, RadixColor> = {
-  import: "cyan",
-  anatomical: "indigo",
-  functional: "violet",
-  standard: "plum",
-};

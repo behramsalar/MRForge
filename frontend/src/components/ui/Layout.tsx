@@ -2,7 +2,7 @@ import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import type { ReactNode } from "react";
 import { useRoute } from "../../lib/router";
 import { navItemFor } from "../../shell/nav";
-import { areaColor, space, type } from "../../theme/tokens";
+import { space, type } from "../../theme/tokens";
 
 /** Title, one explaining sentence and the page's main buttons. */
 export function PageHeader({
@@ -16,7 +16,6 @@ export function PageHeader({
 }) {
   const item = navItemFor(useRoute().page);
   const Icon = item?.icon;
-  const color = areaColor[item?.id ?? ""] ?? "gray";
   return (
     <Flex justify="between" align="end" gap={space.group} wrap="wrap">
       <Flex gap={space.group} align="center" style={{ minWidth: 0 }}>
@@ -25,7 +24,7 @@ export function PageHeader({
             align="center"
             justify="center"
             aria-hidden
-            style={{ width: 48, height: 48, flex: "none", borderRadius: "var(--radius-4)", background: `var(--${color}-a3)`, color: `var(--${color}-10)` }}
+            style={{ width: 48, height: 48, flex: "none", borderRadius: "var(--radius-4)", background: "var(--accent-a3)", color: "var(--accent-10)" }}
           >
             <Icon width={24} height={24} />
           </Flex>

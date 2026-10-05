@@ -51,7 +51,7 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
         }
       />
       <Grid columns={{ initial: "1", sm: "2", lg: "4" }} gap={space.group}>
-        <StatCard label="Subjects" value={o?.subjects_total ?? "-"} color="indigo" icon={<PersonIcon width={22} height={22} />} />
+        <StatCard label="Subjects" value={o?.subjects_total ?? "-"} icon={<PersonIcon width={22} height={22} />} />
         <StatCard
           label="Processed"
           value={o?.processed ?? "-"}
