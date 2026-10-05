@@ -111,3 +111,17 @@ def test_melodic_finds_the_sources_and_matches_a_manual_run(tmp_path: Path) -> N
     assert manual_mix.shape == mix.shape
     corr = np.abs(np.corrcoef(mix.T, manual_mix.T)[: mix.shape[1], mix.shape[1] :])
     assert (corr.max(axis=1) > 0.999).all()
+
+
+@pytest.mark.fsl
+def test_the_same_seed_gives_the_same_components_every_time(tmp_path: Path) -> None:
+    """MELODIC starts from random values; without a fixed seed the order of the components
+    changed from run to run (seen on real data), which would break saved labels."""
+    mixes = []
+    for name in ("a", "b"):
+        ws = synthetic(tmp_path / name)
+        result = run_step(ws, LocalJobQueue(ws), "melodic", "sub-001", INPUTS, {})
+        assert result.action == Action.RAN, result.reason
+        step, ctx = build_context(ws, "melodic", "sub-001", None, INPUTS, {})
+        mixes.append((ctx.output_dir / step.expected_outputs(ctx).mixing).read_text())
+    assert mixes[0] == mixes[1]

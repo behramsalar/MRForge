@@ -19,6 +19,7 @@ Arr = NDArray[np.float64]
 # REVIEW(domain): the z threshold of the overlay (MELODIC's report uses a mixture-model
 # threshold; 2.3 is the common display threshold for its z-maps).
 Z_THRESHOLD = 2.3
+SLICE_SPACING_MM = 5.0  # distance between the slices of the summary picture
 Z_MAX = 8.0  # z at which the colour is at its brightest
 
 
@@ -68,10 +69,12 @@ def draw_planes(
     number: int,
     total: int,
     out: Path,
-    columns: int = 7,
+    columns: int = 12,
+    spacing_mm: float = SLICE_SPACING_MM,
 ) -> None:
-    """A summary of the component: evenly spaced axial, coronal and sagittal slices across the
-    brain, with the map in red-yellow (positive) and blue (negative)."""
+    """A summary of the component: slices every few millimetres through the whole brain in
+    the axial, coronal and sagittal planes, cropped to the brain, with the map in red-yellow
+    (positive) and blue (negative). Close spacing so that a small area is not missed."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -79,34 +82,56 @@ def draw_planes(
 
     inside = background > 0.05 * float(background.max())
     hi = float(np.percentile(background[inside], 99.5)) if inside.any() else 1.0
-    fig, axes = plt.subplots(3, columns, figsize=(11, 5.1), dpi=90)
-    for row, (axis, name) in enumerate(((2, "Axial"), (1, "Coronal"), (0, "Sagittal"))):
-        along = np.flatnonzero(
-            np.moveaxis(inside, axis, 0).reshape(background.shape[axis], -1).any(axis=1)
+    box = [
+        np.flatnonzero(inside.any(axis=tuple(k for k in range(3) if k != ax))) for ax in range(3)
+    ]
+    if any(b.size == 0 for b in box):
+        box = [np.arange(n) for n in background.shape]
+    voxel = np.sqrt((background_affine[:3, :3] ** 2).sum(axis=0))
+    groups = []
+    for axis, name in ((2, "Axial"), (1, "Coronal"), (0, "Sagittal")):
+        step = max(1, int(round(spacing_mm / float(voxel[axis]))))
+        picks = list(range(int(box[axis][0]), int(box[axis][-1]) + 1, step))
+        others = [ax for ax in range(3) if ax != axis]
+        groups.append(
+            (axis, name, picks, [slice(int(box[ax][0]), int(box[ax][-1]) + 1) for ax in others])
         )
-        picks: Arr = (
-            np.linspace(along[0], along[-1], columns + 2)[1:-1] if along.size else np.zeros(0)
-        )
-        for col in range(columns):
-            ax = axes[row, col]
+    tile_ratio = max(
+        (g[3][1].stop - g[3][1].start) / max(1, g[3][0].stop - g[3][0].start) for g in groups
+    )  # height / width of a cropped tile (images are shown rotated)
+    rows = [(len(g[2]) + columns - 1) // columns for g in groups]
+    fig = plt.figure(figsize=(14, 14 * tile_ratio * sum(rows) / columns + 0.5), dpi=80)
+    grid = fig.add_gridspec(
+        sum(rows), columns, wspace=0.02, hspace=0.02, left=0, right=1, top=0.97, bottom=0
+    )
+    row0 = 0
+    for (axis, name, picks, crop), n_rows in zip(groups, rows, strict=True):
+        for k in range(n_rows * columns):
+            ax = fig.add_subplot(grid[row0 + k // columns, k % columns])
             ax.set_axis_off()
-            if col >= len(picks):
+            if k >= len(picks):
                 continue
             bg_slice, z_slice = _plane(
-                background, background_affine, axis, int(round(picks[col])), values, values_affine
+                background, background_affine, axis, picks[k], values, values_affine
             )
+            bg_slice, z_slice = bg_slice[crop[0], crop[1]], z_slice[crop[0], crop[1]]
             ax.imshow(np.rot90(bg_slice), cmap="gray", vmin=0, vmax=hi, interpolation="nearest")
             z = np.rot90(z_slice)
             for sign, cmap in ((1, "autumn"), (-1, "winter")):
                 shown = np.where(sign * z < Z_THRESHOLD, np.nan, np.abs(z))
                 ax.imshow(shown, cmap=cmap, vmin=Z_THRESHOLD, vmax=Z_MAX, interpolation="nearest")
-            if col == 0:
-                ax.text(0.02, 0.97, name, transform=ax.transAxes, color="white", fontsize=9,
-                        va="top")  # fmt: skip
-    fig.subplots_adjust(left=0, right=1, top=0.94, bottom=0, wspace=0.02, hspace=0.02)
-    fig.suptitle(f"Component {number} of {total}", fontsize=10, y=0.995)
+            if k == 0:
+                ax.text(
+                    0.03, 0.97, name, transform=ax.transAxes, color="white", fontsize=9, va="top"
+                )
+        row0 += n_rows
     fig.patch.set_facecolor("black")
-    fig.suptitle(f"Component {number} of {total}", fontsize=10, y=0.995, color="white")
+    fig.suptitle(
+        f"Component {number} of {total} · a slice every {spacing_mm:g} mm",
+        fontsize=10,
+        y=0.995,
+        color="white",
+    )
     fig.savefig(out, facecolor="black")
     plt.close(fig)
 

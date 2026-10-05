@@ -41,6 +41,11 @@ class MelodicParams(BaseModel):
     # REVIEW(domain): None lets MELODIC estimate the number of components itself (Laplace
     # approximation, FSL's default). A fixed number makes runs comparable between subjects.
     dimensionality: int | None = Field(default=None, ge=2)
+    # MELODIC starts from random values, so without a fixed seed every run gives a slightly
+    # different set of components in a different order, and saved labels would not fit.
+    # REVIEW(domain): a fixed seed makes a run reproducible; it does not make the result
+    # "more right". Change it only to check that a finding does not depend on the seed.
+    seed: int = Field(default=1, ge=0)
 
 
 class MelodicOutput(BaseModel):
@@ -139,6 +144,7 @@ class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
             f"--tr={tr:g}",
             "--nobet",
             "--Oall",
+            f"--seed={ctx.params.seed}",
         ]  # fmt: skip
         if bool(ctx.inputs.t1_brain) != bool(ctx.inputs.to_t1_affine):
             raise StepError(

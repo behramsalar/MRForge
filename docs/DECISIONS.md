@@ -127,3 +127,8 @@ The user could not change an import once written (skipping a series or renaming 
 ## 2026-10-05 Component review: interactive viewer (user feedback on 6a pictures)
 - The static component picture now shows three planes (axial, coronal, sagittal) through the component's strongest point, red-yellow for positive and blue for negative z, as a fallback and thumbnail.
 - The review screen (6d) will use the NiiVue viewer: mean image as underlay and the component's z-map as a red-yellow overlay with sliders, next to the time course and spectrum. For that, `melodic` will also write one 3D z-map per component (small files) so the existing `Viewer` can load any component as an overlay; `Viewer` gets overlay threshold/negative colour options.
+
+## 2026-10-05 MELODIC is made reproducible; labels are tied to one decomposition
+- MELODIC starts from random values: without a fixed seed, repeated runs on identical data gave different components in a different order (seen on real data: the same pattern was component 5, then 4). The step now passes `--seed` (default 1, a parameter, recorded; REVIEW(domain)). Verified: same seed gives byte-identical mixing matrices; another seed differs.
+- Consequence for Stage 6b: the saved label file must record which decomposition it belongs to (hash of the mixing matrix) and the review screen must refuse or warn if MELODIC was re-run with a different seed or settings, since component numbers then mean something else.
+- Slice summary: a slice every 5 mm through the whole brain in all three planes, cropped to the brain, so small areas are not missed (earlier: 7 slices per plane).
