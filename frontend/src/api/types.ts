@@ -30,3 +30,5 @@ export type StagePlan = S["StagePlan"];
 export type PlanItem = S["PlanItem"];
 export type FullOptions = S["FullOptions"];
 export type UndoPlanInfo = S["UndoPlanInfo"];
+export type OperationProgress = S["OperationProgress"];
+export type ProgressStep = S["ProgressStep"];

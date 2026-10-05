@@ -356,6 +356,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/operations/{op_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Operation Progress Route
+         * @description Where a running (or finished) operation is: its steps, the running one and what it
+         *     is doing at this moment.
+         */
+        get: operations["operation_progress_route_api_workspaces__ws_id__operations__op_id__progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/operations/{op_id}/log": {
         parameters: {
             query?: never;
@@ -1002,6 +1023,34 @@ export interface components {
             /** Started By */
             started_by?: string | null;
         };
+        /** OperationProgress */
+        OperationProgress: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /** Status */
+            status: string;
+            /** Started */
+            started: string | null;
+            /** Finished */
+            finished: string | null;
+            /** Started By */
+            started_by: string | null;
+            /** Steps */
+            steps: components["schemas"]["ProgressStep"][];
+            /** Current */
+            current: number | null;
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
+            /**
+             * Log Tail
+             * @default []
+             */
+            log_tail: string[];
+        };
         /** OperationStarted */
         OperationStarted: {
             /** Operation Id */
@@ -1048,6 +1097,36 @@ export interface components {
             name: string;
             /** Value */
             value: string;
+        };
+        /** ProgressStep */
+        ProgressStep: {
+            /** Id */
+            id: string;
+            /** Step */
+            step: string;
+            /**
+             * Run
+             * @default
+             */
+            run: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "waiting" | "running" | "done" | "reused" | "failed" | "stopped";
+            /** Job Id */
+            job_id?: number | null;
+            /** Started */
+            started?: string | null;
+            /** Finished */
+            finished?: string | null;
+            /** Now */
+            now?: string | null;
+            /**
+             * Live
+             * @default []
+             */
+            live: string[];
         };
         /** QcEntry */
         QcEntry: {
@@ -2149,6 +2228,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OperationInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    operation_progress_route_api_workspaces__ws_id__operations__op_id__progress_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                op_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationProgress"];
                 };
             };
             /** @description Validation Error */

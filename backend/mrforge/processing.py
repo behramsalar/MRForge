@@ -145,11 +145,11 @@ class Stage(ABC):
         return None
 
 
-def recording_slug(bold_rel: str) -> str:
+def recording_slug(bold_rel: str, default: str = "bold") -> str:
     """ "task-rest_run-1" from a BOLD file name; used in step ids (letters, digits, - and _)."""
     entities = parse_bids_name(Path(bold_rel).name)[0]
     parts = [f"{k}-{v}" for k, v in entities.items() if k not in ("sub", "ses")]
-    return "_".join(parts) or "bold"
+    return "_".join(parts) or default
 
 
 # -- the stages -----------------------------------------------------------------------------
@@ -317,7 +317,7 @@ class FunctionalStage(Stage):
             }
             if use_fmap:
                 assert fmap.magnitude1 and fmap.phasediff
-                fm_slug = recording_slug(fmap.phasediff)
+                fm_slug = recording_slug(fmap.phasediff, "fieldmap")
                 fm_id = f"fieldmap_prep__{fm_slug}"
                 if fm_id not in made_fieldmaps:
                     made_fieldmaps.add(fm_id)

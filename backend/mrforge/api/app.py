@@ -45,6 +45,7 @@ from mrforge.operations import (
 from mrforge.overview import Overview, build_overview
 from mrforge.pipeline import PipelineSpec, PipelineStep
 from mrforge.processing import FullOptions, FullPlan, plan_full_processing
+from mrforge.progress import OperationProgress, operation_progress
 from mrforge.provenance import read_provenance
 from mrforge.runner.jobs import get_job, list_jobs, process_alive, recover_stale_jobs
 from mrforge.viewerimages import find_images
@@ -551,6 +552,16 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         ws = ws_of(ws_id)
         refresh(ws)
         return op_info(get_operation(ws, op_id))
+
+    @app.get(
+        "/api/workspaces/{ws_id}/operations/{op_id}/progress", response_model=OperationProgress
+    )
+    def operation_progress_route(ws_id: str, op_id: int) -> OperationProgress:
+        """Where a running (or finished) operation is: its steps, the running one and what it
+        is doing at this moment."""
+        ws = ws_of(ws_id)
+        refresh(ws)
+        return operation_progress(ws, get_operation(ws, op_id))
 
     @app.get("/api/workspaces/{ws_id}/operations/{op_id}/log", response_model=S.LogText)
     def operation_log(ws_id: str, op_id: int) -> S.LogText:
