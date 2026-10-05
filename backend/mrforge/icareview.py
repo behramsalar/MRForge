@@ -8,6 +8,14 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from mrforge.errors import StepError
+from mrforge.icalabels import (
+    decision_path,
+    draft_path,
+    problem_with,
+    read_labels,
+    write_labels,
+)
 from mrforge.workspace import Workspace
 
 SUMMARY_SUFFIX = "_desc-melodic_components.json"
@@ -31,6 +39,12 @@ class IcaRecording(BaseModel):
     mean_url: str  # the viewer's background: the T1 brain, or the mean functional image
     space: str  # "T1w" when the maps are placed on the T1, else "native"
     components: list[IcaComponent]
+    # The researcher's labels: "decided" (final), "draft" (saved but not final), "stale"
+    # (made for an earlier MELODIC run, so not used) or "none".
+    label_status: str = "none"
+    labels: dict[str, str] = {}
+    decided_by: str | None = None
+    decided_at: str | None = None
 
 
 def _recording(name: str, subject: str) -> str:
@@ -72,8 +86,14 @@ def _read(ws: Workspace, ws_id: str, subject: str, summary: Path, data: Any) -> 
         )
         for c in data["components"]
     ]
+    summary_rel = ws.relpath(summary)
+    status, labels, who, when = _label_state(ws, summary_rel)
     return IcaRecording(
         recording=_recording(summary.name, subject),
+        label_status=status,
+        labels=labels,
+        decided_by=who,
+        decided_at=when,
         n_components=int(data["n_components"]),
         n_volumes=int(data["n_volumes"]),
         tr_s=float(data["tr_s"]),
@@ -81,3 +101,45 @@ def _read(ws: Workspace, ws_id: str, subject: str, summary: Path, data: Any) -> 
         space=str(data.get("space", "native")),
         components=comps,
     )
+
+
+def _label_state(
+    ws: Workspace, summary_rel: str
+) -> tuple[str, dict[str, str], str | None, str | None]:
+    decision = read_labels(ws, decision_path(summary_rel))
+    if decision is not None:
+        if problem_with(ws, summary_rel, decision) is None:
+            return "decided", decision["labels"], decision.get("who"), decision.get("when")
+        status = "stale"
+    else:
+        status = "none"
+    draft = read_labels(ws, draft_path(summary_rel))
+    mixing = json.loads(ws.abspath(summary_rel).read_text()).get("mixing_sha256")
+    if draft is not None and draft.get("mixing_sha256") == mixing:
+        return "draft", draft["labels"], draft.get("who"), draft.get("when")
+    return status, {}, None, None
+
+
+def summary_for(ws: Workspace, subject: str, recording: str) -> str:
+    """Workspace path of the MELODIC summary of one recording."""
+    for summary in (ws.derivatives_dir / subject).rglob(f"*{SUMMARY_SUFFIX}"):
+        if "_runs" not in summary.parts and _recording(summary.name, subject) == recording:
+            return ws.relpath(summary)
+    raise StepError(
+        "NO_COMPONENTS",
+        "There are no components for this recording.",
+        probable_cause="Component analysis (MELODIC) has not been run for it.",
+        suggested_action="Run the artifact rejection stage first.",
+    )
+
+
+def save_labels(
+    ws: Workspace,
+    subject: str,
+    recording: str,
+    labels: dict[int, str],
+    who: str | None,
+    complete: bool,
+) -> str:
+    """Save the researcher's labels (a draft, or the final decision). Returns the file."""
+    return write_labels(ws, summary_for(ws, subject, recording), labels, who, complete)

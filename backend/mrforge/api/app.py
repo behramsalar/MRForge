@@ -29,7 +29,7 @@ from mrforge.engine import latest_pipeline_run
 from mrforge.errors import StepError
 from mrforge.fsl_env import find_fsl
 from mrforge.functional import FunctionalOptions, Readiness, build_pipeline, check_ready
-from mrforge.icareview import IcaRecording, find_ica_results
+from mrforge.icareview import IcaRecording, find_ica_results, save_labels
 from mrforge.importing.bids_validate import find_validator
 from mrforge.importing.classify import effective_all, load_rules, set_override
 from mrforge.importing.manifest import list_manifests, load_manifest, save_manifest
@@ -827,6 +827,27 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         if not SAFE_NAME.fullmatch(label):
             raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
         return find_ica_results(ws, ws_id, label)
+
+    @app.put(
+        "/api/workspaces/{ws_id}/subjects/{label}/ica/{recording}/labels",
+        response_model=S.IcaLabelsSaved,
+    )
+    def save_ica_labels(
+        ws_id: str,
+        label: str,
+        recording: str,
+        body: S.IcaLabelsRequest,
+        who: accounts.Researcher | None = Researcher,
+    ) -> S.IcaLabelsSaved:
+        """Save the labels of the components of a recording: a draft, or the final decision.
+        After a final decision, resume the pipeline (POST .../resume) to carry on."""
+        ws = ws_of(ws_id)
+        if not SAFE_NAME.fullmatch(label):
+            raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
+        path = save_labels(
+            ws, label, recording, body.labels, who.name if who else None, body.complete
+        )
+        return S.IcaLabelsSaved(path=path, complete=body.complete)
 
     @app.get("/api/workspaces/{ws_id}/file/{relpath:path}")
     def serve_file(ws_id: str, relpath: str) -> FileResponse:

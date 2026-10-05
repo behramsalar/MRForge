@@ -1,4 +1,4 @@
-import { CheckIcon, ClockIcon, Cross2Icon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { CheckIcon, ClockIcon, Cross2Icon, ExclamationTriangleIcon, PersonIcon } from "@radix-ui/react-icons";
 import { Badge, Button, Dialog, Flex, Progress, Spinner, Text } from "@radix-ui/themes";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
@@ -20,6 +20,8 @@ function icon(state: ProgressStep["state"]): ReactNode {
       return <CheckIcon color="var(--gray-9)" />;
     case "running":
       return <Spinner />;
+    case "review":
+      return <PersonIcon color="var(--amber-9)" />;
     case "failed":
       return <Cross2Icon color="var(--red-9)" />;
     case "stopped":
@@ -32,6 +34,7 @@ function icon(state: ProgressStep["state"]): ReactNode {
 const label: Record<ProgressStep["state"], string> = {
   waiting: "Waiting",
   running: "Running",
+  review: "Waiting for you",
   done: "Done",
   reused: "Already done, not repeated",
   failed: "Failed",

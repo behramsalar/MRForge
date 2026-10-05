@@ -262,3 +262,13 @@ class UndoPlanInfo(BaseModel):
     only_copy: int  # images that have no other copy in the workspace
     stale_steps: list[str]  # processing steps whose inputs would be gone
     problems: list[str]  # files changed since the import (undo is refused)
+
+
+class IcaLabelsRequest(BaseModel):
+    labels: dict[int, str]  # component number -> "signal", "noise" or "uncertain"
+    complete: bool = False  # True: the final decision (every component labelled)
+
+
+class IcaLabelsSaved(BaseModel):
+    path: str
+    complete: bool

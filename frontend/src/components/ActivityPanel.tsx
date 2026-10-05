@@ -1,3 +1,4 @@
+import { PersonIcon } from "@radix-ui/react-icons";
 import { Button, Callout, Flex, Spinner, Text } from "@radix-ui/themes";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
@@ -5,6 +6,7 @@ import { ApiError, call } from "../api/call";
 import { useTick } from "../api/hooks";
 import type { ErrorBody, WorkspaceState } from "../api/types";
 import { elapsed } from "../lib/labels";
+import { href } from "../lib/router";
 import { space, type } from "../theme/tokens";
 import { ErrorCallout } from "./ErrorCallout";
 import { LiveProgressDialog } from "./LiveProgressDialog";
@@ -65,6 +67,27 @@ export function ActivityPanel({ ws, state }: { ws: string; state: WorkspaceState
               Cancel
             </Button>
           </Flex>
+        </Flex>
+      </Callout.Root>,
+    );
+  } else if (latest && latest.status === "Waiting") {
+    const waitingJob = state.jobs.filter((j) => j.status === "Waiting").pop();
+    blocks.push(
+      <Callout.Root key="waiting" color="amber">
+        <Callout.Icon>
+          <PersonIcon />
+        </Callout.Icon>
+        <Flex align="center" justify="between" gap={space.group} wrap="wrap" style={{ width: "100%" }}>
+          <Text size={type.body}>
+            Processing is paused and waits for you.{" "}
+            <Text color="gray" size={type.help}>
+              {waitingJob?.error?.message ?? "Your decision is needed to continue."} Nothing is running meanwhile; it
+              continues from here when you are done.
+            </Text>
+          </Text>
+          <Button size="2" asChild>
+            <a href={href(ws, "process", "ica")}>Open the review</a>
+          </Button>
         </Flex>
       </Callout.Root>,
     );

@@ -123,7 +123,11 @@ def _pipeline(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
             suggested_action="Fix the cause, then resume: finished steps are not repeated.",
         )
     return {
-        "steps": [{"id": o.step_id, "action": o.action.value, "job_id": o.job_id} for o in outcomes]
+        "steps": [
+            {"id": o.step_id, "action": o.action.value, "job_id": o.job_id} for o in outcomes
+        ],
+        # Steps that need the researcher: the operation ends as "Waiting"; nothing keeps running.
+        "waiting": [o.step_id for o in outcomes if o.action == Action.WAITING],
     }
 
 
@@ -308,6 +312,8 @@ def run_operation(ws: Workspace, op_id: int) -> JobStatus:
     error: StepError | None = None
     try:
         result = HANDLERS[op.kind](ws, {**op.args, "started_by": op.started_by}, log)
+        if result.get("waiting"):
+            status = JobStatus.WAITING
     except Cancelled:
         status, error = JobStatus.CANCELLED, StepError("CANCELLED", "The action was cancelled.")
     except StepError as err:
@@ -352,7 +358,7 @@ def main(argv: list[str]) -> int:
             error=StepError("CANCELLED", "The action was cancelled.").to_dict(),
         )
         return 1
-    return 0 if status == JobStatus.COMPLETED else 1
+    return 0 if status in (JobStatus.COMPLETED, JobStatus.WAITING) else 1
 
 
 if __name__ == "__main__":

@@ -174,6 +174,12 @@ class Step(ABC, Generic[I, P, O]):
             if not _is_nonempty_file(ctx.input_path(rel))
         ]
 
+    def ready(self, ctx: StepContext[I, P]) -> Problem | None:
+        """Is everything this step needs from the researcher there? ``None`` means go ahead.
+        A problem returned here is not a failure: the pipeline stops at this step in the state
+        "Waiting for you" and carries on when the decision has been made."""
+        return None
+
     def desc(self, ctx: StepContext[I, P], base: str) -> str:
         """The ``desc-`` value for this run's results: ``base``, plus the run's label when a
         pipeline gave the step another id, so repeated steps never overwrite each other."""

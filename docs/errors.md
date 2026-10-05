@@ -327,3 +327,15 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 ### ICA_RESULT_INCOMPLETE
 - **What happened:** MELODIC finished but the result is incomplete (no components, or component pictures missing).
 - **Suggested action:** Open the raw log, then run the step again.
+
+### ICA_LABELS_NEEDED (not a failure: the pipeline waits)
+- **What happened:** The pipeline reached the point where you label the ICA components and stopped. Nothing runs while it waits.
+- **Suggested action:** Open Process, then Artifact rejection, label the components and save. The pipeline then continues from there.
+
+### ICA_RESULT_OUTDATED
+- **What happened:** The components were made by an older version of MRForge and cannot be labelled safely.
+- **Suggested action:** Run the component analysis (MELODIC) again for this recording.
+
+### INVALID_LABELS / LABELS_INCOMPLETE
+- **What happened:** A label is not signal, noise or uncertain, or some components have no label when saving the final decision.
+- **Suggested action:** Reload the page and label the remaining components (uncertain is allowed).

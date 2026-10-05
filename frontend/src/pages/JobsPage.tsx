@@ -12,7 +12,7 @@ type Filter = "all" | "running" | "failed" | "completed";
 
 const matches: Record<Filter, (status: string) => boolean> = {
   all: () => true,
-  running: (s) => s === "Queued" || s === "Running",
+  running: (s) => s === "Queued" || s === "Running" || s === "Waiting",
   failed: (s) => s === "Failed" || s === "Interrupted" || s === "Cancelled",
   completed: (s) => s === "Completed",
 };
@@ -85,7 +85,7 @@ export function JobsPage({ ws, state }: { ws: string; state: WorkspaceState | nu
           <Flex gap={space.group} align="center" wrap="wrap" justify="between">
             <SegmentedControl.Root value={filter} onValueChange={(v) => setFilter(v as Filter)}>
               <SegmentedControl.Item value="all">All</SegmentedControl.Item>
-              <SegmentedControl.Item value="running">Running</SegmentedControl.Item>
+              <SegmentedControl.Item value="running">Running or waiting</SegmentedControl.Item>
               <SegmentedControl.Item value="failed">Failed or stopped</SegmentedControl.Item>
               <SegmentedControl.Item value="completed">Finished</SegmentedControl.Item>
             </SegmentedControl.Root>

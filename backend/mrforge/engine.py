@@ -8,11 +8,19 @@ from typing import Any
 
 from sqlalchemy import select
 
+from mrforge.errors import StepError
 from mrforge.models import JobStatus, PipelineRun
 from mrforge.pipeline import PipelineSpec, references, resolve_references
 from mrforge.resume import check_reusable
-from mrforge.runner.jobs import build_context, create_job, get_job, normalise_specs
+from mrforge.runner.jobs import (
+    build_context,
+    create_job,
+    get_job,
+    normalise_specs,
+    record_waiting,
+)
 from mrforge.runner.queue import JobQueue
+from mrforge.steps.registry import get_step
 from mrforge.workspace import Workspace
 
 
@@ -21,6 +29,7 @@ class Action(enum.StrEnum):
     RAN = "Ran"
     FAILED = "Failed"
     NOT_RUN = "Not run"
+    WAITING = "Waiting for you"
 
 
 @dataclass(frozen=True)
@@ -57,6 +66,27 @@ def run_step(
         reason = f"Running because {reuse.reason}."
     else:
         reason = f"Running because {force_reason}."
+    _, ctx = build_context(
+        ws, step_name, subject, session, *normalise_specs(step_name, inputs, params)[1:], label
+    )
+    needs = get_step(step_name).ready(ctx)
+    if needs is not None:
+        error = StepError(
+            needs.code, needs.message, needs.probable_cause, needs.suggested_action
+        ).to_dict()
+        waiting_id = record_waiting(
+            ws,
+            step_name,
+            subject,
+            inputs,
+            params,
+            session,
+            pipeline_run_id,
+            label,
+            started_by,
+            error,
+        )
+        return StepOutcome(sid, step_name, Action.WAITING, needs.message, waiting_id, "Waiting")
     job_id = create_job(
         ws, step_name, subject, inputs, params, session, pipeline_run_id, label, started_by
     )
@@ -86,9 +116,11 @@ def run_pipeline(
     outputs: dict[str, dict[str, str]] = {}
     dirty: set[str] = set()  # steps that ran (so their dependants must rerun)
     failed = False
+    waiting = False
     for st in spec.steps:
-        if failed:
-            outcomes.append(StepOutcome(st.id, st.step, Action.NOT_RUN, "an earlier step failed"))
+        if failed or waiting:
+            why = "an earlier step failed" if failed else "an earlier step waits for you"
+            outcomes.append(StepOutcome(st.id, st.step, Action.NOT_RUN, why))
             continue
         subject = st.subject or spec.subject
         assert subject is not None
@@ -115,6 +147,9 @@ def run_pipeline(
             dirty.add(st.id)
         if outcome.action == Action.FAILED:
             failed = True
+            continue
+        if outcome.action == Action.WAITING:
+            waiting = True
             continue
         # Outputs of this step, for later steps to refer to.
         step, ctx = build_context(

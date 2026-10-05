@@ -5,7 +5,7 @@ import {
   LightningBoltIcon,
   PersonIcon,
 } from "@radix-ui/react-icons";
-import { Badge, Button, Card, Flex, Grid, Heading, Table, Text } from "@radix-ui/themes";
+import { Badge, Button, Callout, Card, Flex, Grid, Heading, Table, Text } from "@radix-ui/themes";
 import type { WorkspaceState } from "../api/types";
 import { useOverview } from "../api/hooks";
 import { PipelineStepper } from "../components/PipelineStepper";
@@ -50,6 +50,26 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
           </Button>
         }
       />
+      {o && o.review.length > 0 && (
+        <Callout.Root color="amber">
+          <Callout.Icon>
+            <PersonIcon />
+          </Callout.Icon>
+          <Flex align="center" justify="between" gap={space.group} wrap="wrap" style={{ width: "100%" }}>
+            <Flex direction="column">
+              <Text weight="bold">Needs your review</Text>
+              {o.review.map((r, i) => (
+                <Text key={i} size={type.help}>
+                  {r.what} ({r.subject})
+                </Text>
+              ))}
+            </Flex>
+            <Button asChild>
+              <a href={`#/w/${encodeURIComponent(ws)}/${o.review[0].page}`}>Open the review</a>
+            </Button>
+          </Flex>
+        </Callout.Root>
+      )}
       <Grid columns={{ initial: "1", sm: "2", lg: "4" }} gap={space.group}>
         <StatCard label="Subjects" value={o?.subjects_total ?? "-"} icon={<PersonIcon width={22} height={22} />} />
         <StatCard

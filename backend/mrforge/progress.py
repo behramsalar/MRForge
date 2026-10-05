@@ -22,7 +22,7 @@ from mrforge.runner.jobs import list_jobs
 from mrforge.steps.fsl_anat import native_folder_name
 from mrforge.workspace import Workspace
 
-State = Literal["waiting", "running", "done", "reused", "failed", "stopped"]
+State = Literal["waiting", "running", "review", "done", "reused", "failed", "stopped"]
 
 # What a tool is doing, in words a researcher understands. First match in the last lines wins.
 TOOL_PHRASES: list[tuple[str, str]] = [
@@ -167,6 +167,7 @@ def _state(job: Job) -> State:
         JobStatus.RUNNING.value: "running",
         JobStatus.COMPLETED.value: "done",
         JobStatus.FAILED.value: "failed",
+        JobStatus.WAITING.value: "review",  # waits for the researcher
     }.get(job.status, "stopped")  # type: ignore[return-value]
 
 
@@ -235,6 +236,8 @@ def operation_progress(ws: Workspace, op: Operation) -> OperationProgress:
     if op.kind == "pipeline" and isinstance(op.args.get("spec"), dict):
         steps = _pipeline_steps(ws, op)
     current = next((i for i, s in enumerate(steps) if s.state == "running"), None)
+    if current is None:
+        current = next((i for i, s in enumerate(steps) if s.state == "review"), None)
     if current is None:
         current = next((i for i, s in enumerate(steps) if s.state == "waiting"), None)
     log_tail = _tail(ws.abspath(op.log), 12) if op.log else []

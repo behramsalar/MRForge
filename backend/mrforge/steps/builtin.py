@@ -8,5 +8,6 @@ from mrforge.steps import (  # noqa: F401
     fsl_anat,
     func_qc,
     func_to_mni,
+    ica_labels,
     melodic,
 )

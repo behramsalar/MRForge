@@ -29,6 +29,7 @@ class JobStatus(enum.StrEnum):
     FAILED = "Failed"
     CANCELLED = "Cancelled"
     INTERRUPTED = "Interrupted"
+    WAITING = "Waiting"  # needs the researcher (for example to label ICA components)
 
 
 class Workspace(Base):

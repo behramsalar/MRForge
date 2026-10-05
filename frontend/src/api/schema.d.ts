@@ -636,6 +636,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/subjects/{label}/ica/{recording}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save Ica Labels
+         * @description Save the labels of the components of a recording: a draft, or the final decision.
+         *     After a final decision, resume the pipeline (POST .../resume) to carry on.
+         */
+        put: operations["save_ica_labels_api_workspaces__ws_id__subjects__label__ica__recording__labels_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/file/{relpath}": {
         parameters: {
             query?: never;
@@ -903,6 +924,25 @@ export interface components {
             /** Peak Mm */
             peak_mm: number[];
         };
+        /** IcaLabelsRequest */
+        IcaLabelsRequest: {
+            /** Labels */
+            labels: {
+                [key: string]: string;
+            };
+            /**
+             * Complete
+             * @default false
+             */
+            complete: boolean;
+        };
+        /** IcaLabelsSaved */
+        IcaLabelsSaved: {
+            /** Path */
+            path: string;
+            /** Complete */
+            complete: boolean;
+        };
         /** IcaRecording */
         IcaRecording: {
             /** Recording */
@@ -919,6 +959,22 @@ export interface components {
             space: string;
             /** Components */
             components: components["schemas"]["IcaComponent"][];
+            /**
+             * Label Status
+             * @default none
+             */
+            label_status: string;
+            /**
+             * Labels
+             * @default {}
+             */
+            labels: {
+                [key: string]: string;
+            };
+            /** Decided By */
+            decided_by?: string | null;
+            /** Decided At */
+            decided_at?: string | null;
         };
         /** ImportDetail */
         ImportDetail: {
@@ -1134,6 +1190,11 @@ export interface components {
             running_now: components["schemas"]["RunningItem"][];
             /** Recent */
             recent: components["schemas"]["ActivityItem"][];
+            /**
+             * Review
+             * @default []
+             */
+            review: components["schemas"]["ReviewItem"][];
         };
         /**
          * PlanItem
@@ -1173,7 +1234,7 @@ export interface components {
              * State
              * @enum {string}
              */
-            state: "waiting" | "running" | "done" | "reused" | "failed" | "stopped";
+            state: "waiting" | "running" | "review" | "done" | "reused" | "failed" | "stopped";
             /** Job Id */
             job_id?: number | null;
             /** Started */
@@ -1254,6 +1315,23 @@ export interface components {
             name: string;
             /** Last Seen */
             last_seen?: string | null;
+        };
+        /**
+         * ReviewItem
+         * @description Something that waits for the researcher (for example component labelling).
+         */
+        ReviewItem: {
+            /** Subject */
+            subject: string;
+            /** What */
+            what: string;
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /** Page */
+            page: string;
         };
         /** RunStatus */
         RunStatus: {
@@ -2776,6 +2854,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IcaRecording"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_ica_labels_api_workspaces__ws_id__subjects__label__ica__recording__labels_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                label: string;
+                recording: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IcaLabelsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IcaLabelsSaved"];
                 };
             };
             /** @description Validation Error */

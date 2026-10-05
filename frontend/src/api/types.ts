@@ -34,3 +34,4 @@ export type OperationProgress = S["OperationProgress"];
 export type ProgressStep = S["ProgressStep"];
 export type IcaRecording = S["IcaRecording"];
 export type IcaComponent = S["IcaComponent"];
+export type ReviewItem = S["ReviewItem"];

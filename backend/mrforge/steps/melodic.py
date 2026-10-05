@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 
 from mrforge.bids import split_extension
 from mrforge.errors import StepError
+from mrforge.hashing import file_sha256
 from mrforge.niftiutil import image_info, is_readable_nifti
 from mrforge.steps.base import Problem, QCItem, Step, StepContext, StepResult
 from mrforge.steps.icapics import draw_component, draw_planes, draw_plots, peak_voxel
@@ -274,6 +275,10 @@ class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
             "n_volumes": int(mix.shape[0]),
             "tr_s": tr,
             "melodic_folder": ctx.workspace.relpath(native),
+            # Identifies this decomposition: labels saved for it mean nothing for another one.
+            "mixing_sha256": file_sha256(
+                ctx.workspace, ctx.workspace.relpath(ctx.output_dir / out.mixing)
+            ),
             "mean": ctx.workspace.relpath(native / "mrforge_report" / "mean.nii.gz"),
             # What the maps are drawn on: the T1 brain when the maps were placed on it.
             "background": ctx.inputs.t1_brain

@@ -145,6 +145,43 @@ def create_job(
         return job.id
 
 
+def record_waiting(
+    ws: Workspace,
+    step_name: str,
+    subject: str,
+    inputs: dict[str, Any] | None,
+    params: dict[str, Any] | None,
+    session: str | None,
+    pipeline_run_id: int | None,
+    label: str | None,
+    started_by: str | None,
+    error: dict[str, object],
+) -> int:
+    """Note that a step is waiting for the researcher. No process is started. An earlier
+    waiting record of the same run is updated instead of piling up a new one."""
+    step, inputs_dict, _ = normalise_specs(step_name, inputs, params)
+    _, run_rel = job_dirs(ws, subject, session, step.datatype, label or step_name, inputs_dict)
+    with ws.session() as s:
+        earlier = s.scalar(select(Job).where(Job.run_dir == run_rel).order_by(Job.id.desc()))
+        if earlier is not None and earlier.status == JobStatus.WAITING.value:
+            earlier.error = error
+            earlier.error_message = str(error.get("message", ""))
+            earlier.pipeline_run_id = pipeline_run_id
+            earlier.started_by = started_by
+            return earlier.id
+    job_id = create_job(
+        ws, step_name, subject, inputs, params, session, pipeline_run_id, label, started_by
+    )
+    with ws.session() as s:
+        job = s.get(Job, job_id)
+        assert job is not None
+        job.status = JobStatus.WAITING.value
+        job.error = error
+        job.error_code = str(error.get("code", ""))
+        job.error_message = str(error.get("message", ""))
+    return job_id
+
+
 def get_job(ws: Workspace, job_id: int) -> Job:
     with ws.session() as s:
         job = s.get(Job, job_id)

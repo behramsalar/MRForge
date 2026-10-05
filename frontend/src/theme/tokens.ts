@@ -66,6 +66,7 @@ export const statusColor: Record<string, RadixColor> = {
   Failed: "red",
   Cancelled: "gray",
   Interrupted: "orange",
+  Waiting: "amber", // needs the researcher
 };
 
 /** Plain-language labels for states (the UI says these, not the internal names). */
@@ -76,6 +77,7 @@ export const statusLabel: Record<string, string> = {
   Failed: "Failed",
   Cancelled: "Cancelled",
   Interrupted: "Stopped early",
+  Waiting: "Waiting for you",
 };
 
 /** How far a subject is in a stage (dashboard). Same colours as the job states above. */
