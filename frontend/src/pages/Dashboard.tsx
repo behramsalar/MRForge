@@ -78,7 +78,7 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
           {o && <PipelineStepper stages={o.stages} />}
           <Card size="3">
             <Flex direction="column" gap={space.group}>
-              <Heading size={type.sectionTitle}>Subjects</Heading>
+              <Heading as="h2" size={type.sectionTitle}>Subjects</Heading>
               <Table.Root>
                 <Table.Header>
                   <Table.Row>
@@ -133,7 +133,7 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
         <Flex direction="column" gap={space.group}>
           <Card size="3">
             <Flex direction="column" gap={space.group}>
-              <Heading size={type.sectionTitle}>Running now</Heading>
+              <Heading as="h2" size={type.sectionTitle}>Running now</Heading>
               {o && o.running_now.length === 0 && (
                 <Text size={type.help} color="gray">
                   Nothing is running.
@@ -154,7 +154,7 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
           </Card>
           <Card size="3">
             <Flex direction="column" gap={space.group}>
-              <Heading size={type.sectionTitle}>Recent activity</Heading>
+              <Heading as="h2" size={type.sectionTitle}>Recent activity</Heading>
               {o && o.recent.length === 0 && (
                 <Text size={type.help} color="gray">
                   Nothing has happened yet.

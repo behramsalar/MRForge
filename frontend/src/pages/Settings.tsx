@@ -21,7 +21,7 @@ export function Settings() {
       <PageHeader title="Settings" description="How MRForge looks, and which tools it found on this computer." />
       <Card size="3">
         <Flex direction="column" gap={space.group}>
-          <Heading size={type.sectionTitle}>Appearance</Heading>
+          <Heading as="h2" size={type.sectionTitle}>Appearance</Heading>
           <SegmentedControl.Root value={mode} onValueChange={(v) => setMode(v as Mode)} style={{ alignSelf: "flex-start" }}>
             <SegmentedControl.Item value="light">Light</SegmentedControl.Item>
             <SegmentedControl.Item value="dark">Dark</SegmentedControl.Item>
@@ -31,7 +31,7 @@ export function Settings() {
       </Card>
       <Card size="3">
         <Flex direction="column" gap={space.group}>
-          <Heading size={type.sectionTitle}>Tools and folders</Heading>
+          <Heading as="h2" size={type.sectionTitle}>Tools and folders</Heading>
           {health.error && <ErrorCallout error={(health.error as ApiError).body} />}
           {health.data && (
             <>

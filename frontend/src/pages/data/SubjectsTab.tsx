@@ -43,7 +43,7 @@ export function SubjectsTab({ ws }: { ws: string }) {
       <Card size="3" style={{ flex: "1 1 520px", minWidth: 0 }}>
         <Flex direction="column" gap={space.group}>
           <Flex justify="between" align="center" gap={space.group} wrap="wrap">
-            <Heading size={type.sectionTitle}>{label}</Heading>
+            <Heading as="h2" size={type.sectionTitle}>{label}</Heading>
             {data.data && (
               <Text size={type.help} color="gray">
                 {data.data.files.length} images · {humanSize(data.data.bytes_total)}

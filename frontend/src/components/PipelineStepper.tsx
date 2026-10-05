@@ -8,7 +8,7 @@ export function PipelineStepper({ stages }: { stages: Overview["stages"] }) {
   return (
     <Card size="3">
       <Flex direction="column" gap={space.group}>
-        <Heading size={type.sectionTitle}>Processing pipeline</Heading>
+        <Heading as="h2" size={type.sectionTitle}>Processing pipeline</Heading>
         <Flex gap={space.group} wrap="wrap">
           {stages.map((st, i) => {
             const finished = st.total > 0 && st.done === st.total;

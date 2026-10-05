@@ -1,8 +1,25 @@
 # Progress
 
-**Current stage:** Stage 4 UI overhaul in progress (branch `stage-4-ui-overhaul`). Stages 0-3 and 5 accepted (tags up to `stage5-accepted`). Built so far: O1 app shell (dark sidebar with a Process tree, top bar, activity bell, light/dark switch, Forge amber theme), O2 light researcher profiles (a name, not a login; who created workspaces and imports, who started jobs), O3 Dashboard, O4 Data section, O5 global Viewer, and full processing (stage registry: Anatomical, Functional, Standard space; confirmation dialog). Still to do: O6 Jobs history and Settings polish, O7 polish and `docs/design-system.md`, then the lab user test.
+**Current stage:** Stage 4 UI overhaul, all sub-steps built (branch `stage-4-ui-overhaul`); waiting for the user's manual check, then the lab user test. Stages 0-3 and 5 accepted (tags up to `stage5-accepted`).
 
-Last test status: `pytest -m "not fsl"` 427 passed; frontend `npm test` 22 passed, `tsc` clean; ruff and mypy clean. Full processing was run end to end once from the UI on `func-e2e` (about 15 minutes, including a fresh `fsl_anat`): all steps completed. The `-m fsl` suite was not re-run after these changes.
+Built: O1 app shell and Forge theme (light/dark), O2 light researcher profiles, O3 Dashboard, O4 Data section (with undo of a whole import), O5 global Viewer, full processing (stage registry, confirmation dialog, live progress window), O6 Jobs history and Settings (disk space, cores), O7 polish (empty states, h1/h2 structure, keyboard check, `docs/design-system.md`).
+
+Plan change (2026-10-05): Stage 6 is now artifact rejection (MELODIC, component review, `fsl_regfilt`, optional ICA-AROMA); batch, presets (7e) and QC decisions are Stage 7; reports (with flexible QC pictures) Stage 8. See `docs/DECISIONS.md`.
+
+Last test status: `pytest -m "not fsl"` 445 passed; frontend `npm test` 22 passed, `tsc` clean; ruff and mypy clean. The `-m fsl` suite was not re-run since Stage 5. Not tested: full processing on a subject with several functional runs through the UI; fieldmap-less subject through the new progress window (a subject with a fieldmap was).
+
+Next action: user checks the Stage 4 manual checklist below; then a lab member runs the flow unaided (`docs/ux-findings.md`).
+
+### Stage 4 manual checklist
+1. `cd frontend && npm run build`, then `mrforge serve`; open http://127.0.0.1:8000.
+2. Create a workspace: it opens on the Dashboard with "Start your first import".
+3. Import scans (Data), check the series table, import; undo the import and redo it.
+4. Process: pick a subject, press Process, read the dialog, confirm. Press Details in the top bar: steps, current activity and elapsed time update.
+5. Type 200 in "Volumes discarded": the dialog explains the problem in words (no "unreachable" message).
+6. Kill `mrforge serve` mid-run and restart: the job shows "Stopped early"; Resume continues.
+7. Viewer: open the T1 and an overlay from Process results; switch light/dark and reload (the choice stays).
+8. Jobs: filters, "Show earlier attempts", View log on a row. Settings: tools, disk space.
+9. Pick another researcher name: new work is tagged with it.
 
 ## Stage 5 (Functional preprocessing, on FEAT)
 | Sub-step | Status |

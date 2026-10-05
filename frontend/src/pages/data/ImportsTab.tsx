@@ -119,7 +119,7 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
         {d && (
           <>
             <Flex align="center" gap={space.group} wrap="wrap">
-              <Heading size={type.sectionTitle}>
+              <Heading as="h2" size={type.sectionTitle}>
                 {d.subject}
                 {d.session ? ` · ${d.session}` : ""}
               </Heading>

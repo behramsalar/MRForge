@@ -1,4 +1,4 @@
-import { Button, Callout, Card, Flex, Select, Text } from "@radix-ui/themes";
+import { Button, Card, Flex, Select, Text } from "@radix-ui/themes";
 import { useState } from "react";
 import { useOverview, useSubjects } from "../api/hooks";
 import type { WorkspaceState } from "../api/types";
@@ -6,7 +6,7 @@ import { ConfirmProcessDialog } from "../components/ConfirmProcessDialog";
 import { JobsPanel } from "../components/JobsPanel";
 import { QcPanel } from "../components/QcPanel";
 import { StageBadge } from "../components/ui/Badges";
-import { PageHeader } from "../components/ui/Layout";
+import { EmptyState, PageHeader } from "../components/ui/Layout";
 import { href } from "../lib/router";
 import { space, type } from "../theme/tokens";
 
@@ -28,11 +28,12 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
         description="Runs every processing stage for a subject, one after another: the recommended way to prepare data for analysis."
       />
       {subjects.data && labels.length === 0 && (
-        <Callout.Root>
-          <Callout.Text>
-            There is no data to process yet. <a href={href(ws, "data")}>Import scans first.</a>
-          </Callout.Text>
-        </Callout.Root>
+        <EmptyState
+          title="There is no data to process yet"
+          text="Import your scans first; then come back here and press Process."
+          action="Import scans"
+          href={href(ws, "data")}
+        />
       )}
       {subject && (
         <Card size="3">

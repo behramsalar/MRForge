@@ -27,7 +27,7 @@ export function SeriesDetail({ ws, detail, row }: { ws: string; detail: ImportDe
             <Text size={type.caption} color="gray">
               Series {row.number}
             </Text>
-            <Heading size={type.sectionTitle} style={{ wordBreak: "break-word" }}>
+            <Heading as="h2" size={type.sectionTitle} style={{ wordBreak: "break-word" }}>
               {row.label}
             </Heading>
           </Flex>

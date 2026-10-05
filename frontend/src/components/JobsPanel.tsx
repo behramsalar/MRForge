@@ -53,7 +53,7 @@ export function JobsPanel({
   const showWho = rows.some((j) => j.started_by);
   return (
     <Flex direction="column" gap={space.group}>
-      {!hideTable && <Heading size={type.sectionTitle}>Progress</Heading>}
+      {!hideTable && <Heading as="h2" size={type.sectionTitle}>Progress</Heading>}
       {!hideTable && (
       <Card>
         <Table.Root>

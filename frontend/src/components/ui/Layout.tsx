@@ -99,7 +99,7 @@ export function EmptyState({
     <Card size="4">
       <Flex direction="column" align="center" gap={space.group} py="6">
         {icon && <Text color="gray">{icon}</Text>}
-        <Heading size={type.sectionTitle}>{title}</Heading>
+        <Heading as="h2" size={type.sectionTitle}>{title}</Heading>
         <Text color="gray" size={type.body} align="center" style={{ maxWidth: 460 }}>
           {text}
         </Text>
