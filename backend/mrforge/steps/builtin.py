@@ -10,4 +10,5 @@ from mrforge.steps import (  # noqa: F401
     func_to_mni,
     ica_labels,
     melodic,
+    regfilt,
 )

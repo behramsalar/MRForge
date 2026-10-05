@@ -339,3 +339,8 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 ### INVALID_LABELS / LABELS_INCOMPLETE
 - **What happened:** A label is not signal, noise or uncertain, or some components have no label when saving the final decision.
 - **Suggested action:** Reload the page and label the remaining components (uncertain is allowed).
+
+### MIXING_MISMATCH / LABELS_MISMATCH / CLEANED_SHAPE_MISMATCH
+- **What happened:** The component time courses do not fit the functional image (different number of volumes), the labels name components that do not exist, or the cleaned image has an unexpected shape.
+- **Probable cause:** The components or labels belong to another run of the component analysis.
+- **Suggested action:** Run the component analysis (MELODIC) again for this image and label the components again.
