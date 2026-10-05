@@ -305,13 +305,31 @@ Core preprocessing is done by FSL's own FEAT (pre-stats only), driven from a `de
 4. Interrupt mid-pipeline and confirm resume starts at the right step.
 5. Review the list of `REVIEW(domain)` items with Claude Code.
 
-### Stage 6 — Batch, resources, QC decisions
+### Stage 6 — Artifact rejection (denoising)
+
+Moved ahead of batch work (user decision, 2026-10-05). It runs between Functional and Standard space in the full-processing stage registry; standard space then uses the cleaned data (see 5e).
+
+**Build** (each a separate `Step`, with its own QC, tests and a comparison against a manual FSL run)
+- 6a. MELODIC (single-subject ICA) on the FEAT result.
+- 6b. Component review screen: signal / noise / uncertain per component (spatial map, time course, power spectrum), decisions stored as provenance (who, when); components are only flagged, never classified without the researcher.
+- 6c. `fsl_regfilt` removes the chosen noise components.
+- 6d. ICA-AROMA as an optional automatic proposal that the researcher still confirms (if installed).
+- 6e. Before/after QC and the stage in the full-processing dialog (skippable).
+- 6f. WM/CSF/motion regression is NOT part of this stage (later, MVP 2).
+
+**Manual test checklist**
+1. Run MELODIC in the app and by hand on the same data; the components match.
+2. Classify components, remove them, and compare with a manual `fsl_regfilt` using the same list.
+3. Interrupt mid-run and resume. The standard-space step uses the cleaned data.
+
+### Stage 7 — Batch, presets, resources, QC decisions
 
 **Build**
-- 6a. Multi-subject selection and batch runs using the same pipeline (no special "group mode").
-- 6b. Resource scheduler: max simultaneous subjects, CPU threads per subject, total CPU cap, memory reserve, and Balanced / Max performance / Low impact presets. Jobs wait instead of oversubscribing the machine.
-- 6c. QC decision workflow: per-subject Accept / Review / Exclude with a required reason, stored as provenance. Motion summary (mean/median/max FD, number of volumes above threshold) with warnings that flag but never exclude.
-- 6d. Dataset dashboard (counts of processed / failed / needs review / excluded, subject table).
+- 7a. Multi-subject selection and batch runs using the same pipeline (no special "group mode").
+- 7b. Resource scheduler: max simultaneous subjects, CPU threads per subject, total CPU cap, memory reserve, and Balanced / Max performance / Low impact presets. Jobs wait instead of oversubscribing the machine.
+- 7c. QC decision workflow: per-subject Accept / Review / Exclude with a required reason, stored as provenance. Motion summary (mean/median/max FD, number of volumes above threshold) with warnings that flag but never exclude.
+- 7d. Dataset dashboard (counts of processed / failed / needs review / excluded, subject table).
+- 7e. Processing presets: a named bundle of the full-processing settings (stages on or off, smoothing, high-pass, fieldmap use, ...), chosen in the confirmation dialog and recorded with the run. Two example presets to start; users cannot yet build their own steps or reorder them (later, MVP 4).
 
 **Manual test checklist**
 1. Run the pipeline on 5–10 subjects. The machine stays responsive and the resource limits are respected (watch `htop`).
@@ -319,12 +337,12 @@ Core preprocessing is done by FSL's own FEAT (pre-stats only), driven from a `de
 3. Record QC decisions, restart the app, and confirm they persist with reasons.
 4. A high-motion subject is flagged but not excluded automatically.
 
-### Stage 7 — Reports and system page (completes MVP 1)
+### Stage 8 — Reports and system page (completes MVP 1)
 
 **Build**
-- 7a. HTML preprocessing report per subject: acquisition, structural and functional processing, motion, registration, QC, warnings, user decisions, software versions, parameters, commands.
-- 7b. Command history / provenance viewer (with **Copy command** and **Re-run**).
-- 7c. System status page (the Stage 0 environment checks in the UI).
+- 8a. HTML preprocessing report per subject (registration QC pictures built from separate slice images, like FEAT's, that the page can reorder, resize or hide): acquisition, structural and functional processing, motion, registration, QC, warnings, user decisions, software versions, parameters, commands.
+- 8b. Command history / provenance viewer (with **Copy command** and **Re-run**).
+- 8c. System status page (the Stage 0 environment checks in the UI).
 
 **Manual test checklist**
 - Generate a report for a processed subject and verify every number against the logs and `provenance.json`.
@@ -335,7 +353,7 @@ Core preprocessing is done by FSL's own FEAT (pre-stats only), driven from a `de
 
 Each follows the same pattern: backend step with tests and a comparison against manual FSL, quick check, then its screen in the agreed design, then a manual test checklist.
 
-- **MVP 2:** MELODIC, manual ICA component classification screen (signal / noise / uncertain → `fsl_regfilt`), WM/CSF/motion nuisance regression with mask preview, ICA-AROMA, before/after denoising QC, deterministic methods-text generator, motion scrubbing.
+- **MVP 2:** WM/CSF/motion nuisance regression with mask preview, deterministic methods-text generator, motion scrubbing (MELODIC, component classification and ICA-AROMA moved to Stage 6).
 - **MVP 3:** atlas abstraction and browser (Schaefer, AAL, Harvard-Oxford, Yeo, Brainnetome), custom ROIs, time-series extraction, connectivity matrices (Pearson/Spearman, Fisher z), interactive matrix linked to the viewer, connectivity report.
 - **MVP 4:** dataset snapshots, pipeline presets, versions and cloning, advanced QC (DVARS, tSNR, carpet plots), group analysis (FEAT, randomise, dual regression, NBS) as a separate product area.
 

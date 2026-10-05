@@ -59,7 +59,7 @@ Demo workspace with your real session imported: `~/Documents/mrforge-workspaces/
 - Several full-size copies exist while importing (DICOM copy, converted files, rawbids is hard-linked); `sourcedata/` and `imports/…/converted/` can be removed by hand once an import is final, but MRForge does not do this itself yet.
 - One `fsl_anat` per T1 input per subject: two runs with different labels on the same input would share the native `.anat` folder and several result names.
 - One `LocalJobQueue` per workspace at a time (two could start the same queued job).
-- Pipelines run steps sequentially; per-subject parallelism is Stage 6.
+- Pipelines run steps sequentially; per-subject parallelism is Stage 7.
 - No QC output yet for `bet`/`fsl_anat` (QC contract exists; real QC arrives in Stage 5).
 - `fsl_anat` leaves stray `imcp.e<PID>`/`imcp.o<PID>` files; ignored.
 - The claim "fsl_anat on a skull-stripped input skips registration" is from the script source, not an experiment.
