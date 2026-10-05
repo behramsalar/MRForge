@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
@@ -112,6 +113,21 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             suggested_action="Pick another workspace or create a new one.",
         )
         return JSONResponse(body.model_dump(), status_code=400)
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_request_handler(_: Request, err: RequestValidationError) -> JSONResponse:
+        first = err.errors()[0] if err.errors() else {}
+        where = [
+            str(p).replace("_", " ") for p in first.get("loc", ()) if p not in ("body", "query")
+        ]
+        what = f"'{where[-1]}'" if where else "one of the values"
+        body = S.ErrorBody(
+            code="INVALID_VALUE",
+            message=f"The value for {what} is not allowed.",
+            probable_cause=str(first.get("msg", "The value is outside the allowed range.")),
+            suggested_action="Change the value and try again.",
+        )
+        return JSONResponse(body.model_dump(), status_code=422)
 
     def ws_of(ws_id: str) -> Workspace:
         if not SAFE_NAME.fullmatch(ws_id):

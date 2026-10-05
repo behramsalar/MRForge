@@ -267,3 +267,13 @@ def test_discarding_more_volumes_than_a_run_has_is_explained_not_rejected(tmp_pa
     func = p.stages[1]
     assert not func.can_run and func.reason and "too few" in func.reason
     assert spec is None or "feat_preproc" not in [s.step for s in spec.steps]
+
+
+def test_a_rejected_value_comes_back_as_a_plain_error(client: TestClient) -> None:
+    r = client.post(
+        "/api/workspaces/x/process/plan",
+        json={"subject": "s", "functional": {"delete_volumes": -1}},
+    )
+    assert r.status_code == 422
+    body = r.json()
+    assert body["code"] == "INVALID_VALUE" and "delete volumes" in body["message"]
