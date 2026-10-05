@@ -153,6 +153,9 @@ export function ComponentReviewPage({ ws }: { ws: string }) {
               height="44vh"
               crosshairMm={current.peak_mm}
             />
+            <Card size="1" style={{ background: "black" }}>
+              <img src={current.planes_url} alt={`Slices of component ${current.number} in three planes`} style={{ width: "100%", display: "block" }} />
+            </Card>
             <Card size="1">
               <img src={current.plots_url} alt={`Time course and frequencies of component ${current.number}`} style={{ width: "100%", display: "block" }} />
             </Card>

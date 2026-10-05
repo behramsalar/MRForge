@@ -22,7 +22,7 @@ from mrforge.bids import split_extension
 from mrforge.errors import StepError
 from mrforge.niftiutil import image_info, is_readable_nifti
 from mrforge.steps.base import Problem, QCItem, Step, StepContext, StepResult
-from mrforge.steps.icapics import draw_component, draw_plots, peak_voxel
+from mrforge.steps.icapics import draw_component, draw_planes, draw_plots, peak_voxel
 from mrforge.steps.registry import register_step
 
 MIN_VOLUMES = 30  # fewer than this is too short for a meaningful decomposition
@@ -67,6 +67,10 @@ def map_name(number: int) -> str:
     return f"mrforge_report/ic-{number:03d}.nii.gz"
 
 
+def planes_name(number: int) -> str:
+    return f"mrforge_report/planes-{number:03d}.png"
+
+
 def map_t1_name(number: int) -> str:
     return f"mrforge_report/ic-{number:03d}_T1w.nii.gz"
 
@@ -74,7 +78,9 @@ def map_t1_name(number: int) -> str:
 @register_step
 class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
     name = "melodic"
-    version = "5"  # 5: T1-space maps (2 mm); 4: maps on the T1; 3: 3D maps; 2: pictures
+    version = (
+        "6"  # 6: slice summary; 5: T1-space maps (2 mm); 4: maps on the T1; 3: 3D maps; 2: pictures
+    )
     InputSpec, ParamSpec, OutputSpec = MelodicInput, MelodicParams, MelodicOutput
     requires_fsl = True
     datatype = "func"
@@ -196,6 +202,14 @@ class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
         spectra = np.loadtxt(native / "melodic_FTmix", ndmin=2)
         variance = _variance_explained(native / "melodic_ICstats", total)
         (native / "mrforge_report").mkdir(exist_ok=True)
+        background_path = (
+            ctx.input_path(ctx.inputs.t1_brain)
+            if ctx.inputs.t1_brain and ctx.inputs.to_t1_affine
+            else native / "mean.nii.gz"
+        )
+        bg_img: Any = nib.as_closest_canonical(nib.load(background_path))  # type: ignore[attr-defined,no-untyped-call]
+        bg_data = np.asarray(bg_img.dataobj, dtype=np.float64)
+        bg_affine = bg_img.affine
         entries = []
         for k in range(total):
             picture = picture_name(k + 1)
@@ -231,11 +245,18 @@ class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
             else:
                 px, py, pz = peak_voxel(maps[..., k], mask)
                 peak_mm = [float(v) for v in (affine @ np.array([px, py, pz, 1.0]))[:3]]
+            map_img: Any = nib.as_closest_canonical(nib.load(native / shown))  # type: ignore[attr-defined,no-untyped-call]
+            draw_planes(
+                bg_data, bg_affine,
+                np.asarray(map_img.dataobj, dtype=np.float64), map_img.affine,
+                k + 1, total, native / planes_name(k + 1),
+            )  # fmt: skip
             entries.append(
                 {
                     "number": k + 1,
                     "picture": ctx.workspace.relpath(native / picture),
                     "plots": ctx.workspace.relpath(native / plots_name(k + 1)),
+                    "planes": ctx.workspace.relpath(native / planes_name(k + 1)),
                     "map": ctx.workspace.relpath(native / shown),
                     "peak_mm": peak_mm,
                     "variance_pct": variance[k],

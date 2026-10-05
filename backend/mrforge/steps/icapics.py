@@ -25,8 +25,8 @@ Z_MAX = 8.0  # z at which the colour is at its brightest
 def peak_voxel(ic_map: Arr, mask: NDArray[np.bool_]) -> tuple[int, int, int]:
     """Where the component is strongest inside the brain (largest absolute z)."""
     strength = np.where(mask, np.abs(ic_map), 0)
-    x, y, z = np.unravel_index(int(np.argmax(strength)), strength.shape)
-    return int(x), int(y), int(z)
+    x, y, z = (int(v) for v in np.unravel_index(int(np.argmax(strength)), strength.shape))
+    return x, y, z
 
 
 def _overlay(ax: Any, background: Arr, zmap: Arr, lo: float, hi: float) -> None:
@@ -37,6 +37,78 @@ def _overlay(ax: Any, background: Arr, zmap: Arr, lo: float, hi: float) -> None:
         shown = np.where(sign * z < Z_THRESHOLD, np.nan, np.abs(z))  # NaN is drawn clear
         ax.imshow(shown, cmap=cmap, vmin=Z_THRESHOLD, vmax=Z_MAX, interpolation="nearest")
     ax.set_axis_off()
+
+
+def _plane(
+    bg: Arr, bg_affine: Arr, axis: int, index: int, values: Arr, values_affine: Arr
+) -> tuple[Arr, Arr]:
+    """One slice of the background and the same slice of ``values`` (a map that may sit on
+    another grid, for example 2 mm on a 1 mm background), nearest-neighbour."""
+    shape = list(bg.shape)
+    ranges: list[Any] = [np.arange(n) for n in shape]
+    ranges[axis] = np.array([index])
+    grid = np.stack(np.meshgrid(*ranges, indexing="ij"), axis=-1).reshape(-1, 3)
+    homogeneous = np.c_[grid, np.ones(len(grid))]
+    mapped = np.rint((np.linalg.inv(values_affine) @ bg_affine @ homogeneous.T).T[:, :3]).astype(
+        int
+    )
+    inside = np.all((mapped >= 0) & (mapped < np.array(values.shape)), axis=1)
+    sampled = np.zeros(len(grid))
+    sampled[inside] = values[tuple(mapped[inside].T)]
+    flat_shape = [n for k, n in enumerate(shape) if k != axis]
+    plane_bg = np.take(bg, index, axis=axis)
+    return plane_bg, sampled.reshape(flat_shape)
+
+
+def draw_planes(
+    background: Arr,  # 3D background (RAS orientation)
+    background_affine: Arr,
+    values: Arr,  # 3D z-map (RAS orientation), possibly on a coarser grid
+    values_affine: Arr,
+    number: int,
+    total: int,
+    out: Path,
+    columns: int = 7,
+) -> None:
+    """A summary of the component: evenly spaced axial, coronal and sagittal slices across the
+    brain, with the map in red-yellow (positive) and blue (negative)."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    inside = background > 0.05 * float(background.max())
+    hi = float(np.percentile(background[inside], 99.5)) if inside.any() else 1.0
+    fig, axes = plt.subplots(3, columns, figsize=(11, 5.1), dpi=90)
+    for row, (axis, name) in enumerate(((2, "Axial"), (1, "Coronal"), (0, "Sagittal"))):
+        along = np.flatnonzero(
+            np.moveaxis(inside, axis, 0).reshape(background.shape[axis], -1).any(axis=1)
+        )
+        picks: Arr = (
+            np.linspace(along[0], along[-1], columns + 2)[1:-1] if along.size else np.zeros(0)
+        )
+        for col in range(columns):
+            ax = axes[row, col]
+            ax.set_axis_off()
+            if col >= len(picks):
+                continue
+            bg_slice, z_slice = _plane(
+                background, background_affine, axis, int(round(picks[col])), values, values_affine
+            )
+            ax.imshow(np.rot90(bg_slice), cmap="gray", vmin=0, vmax=hi, interpolation="nearest")
+            z = np.rot90(z_slice)
+            for sign, cmap in ((1, "autumn"), (-1, "winter")):
+                shown = np.where(sign * z < Z_THRESHOLD, np.nan, np.abs(z))
+                ax.imshow(shown, cmap=cmap, vmin=Z_THRESHOLD, vmax=Z_MAX, interpolation="nearest")
+            if col == 0:
+                ax.text(0.02, 0.97, name, transform=ax.transAxes, color="white", fontsize=9,
+                        va="top")  # fmt: skip
+    fig.subplots_adjust(left=0, right=1, top=0.94, bottom=0, wspace=0.02, hspace=0.02)
+    fig.suptitle(f"Component {number} of {total}", fontsize=10, y=0.995)
+    fig.patch.set_facecolor("black")
+    fig.suptitle(f"Component {number} of {total}", fontsize=10, y=0.995, color="white")
+    fig.savefig(out, facecolor="black")
+    plt.close(fig)
 
 
 def draw_plots(

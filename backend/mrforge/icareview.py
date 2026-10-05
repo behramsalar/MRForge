@@ -18,6 +18,7 @@ class IcaComponent(BaseModel):
     variance_pct: float | None
     map_url: str  # 3D z-map, for the viewer overlay
     plots_url: str  # time course and power spectrum
+    planes_url: str  # summary of slices through all three planes
     picture_url: str  # the static picture (three planes and the plots)
     peak_mm: list[float]  # where the component is strongest (scanner coordinates, mm)
 
@@ -65,6 +66,7 @@ def _read(ws: Workspace, ws_id: str, subject: str, summary: Path, data: Any) -> 
             variance_pct=c.get("variance_pct"),
             map_url=_url(ws, ws_id, str(c["map"])),
             plots_url=_url(ws, ws_id, str(c["plots"])),
+            planes_url=_url(ws, ws_id, str(c["planes"])),
             picture_url=_url(ws, ws_id, str(c["picture"])),
             peak_mm=[float(v) for v in c["peak_mm"]],
         )

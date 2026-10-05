@@ -896,6 +896,8 @@ export interface components {
             map_url: string;
             /** Plots Url */
             plots_url: string;
+            /** Planes Url */
+            planes_url: string;
             /** Picture Url */
             picture_url: string;
             /** Peak Mm */
@@ -913,6 +915,8 @@ export interface components {
             tr_s: number;
             /** Mean Url */
             mean_url: string;
+            /** Space */
+            space: string;
             /** Components */
             components: components["schemas"]["IcaComponent"][];
         };

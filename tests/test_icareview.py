@@ -16,7 +16,7 @@ def fake_result(ws: Workspace, complete: bool = True) -> None:
     for n in (1, 2):
         files = {
             k: f"{D}/sub-001_task-rest_desc-preproc_bold.ica/mrforge_report/{k}-{n}.x"
-            for k in ("map", "plots", "picture")
+            for k in ("map", "plots", "picture", "planes")
         }
         for rel in files.values():
             if complete or n == 1:
