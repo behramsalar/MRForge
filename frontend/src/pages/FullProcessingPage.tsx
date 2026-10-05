@@ -75,7 +75,7 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
             )}
             <Text size={type.help} color="gray">
               You will see exactly what runs, with the settings, before anything starts. To run one kind of
-              processing on its own, use the other entries under Process.
+              processing on its own, use the "Single steps" tab above.
             </Text>
           </Flex>
         </Card>

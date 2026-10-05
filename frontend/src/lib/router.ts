@@ -8,10 +8,10 @@ import { useEffect, useState } from "react";
 export type Route = { workspace?: string; page: string; extra?: string; extra2?: string };
 
 /** Addresses used before the sidebar existed keep working. */
-const LEGACY: Record<string, { page: string; extra?: string; keepExtra?: boolean }> = {
+const LEGACY: Record<string, { page: string; extra?: string; extra2?: string; keepExtra?: boolean }> = {
   import: { page: "data", keepExtra: true },
-  anat: { page: "process", extra: "anat" },
-  func: { page: "process", extra: "func" },
+  anat: { page: "process", extra: "steps", extra2: "anat" },
+  func: { page: "process", extra: "steps", extra2: "func" },
   view: { page: "viewer", keepExtra: true },
 };
 
@@ -23,7 +23,19 @@ export function parse(hash: string): Route {
     const raw = parts[2] ?? "dashboard";
     const legacy = LEGACY[raw];
     if (legacy) {
-      return { workspace: parts[1], page: legacy.page, extra: legacy.keepExtra ? parts[3] : legacy.extra };
+      return {
+        workspace: parts[1],
+        page: legacy.page,
+        extra: legacy.keepExtra ? parts[3] : legacy.extra,
+        extra2: legacy.extra2,
+      };
+    }
+    if (raw === "process") {
+      // Addresses from the sidebar-tree days: process/full, process/anat, process/func.
+      if (parts[3] === "full") return { workspace: parts[1], page: raw, extra: "pipelines" };
+      if (parts[3] === "anat" || parts[3] === "func") {
+        return { workspace: parts[1], page: raw, extra: "steps", extra2: parts[3] };
+      }
     }
     return { workspace: parts[1], page: raw, extra: parts[3], extra2: parts[4] };
   }
