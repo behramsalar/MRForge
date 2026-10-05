@@ -859,6 +859,12 @@ export interface components {
             tools: {
                 [key: string]: string | null;
             };
+            /** Disk Free Gb */
+            disk_free_gb?: number | null;
+            /** Disk Total Gb */
+            disk_total_gb?: number | null;
+            /** Cpu Cores */
+            cpu_cores?: number | null;
         };
         /** ImportDetail */
         ImportDetail: {

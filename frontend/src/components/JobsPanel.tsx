@@ -35,11 +35,13 @@ export function JobsPanel({
   jobs,
   busy,
   action,
+  hideTable = false,
 }: {
   ws: string;
   jobs: JobInfo[];
   busy: boolean;
   action?: (job: JobInfo) => ReactNode; // a button for a finished step, e.g. "View result"
+  hideTable?: boolean; // only the failure messages (the Jobs page has its own history table)
 }) {
   useTick(jobs.some((j) => j.status === "Running"));
   const resume = useMutation({
@@ -51,7 +53,8 @@ export function JobsPanel({
   const showWho = rows.some((j) => j.started_by);
   return (
     <Flex direction="column" gap={space.group}>
-      <Heading size={type.sectionTitle}>Progress</Heading>
+      {!hideTable && <Heading size={type.sectionTitle}>Progress</Heading>}
+      {!hideTable && (
       <Card>
         <Table.Root>
           <Table.Header>
@@ -84,6 +87,7 @@ export function JobsPanel({
           </Table.Body>
         </Table.Root>
       </Card>
+      )}
       {rows
         .filter((j) => j.error && (j.status === "Failed" || j.status === "Interrupted"))
         .map((j) => (

@@ -59,6 +59,30 @@ export function Settings() {
                       <Text size={type.help}>{health.data.workspaces_root}</Text>
                     </Table.Cell>
                   </Table.Row>
+                  {health.data.disk_free_gb != null && (
+                    <Table.Row>
+                      <Table.RowHeaderCell>Free disk space</Table.RowHeaderCell>
+                      <Table.Cell>
+                        <Badge color={health.data.disk_free_gb < 20 ? "orange" : "green"} variant="soft">
+                          {health.data.disk_free_gb} GB free
+                          {health.data.disk_total_gb ? ` of ${health.data.disk_total_gb} GB` : ""}
+                        </Badge>
+                        {health.data.disk_free_gb < 20 && (
+                          <Text size={type.help} ml="2">
+                            Low: full processing of one subject can need several GB.
+                          </Text>
+                        )}
+                      </Table.Cell>
+                    </Table.Row>
+                  )}
+                  {health.data.cpu_cores != null && (
+                    <Table.Row>
+                      <Table.RowHeaderCell>Processor cores</Table.RowHeaderCell>
+                      <Table.Cell>
+                        <Text size={type.help}>{health.data.cpu_cores}</Text>
+                      </Table.Cell>
+                    </Table.Row>
+                  )}
                   <Table.Row>
                     <Table.RowHeaderCell>MRForge version</Table.RowHeaderCell>
                     <Table.Cell>

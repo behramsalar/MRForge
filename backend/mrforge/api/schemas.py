@@ -23,6 +23,9 @@ class Health(BaseModel):
     version: str
     workspaces_root: str
     tools: dict[str, str | None]  # tool name -> version, or None when not found
+    disk_free_gb: float | None = None  # free space where the workspaces are kept
+    disk_total_gb: float | None = None
+    cpu_cores: int | None = None
 
 
 # -- workspaces -------------------------------------------------------------------------------

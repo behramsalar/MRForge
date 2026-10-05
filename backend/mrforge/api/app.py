@@ -253,7 +253,20 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             tools["bids-validator"] = "installed"
         except StepError:
             tools["bids-validator"] = None
-        return S.Health(version=__version__, workspaces_root=str(root), tools=tools)
+        free = total = None
+        try:
+            usage = shutil.disk_usage(root if root.is_dir() else root.parent)
+            free, total = round(usage.free / 1e9, 1), round(usage.total / 1e9, 1)
+        except OSError:
+            pass
+        return S.Health(
+            version=__version__,
+            workspaces_root=str(root),
+            tools=tools,
+            disk_free_gb=free,
+            disk_total_gb=total,
+            cpu_cores=os.cpu_count(),
+        )
 
     @app.get("/api/workspaces", response_model=list[S.WorkspaceInfo])
     def list_workspaces() -> list[S.WorkspaceInfo]:
