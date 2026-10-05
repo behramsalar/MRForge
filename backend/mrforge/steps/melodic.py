@@ -12,6 +12,7 @@ import json
 import os
 import shutil
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -30,6 +31,10 @@ MIN_VOLUMES = 30  # fewer than this is too short for a meaningful decomposition
 class MelodicInput(BaseModel):
     bold: str  # preprocessed 4D functional image (the FEAT result)
     brain_mask: str  # brain mask in the same space
+    # Both or neither. With them the component maps are also placed on the subject's T1 (using
+    # the affine FEAT found), so the review screen can show them on an anatomical background.
+    t1_brain: str | None = None
+    to_t1_affine: str | None = None  # example volume -> T1 (FSL matrix), from feat_preproc
 
 
 class MelodicParams(BaseModel):
@@ -62,10 +67,14 @@ def map_name(number: int) -> str:
     return f"mrforge_report/ic-{number:03d}.nii.gz"
 
 
+def map_t1_name(number: int) -> str:
+    return f"mrforge_report/ic-{number:03d}_T1w.nii.gz"
+
+
 @register_step
 class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
     name = "melodic"
-    version = "3"  # 3: per-component 3D maps and plots for the interactive review; 2: new pictures
+    version = "5"  # 5: T1-space maps (2 mm); 4: maps on the T1; 3: 3D maps; 2: pictures
     InputSpec, ParamSpec, OutputSpec = MelodicInput, MelodicParams, MelodicOutput
     requires_fsl = True
     datatype = "func"
@@ -125,6 +134,13 @@ class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
             "--nobet",
             "--Oall",
         ]  # fmt: skip
+        if bool(ctx.inputs.t1_brain) != bool(ctx.inputs.to_t1_affine):
+            raise StepError(
+                code="MELODIC_T1_INCOMPLETE",
+                message="The T1 image and the registration must be given together.",
+                probable_cause="Only one of the two was supplied.",
+                suggested_action="Give both, or neither.",
+            )
         if ctx.params.dimensionality is not None:
             argv.append(f"--dim={ctx.params.dimensionality}")
         record = ctx.run_command(argv, check=False)
@@ -194,14 +210,33 @@ class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
                 nib.Nifti1Image(maps[..., k].astype(np.float32), affine),  # type: ignore[attr-defined,no-untyped-call]
                 native / map_name(k + 1),
             )
-            px, py, pz = peak_voxel(maps[..., k], mask)
-            peak_mm = [float(v) for v in (affine @ np.array([px, py, pz, 1.0]))[:3]]
+            shown = map_name(k + 1)
+            if ctx.inputs.t1_brain and ctx.inputs.to_t1_affine:
+                # Affine only: FEAT's data are already unwarped, so the fieldmap warp is not
+                # applied again. Trilinear interpolation of a z-map, on a 2 mm grid inside the T1's
+                # space (a 1 mm map of every component would be about 8 MB each).
+                ctx.run_command(
+                    [
+                        "flirt", "-in", str(native / map_name(k + 1)),
+                        "-ref", str(ctx.input_path(ctx.inputs.t1_brain)),
+                        "-applyisoxfm", "2", "-init", str(ctx.input_path(ctx.inputs.to_t1_affine)),
+                        "-interp", "trilinear", "-out", str(native / map_t1_name(k + 1)),
+                    ]
+                )  # fmt: skip
+                shown = map_t1_name(k + 1)
+                grid: Any = nib.load(native / shown)  # type: ignore[attr-defined]
+                shown_data = np.asarray(grid.dataobj, dtype=np.float64)
+                px, py, pz = peak_voxel(shown_data, np.ones(shown_data.shape, dtype=bool))
+                peak_mm = [float(v) for v in (grid.affine @ np.array([px, py, pz, 1.0]))[:3]]
+            else:
+                px, py, pz = peak_voxel(maps[..., k], mask)
+                peak_mm = [float(v) for v in (affine @ np.array([px, py, pz, 1.0]))[:3]]
             entries.append(
                 {
                     "number": k + 1,
                     "picture": ctx.workspace.relpath(native / picture),
                     "plots": ctx.workspace.relpath(native / plots_name(k + 1)),
-                    "map": ctx.workspace.relpath(native / map_name(k + 1)),
+                    "map": ctx.workspace.relpath(native / shown),
                     "peak_mm": peak_mm,
                     "variance_pct": variance[k],
                 }
@@ -213,6 +248,11 @@ class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
             "tr_s": tr,
             "melodic_folder": ctx.workspace.relpath(native),
             "mean": ctx.workspace.relpath(native / "mrforge_report" / "mean.nii.gz"),
+            # What the maps are drawn on: the T1 brain when the maps were placed on it.
+            "background": ctx.inputs.t1_brain
+            if ctx.inputs.t1_brain and ctx.inputs.to_t1_affine
+            else ctx.workspace.relpath(native / "mrforge_report" / "mean.nii.gz"),
+            "space": "T1w" if ctx.inputs.t1_brain and ctx.inputs.to_t1_affine else "native",
             "components": entries,
         }
         (ctx.output_dir / out.summary).write_text(json.dumps(summary, indent=2) + "\n")

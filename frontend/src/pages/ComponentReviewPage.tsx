@@ -148,7 +148,7 @@ export function ComponentReviewPage({ ws }: { ws: string }) {
             </Flex>
             <Viewer
               underlay={rec.mean_url}
-              overlays={[{ url: current.map_url, colormap: "warm", colormapNegative: "winter", opacity: 1, calMin: z, calMax: 8 }]}
+              overlays={[{ url: current.map_url, colormap: "hot", colormapNegative: "winter", opacity: 1, calMin: z, calMax: 8 }]}
               layout="row"
               height="44vh"
               crosshairMm={current.peak_mm}

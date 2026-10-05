@@ -27,7 +27,8 @@ class IcaRecording(BaseModel):
     n_components: int
     n_volumes: int
     tr_s: float
-    mean_url: str  # mean functional image, the viewer's background
+    mean_url: str  # the viewer's background: the T1 brain, or the mean functional image
+    space: str  # "T1w" when the maps are placed on the T1, else "native"
     components: list[IcaComponent]
 
 
@@ -74,6 +75,7 @@ def _read(ws: Workspace, ws_id: str, subject: str, summary: Path, data: Any) -> 
         n_components=int(data["n_components"]),
         n_volumes=int(data["n_volumes"]),
         tr_s=float(data["tr_s"]),
-        mean_url=_url(ws, ws_id, str(data["mean"])),
+        mean_url=_url(ws, ws_id, str(data.get("background", data["mean"]))),
+        space=str(data.get("space", "native")),
         components=comps,
     )
