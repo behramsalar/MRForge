@@ -1,6 +1,8 @@
 import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import type { ReactNode } from "react";
-import { space, type } from "../../theme/tokens";
+import { useRoute } from "../../lib/router";
+import { navItemFor } from "../../shell/nav";
+import { areaColor, space, type } from "../../theme/tokens";
 
 /** Title, one explaining sentence and the page's main buttons. */
 export function PageHeader({
@@ -12,15 +14,30 @@ export function PageHeader({
   description?: string;
   actions?: ReactNode;
 }) {
+  const item = navItemFor(useRoute().page);
+  const Icon = item?.icon;
+  const color = areaColor[item?.id ?? ""] ?? "gray";
   return (
     <Flex justify="between" align="end" gap={space.group} wrap="wrap">
-      <Flex direction="column" gap="1" style={{ minWidth: 0 }}>
-        <Heading size={type.pageTitle}>{title}</Heading>
-        {description && (
-          <Text color="gray" size={type.body}>
-            {description}
-          </Text>
+      <Flex gap={space.group} align="center" style={{ minWidth: 0 }}>
+        {Icon && (
+          <Flex
+            align="center"
+            justify="center"
+            aria-hidden
+            style={{ width: 48, height: 48, flex: "none", borderRadius: "var(--radius-4)", background: `var(--${color}-a3)`, color: `var(--${color}-10)` }}
+          >
+            <Icon width={24} height={24} />
+          </Flex>
         )}
+        <Flex direction="column" gap="1" style={{ minWidth: 0 }}>
+          <Heading size={type.pageTitle}>{title}</Heading>
+          {description && (
+            <Text color="gray" size={type.body}>
+              {description}
+            </Text>
+          )}
+        </Flex>
       </Flex>
       {actions && <Flex gap={space.inline}>{actions}</Flex>}
     </Flex>
@@ -38,7 +55,7 @@ export function StatCard({
   label: string;
   value: ReactNode;
   hint?: string;
-  color?: "green" | "amber" | "red" | "orange" | "gray";
+  color?: string; // a Radix colour name
   icon?: ReactNode;
 }) {
   return (

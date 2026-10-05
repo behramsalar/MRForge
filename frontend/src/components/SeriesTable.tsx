@@ -150,7 +150,7 @@ export function SeriesTable({
   selected?: string;
   onSelect?: (uid: string) => void;
 }) {
-  const compact = !!onSelect; // the details panel next to the table shows size and the Change button
+  const compact = !!onSelect; // the details panel next to the table shows the size
   return (
     <Card style={{ overflowX: "auto" }}>
       <Table.Root size="2">
@@ -162,7 +162,7 @@ export function SeriesTable({
             <Table.ColumnHeaderCell>Detected as</Table.ColumnHeaderCell>
             <Table.ColumnHeaderCell>Confidence</Table.ColumnHeaderCell>
             <Table.ColumnHeaderCell>What happens</Table.ColumnHeaderCell>
-            {!compact && <Table.ColumnHeaderCell />}
+            <Table.ColumnHeaderCell />
           </Table.Row>
         </Table.Header>
         <Table.Body>
@@ -199,11 +199,9 @@ export function SeriesTable({
                   <ActionBadge action={s.action} />
                 )}
               </Table.Cell>
-              {!compact && (
-                <Table.Cell>
-                  <DecisionDialog ws={ws} detail={detail} row={s} key={`${s.uid}-${s.action}-${s.kind}`} />
-                </Table.Cell>
-              )}
+              <Table.Cell onClick={(e) => e.stopPropagation()}>
+                <DecisionDialog ws={ws} detail={detail} row={s} key={`${s.uid}-${s.action}-${s.kind}`} />
+              </Table.Cell>
             </Table.Row>
           ))}
         </Table.Body>

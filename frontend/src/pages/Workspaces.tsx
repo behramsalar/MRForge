@@ -1,4 +1,5 @@
-import { Button, Callout, Card, Dialog, Flex, Grid, Heading, SegmentedControl, Text, TextField } from "@radix-ui/themes";
+import { LayersIcon, PersonIcon } from "@radix-ui/react-icons";
+import { Badge, Button, Callout, Card, Dialog, Flex, Grid, Heading, SegmentedControl, Text, TextField } from "@radix-ui/themes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
@@ -106,18 +107,31 @@ export function Workspaces() {
         {list.data?.filter((w) => only === "all" || w.created_by === researcher?.name).map((w) => (
           <Card key={w.id} asChild size="3">
             <a href={href(w.id, "dashboard")} style={{ textDecoration: "none" }}>
-              <Flex direction="column" gap="1">
-                <Text weight="bold" size={type.body}>
-                  {w.name}
-                </Text>
+              <Flex direction="column" gap="2">
+                <Flex align="center" gap={space.inline}>
+                  <Flex
+                    align="center"
+                    justify="center"
+                    aria-hidden
+                    style={{ width: 32, height: 32, borderRadius: "var(--radius-3)", background: "var(--indigo-a3)", color: "var(--indigo-10)" }}
+                  >
+                    <LayersIcon />
+                  </Flex>
+                  <Text weight="bold" size={type.body}>
+                    {w.name}
+                  </Text>
+                </Flex>
                 <Text color="gray" size={type.help}>
                   {w.subjects} {w.subjects === 1 ? "subject" : "subjects"} · {w.imports}{" "}
                   {w.imports === 1 ? "import" : "imports"}
                 </Text>
                 {w.created_by && (
-                  <Text color="gray" size={type.caption}>
-                    Created by {w.created_by}
-                  </Text>
+                  <Flex>
+                    <Badge color={w.created_by === researcher?.name ? "indigo" : "gray"} variant="soft" size="2">
+                      <PersonIcon /> Created by {w.created_by}
+                      {w.created_by === researcher?.name ? " (you)" : ""}
+                    </Badge>
+                  </Flex>
                 )}
               </Flex>
             </a>

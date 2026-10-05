@@ -215,7 +215,11 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
         )}
       </Flex>
 
-      {d && row && <SeriesDetail ws={ws} detail={d} row={row} />}
+      {d && row && (
+        <div style={{ position: "sticky", top: "var(--space-4)" }}>
+          <SeriesDetail ws={ws} detail={d} row={row} />
+        </div>
+      )}
       </Grid>
     </Flex>
   );

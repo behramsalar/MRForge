@@ -1,3 +1,5 @@
+import { IconButton } from "@radix-ui/themes";
+import { MinusIcon, PlusIcon, ResetIcon } from "@radix-ui/react-icons";
 import { MULTIPLANAR_TYPE, Niivue, SHOW_RENDER, SLICE_TYPE } from "@niivue/niivue";
 import { useEffect, useRef, useState } from "react";
 
@@ -106,10 +108,32 @@ export function Viewer({
     if (nv && vol && ready && (vol.nFrame4D ?? 1) > 1) nv.setFrame4D(vol.id, frame);
   }, [frame, ready]);
 
+  // Zoom buttons: the mouse wheel stays "next slice", as people expect in a viewer.
+  const zoomBy = (factor: number | null) => {
+    const nv = viewer.current;
+    if (!nv) return;
+    const [x, y, z, zoom] = nv.scene.pan2Dxyzmm;
+    const next = factor === null ? 1 : Math.min(8, Math.max(1, zoom * factor));
+    nv.setPan2Dxyzmm(factor === null || next === 1 ? [0, 0, 0, 1] : [x, y, z, next]);
+  };
+
   // NiiVue sizes its canvas to the parent element, so the parent carries the height.
   return (
     <div style={{ width: "100%", height, position: "relative", background: "black", borderRadius: "var(--radius-3)" }}>
       <canvas ref={canvas} style={{ display: "block" }} />
+      {ready && (
+        <div style={{ position: "absolute", top: "var(--space-2)", right: "var(--space-2)", display: "flex", gap: "var(--space-1)" }}>
+          <IconButton size="1" variant="soft" color="gray" aria-label="Zoom in" title="Zoom in (the mouse wheel still scrolls through slices)" onClick={() => zoomBy(1.25)}>
+            <PlusIcon />
+          </IconButton>
+          <IconButton size="1" variant="soft" color="gray" aria-label="Zoom out" title="Zoom out" onClick={() => zoomBy(0.8)}>
+            <MinusIcon />
+          </IconButton>
+          <IconButton size="1" variant="soft" color="gray" aria-label="Reset zoom" title="Reset zoom" onClick={() => zoomBy(null)}>
+            <ResetIcon />
+          </IconButton>
+        </div>
+      )}
       {loading && (
         <div
           style={{
