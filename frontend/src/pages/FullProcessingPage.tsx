@@ -24,7 +24,7 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
   return (
     <Flex direction="column" gap={space.section}>
       <PageHeader
-        title="Full processing"
+        title="Pipelines"
         description="Runs every processing stage for a subject, one after another: the recommended way to prepare data for analysis."
       />
       {subjects.data && labels.length === 0 && (
@@ -75,7 +75,7 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
             )}
             <Text size={type.help} color="gray">
               You will see exactly what runs, with the settings, before anything starts. To run one kind of
-              processing on its own, use the "Single steps" tab above.
+              processing on its own, use the entries under "Single steps" in the sidebar.
             </Text>
           </Flex>
         </Card>

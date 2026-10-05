@@ -27,9 +27,19 @@ export type NavItem = {
 export const WORKSPACE_NAV: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: HomeIcon },
   { id: "data", label: "Data", icon: ArchiveIcon },
-  // Process is one page with tabs (Pipelines, Single steps), so new pipelines and steps never
-  // lengthen the sidebar. Analysis (ROI-to-ROI, diffusion) gets its own item once it exists.
-  { id: "process", label: "Process", icon: MixerHorizontalIcon },
+  {
+    id: "process",
+    label: "Process",
+    icon: MixerHorizontalIcon,
+    // Everything under Process is visible in the sidebar. Pipelines is one page that lists
+    // all pipelines and presets as cards (so new ones never lengthen the sidebar); single
+    // steps are listed one by one. Analysis (ROI-to-ROI, diffusion) becomes its own group.
+    children: [
+      { id: "pipelines", label: "Pipelines" },
+      { id: "anat", label: "Anatomical", section: "Single steps" },
+      { id: "func", label: "Functional" },
+    ],
+  },
   { id: "viewer", label: "Viewer", icon: EyeOpenIcon },
   { id: "jobs", label: "Jobs", icon: ActivityLogIcon },
 ];

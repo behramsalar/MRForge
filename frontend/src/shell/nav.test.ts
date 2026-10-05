@@ -23,13 +23,15 @@ describe("sidebar", () => {
 import { crumbs, defaultChild } from "./nav";
 
 describe("sidebar tree", () => {
-  it("keeps Process one flat item so new pipelines never lengthen the sidebar", () => {
+  it("shows every kind of processing under Process in the sidebar", () => {
     const process = WORKSPACE_NAV.find((n) => n.id === "process");
-    expect(process?.children).toBeUndefined();
+    expect(process?.children?.map((c) => c.id)).toEqual(["pipelines", "anat", "func"]);
+    expect(defaultChild("process")).toBe("pipelines");
     expect(defaultChild("viewer")).toBeUndefined();
   });
   it("names the trail in the top bar", () => {
-    expect(crumbs("process", "steps")).toEqual(["Process"]);
+    expect(crumbs("process", "func")).toEqual(["Process", "Functional"]);
+    expect(crumbs("process")).toEqual(["Process", "Pipelines"]);
     expect(crumbs("viewer")).toEqual(["Viewer"]);
   });
 });

@@ -30,7 +30,7 @@ function WorkspacePage({ page, extra, extra2 }: { page: string; extra?: string; 
     case "data":
       return <DataPage ws={ws} extra={extra} state={state} />;
     case "process":
-      return <ProcessPage ws={ws} tab={extra} sub={extra2} state={state} />;
+      return <ProcessPage ws={ws} tab={extra} state={state} />;
     case "viewer":
       return (
         <Suspense fallback={<p>Loading the viewer…</p>}>

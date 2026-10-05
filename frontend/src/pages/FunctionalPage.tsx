@@ -100,7 +100,7 @@ export function FunctionalPage({ ws, state }: { ws: string; state: WorkspaceStat
         <Callout.Root color="amber">
           <Callout.Text>
             {ready.data.anat_reason}{" "}
-            <a href={href(ws, "process", "steps", "anat")}>Go to anatomical processing.</a>
+            <a href={href(ws, "process", "anat")}>Go to anatomical processing.</a>
           </Callout.Text>
         </Callout.Root>
       )}
