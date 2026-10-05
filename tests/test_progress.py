@@ -194,3 +194,19 @@ def test_the_route(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-unty
     assert body["status"] == "Completed" and body["total"] == 1 and body["done"] == 1
     assert [s["state"] for s in body["steps"]] == ["done"]
     assert client.get(f"/api/workspaces/{ws_id}/operations/999/progress").status_code == 404
+
+
+def test_a_fieldmap_that_really_ran_is_not_shown_as_skipped(tmp_path: Path) -> None:
+    ws, op, sid = setup(tmp_path)
+    spec = {**SPEC, "steps": [
+        {"id": "fsl_anat", "step": "fsl_anat", "inputs": {}},
+        {"id": "fieldmap_prep__fieldmap", "label": "fieldmap_prep", "step": "fieldmap_prep", "inputs": {}},
+        SPEC["steps"][1],
+    ]}  # fmt: skip
+    with ws.session() as s:
+        s.get(Operation, op.id).args = {"spec": spec}  # type: ignore[union-attr]
+        op = s.get(Operation, op.id)  # type: ignore[assignment]
+    add_job(ws, sid, "fsl_anat", "Completed")
+    add_job(ws, sid, "fieldmap_prep", "Completed", "fieldmap_prep", "fieldmap_prep")
+    add_job(ws, sid, "feat_preproc", "Running", "feat_preproc", "feat_preproc_task-rest")
+    assert states(ws, op) == ["done", "done", "running"]
