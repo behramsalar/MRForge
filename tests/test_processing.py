@@ -260,3 +260,10 @@ def test_pipeline_steps_can_share_a_label(tmp_path: Path) -> None:
     run_pipeline(ws, LocalJobQueue(ws), spec)
     [job] = list_jobs(ws)
     assert job.label == "fake" and job.run_dir is not None and job.run_dir.endswith("_runs/fake")
+
+
+def test_discarding_more_volumes_than_a_run_has_is_explained_not_rejected(tmp_path: Path) -> None:
+    p, spec = plan(workspace(tmp_path), functional=FunctionalOptions(delete_volumes=5000))
+    func = p.stages[1]
+    assert not func.can_run and func.reason and "too few" in func.reason
+    assert spec is None or "feat_preproc" not in [s.step for s in spec.steps]

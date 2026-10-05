@@ -43,7 +43,7 @@ class AnatomicalOptions(BaseModel):
 
 class FunctionalOptions(BaseModel):
     # REVIEW(domain): 5 volumes (confirmed); 5 mm FWHM and 150 s high-pass are proposals.
-    delete_volumes: int = Field(default=5, ge=0, le=100)
+    delete_volumes: int = Field(default=5, ge=0)
     smoothing_fwhm_mm: float = Field(default=5.0, ge=0, le=20)
     highpass_cutoff_s: float | None = Field(default=150.0, gt=0)  # None: no temporal filtering
     use_fieldmap: bool = True  # used for every run that has a usable fieldmap
@@ -278,6 +278,12 @@ class FunctionalStage(Stage):
                 volumes = image_info(ctx.ws.abspath(f.relpath))[0][3]
             except Exception:
                 volumes = None
+            if volumes is not None and volumes <= opts.delete_volumes + 1:
+                stage.can_run = False
+                stage.reason = (
+                    f"Run {slug.replace('_', ' ')} has {volumes} volumes; after discarding "
+                    f"{opts.delete_volumes} too few would remain. Lower the discarded volumes."
+                )
             stage.items.append(
                 PlanItem(
                     title=f"Run {slug.replace('_', ' ')}"
@@ -305,7 +311,7 @@ class FunctionalStage(Stage):
                     ],
                 )
             )
-            if not enabled:
+            if not enabled or not stage.can_run:
                 continue
             assert ctx.anat is not None
             ctx.runs[slug] = f.relpath
