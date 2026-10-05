@@ -57,7 +57,7 @@ def picture_name(number: int) -> str:
 @register_step
 class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
     name = "melodic"
-    version = "1"
+    version = "2"  # 2: pictures show three planes through the strongest point, vivid colours
     InputSpec, ParamSpec, OutputSpec = MelodicInput, MelodicParams, MelodicOutput
     requires_fsl = True
     datatype = "func"

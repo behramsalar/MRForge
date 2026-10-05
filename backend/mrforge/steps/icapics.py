@@ -9,6 +9,7 @@ only shows; it never labels anything (CLAUDE.md principle 6).
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -18,16 +19,24 @@ Arr = NDArray[np.float64]
 # REVIEW(domain): the z threshold of the overlay (MELODIC's report uses a mixture-model
 # threshold; 2.3 is the common display threshold for its z-maps).
 Z_THRESHOLD = 2.3
-N_SLICES = 12
+Z_MAX = 8.0  # z at which the colour is at its brightest
 
 
-def spaced_slices(mask: NDArray[np.bool_], count: int = N_SLICES) -> list[int]:
-    """Axial slice numbers spread over the part of the volume that holds brain."""
-    zs = np.flatnonzero(mask.reshape(-1, mask.shape[2]).any(axis=0))
-    if zs.size == 0:
-        zs = np.arange(mask.shape[2])
-    picks = np.linspace(zs[0], zs[-1], min(count, zs.size))
-    return sorted({int(round(p)) for p in picks})
+def peak_voxel(ic_map: Arr, mask: NDArray[np.bool_]) -> tuple[int, int, int]:
+    """Where the component is strongest inside the brain (largest absolute z)."""
+    strength = np.where(mask, np.abs(ic_map), 0)
+    x, y, z = np.unravel_index(int(np.argmax(strength)), strength.shape)
+    return int(x), int(y), int(z)
+
+
+def _overlay(ax: Any, background: Arr, zmap: Arr, lo: float, hi: float) -> None:
+    """One plane: the mean image in grey, positive z in red-yellow, negative z in blue-cyan."""
+    ax.imshow(np.rot90(background), cmap="gray", vmin=lo, vmax=hi, interpolation="nearest")
+    z = np.rot90(zmap)
+    for sign, cmap in ((1, "autumn"), (-1, "winter")):
+        shown = np.where(sign * z < Z_THRESHOLD, np.nan, np.abs(z))  # NaN is drawn clear
+        ax.imshow(shown, cmap=cmap, vmin=Z_THRESHOLD, vmax=Z_MAX, interpolation="nearest")
+    ax.set_axis_off()
 
 
 def draw_component(
@@ -47,27 +56,27 @@ def draw_component(
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    slices = spaced_slices(mask)
-    cols = 6
-    rows = (len(slices) + cols - 1) // cols
-    fig = plt.figure(figsize=(11, 2.1 * rows + 2.3), dpi=90)
-    grid = fig.add_gridspec(rows + 1, cols, height_ratios=[1] * rows + [1.15], hspace=0.15)
-    lo, hi = np.percentile(background[mask > 0], [2, 98]) if mask.any() else (0, 1)
-    for k, z in enumerate(slices):
-        ax = fig.add_subplot(grid[k // cols, k % cols])
-        ax.imshow(np.rot90(background[:, :, z]), cmap="gray", vmin=lo, vmax=hi)
-        zmap = np.rot90(ic_map[:, :, z])
-        shown = np.where(np.abs(zmap) < Z_THRESHOLD, np.nan, zmap)  # NaN is drawn transparent
-        ax.imshow(shown, cmap="coolwarm", vmin=-8, vmax=8, alpha=0.85)
-        ax.set_axis_off()
+    px, py, pz = peak_voxel(ic_map, mask)
+    lo, hi = (0.0, float(np.percentile(background[mask], 99.5))) if mask.any() else (0.0, 1.0)
+    fig = plt.figure(figsize=(11, 7.2), dpi=90)
+    grid = fig.add_gridspec(2, 3, height_ratios=[1.6, 1], hspace=0.12, wspace=0.05)
+    planes = (
+        ("Axial", background[:, :, pz], ic_map[:, :, pz]),
+        ("Coronal", background[:, py, :], ic_map[:, py, :]),
+        ("Sagittal", background[px, :, :], ic_map[px, :, :]),
+    )
+    for k, (title, bg, zmap) in enumerate(planes):
+        ax = fig.add_subplot(grid[0, k])
+        _overlay(ax, bg, zmap, float(lo), float(hi))
+        ax.set_title(title, fontsize=10)
     t = np.arange(len(time_course)) * tr_s
-    ax_t = fig.add_subplot(grid[rows, : cols - 2])
+    ax_t = fig.add_subplot(grid[1, :2])
     ax_t.plot(t, time_course, color="black", linewidth=0.8)
     ax_t.set_xlabel("Time (s)")
     ax_t.set_ylabel("Component\nstrength")
     ax_t.margins(x=0)
     ax_t.grid(alpha=0.3)
-    ax_f = fig.add_subplot(grid[rows, cols - 2 :])
+    ax_f = fig.add_subplot(grid[1, 2])
     freqs = np.linspace(0, 0.5 / tr_s, len(power))
     ax_f.plot(freqs, power, color="tab:blue", linewidth=0.9)
     ax_f.set_xlabel("Frequency (Hz)")
@@ -75,6 +84,10 @@ def draw_component(
     ax_f.margins(x=0)
     ax_f.grid(alpha=0.3)
     extra = f" · explains {variance_pct:.1f}% of the variance" if variance_pct is not None else ""
-    fig.suptitle(f"Component {number} of {total}{extra}", y=0.995)
+    fig.suptitle(
+        f"Component {number} of {total}{extra} · red/yellow = positive, blue = negative "
+        f"(slices through the strongest point)",
+        fontsize=11,
+    )
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)

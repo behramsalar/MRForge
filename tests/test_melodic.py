@@ -13,7 +13,7 @@ from mrforge.engine import Action, run_step
 from mrforge.runner.jobs import build_context
 from mrforge.runner.local import LocalJobQueue
 from mrforge.steps import builtin  # noqa: F401
-from mrforge.steps.icapics import draw_component, spaced_slices
+from mrforge.steps.icapics import draw_component, peak_voxel
 from mrforge.workspace import Workspace
 
 D = "derivatives/mrforge/sub-001/func"
@@ -59,11 +59,14 @@ def test_a_long_enough_run_is_accepted(tmp_path: Path) -> None:
     assert problems(synthetic(tmp_path)) == []
 
 
-def test_slices_cover_the_brain_only() -> None:
-    mask = np.zeros((6, 6, 20), dtype=bool)
-    mask[:, :, 5:15] = True
-    picks = spaced_slices(mask, 6)
-    assert picks[0] == 5 and picks[-1] == 14 and len(picks) == 6
+def test_the_picture_is_centred_on_the_strongest_point() -> None:
+    mask = np.ones((8, 8, 8), dtype=bool)
+    z = np.zeros((8, 8, 8))
+    z[2, 5, 6] = -9.0  # a strong negative value counts as strong
+    z[4, 4, 4] = 3.0
+    assert peak_voxel(z, mask) == (2, 5, 6)
+    mask[2, 5, 6] = False  # outside the brain it is ignored
+    assert peak_voxel(z, mask) == (4, 4, 4)
 
 
 def test_a_component_picture_is_drawn(tmp_path: Path) -> None:
