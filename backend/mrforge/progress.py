@@ -44,6 +44,8 @@ TOOL_PHRASES: list[tuple[str, str]] = [
     ("flirt", "Aligning images"),
     ("slicer", "Drawing the quality-check pictures"),
     ("pngappend", "Drawing the quality-check pictures"),
+    ("melodic", "Finding independent components"),
+    ("fsl_regfilt", "Removing the noise components"),
     ("feat", "Preprocessing the functional data"),
     ("dcm2niix", "Converting the scanner files"),
 ]

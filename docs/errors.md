@@ -311,3 +311,19 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 - **Probable cause:** MRForge never edits raw files; they were changed outside it.
 - **Suggested action:** Restore the original files, or ask whoever looks after MRForge for help.
 
+
+## Artifact rejection (Stage 6)
+
+### BOLD_TOO_SHORT_FOR_ICA
+- **What happened:** The functional run has too few volumes (fewer than 30) for a component analysis.
+- **Probable cause:** A very short run, or the image is not a time series.
+- **Suggested action:** Skip artifact rejection for this run, or check the scan.
+
+### MELODIC_FAILED
+- **What happened:** MELODIC did not produce any components.
+- **Probable cause:** The data could not be decomposed, or MELODIC was given an option it did not accept (MELODIC reports some mistakes in its text but still exits normally).
+- **Suggested action:** Open the raw log for MELODIC's message, fix the input, retry.
+
+### ICA_RESULT_INCOMPLETE
+- **What happened:** MELODIC finished but the result is incomplete (no components, or component pictures missing).
+- **Suggested action:** Open the raw log, then run the step again.
