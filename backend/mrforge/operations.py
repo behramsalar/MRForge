@@ -28,10 +28,11 @@ from mrforge.errors import StepError
 from mrforge.importing.bids_validate import format_report, validate_dataset
 from mrforge.importing.classify import load_rules
 from mrforge.importing.convert import convert_import
-from mrforge.importing.manifest import load_manifest
+from mrforge.importing.manifest import load_manifest, save_manifest
 from mrforge.importing.organize import organize
 from mrforge.importing.scan import scan_source
 from mrforge.importing.sourcedata import remove_dicom
+from mrforge.importing.undo import undo_import
 from mrforge.models import JobStatus, Operation
 from mrforge.pipeline import parse_pipeline
 from mrforge.runner.jobs import get_job, kill_orphans, list_jobs, now, process_alive
@@ -52,6 +53,9 @@ def _scan(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
     manifest, is_new = scan_source(
         ws, Path(args["source"]), args.get("subject"), args.get("session")
     )
+    if is_new and args.get("started_by"):
+        manifest.created_by = args["started_by"]
+        save_manifest(ws, manifest)
     return {"import_id": manifest.id, "is_new": is_new}
 
 
@@ -95,11 +99,18 @@ def _remove_dicom(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, An
     return {"import_id": manifest.id, "freed_bytes": plan.size_bytes}
 
 
+def _undo_import(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
+    manifest = load_manifest(ws, args.get("import_id"))
+    log("Removing the files this import wrote into the data folder...")
+    plan = undo_import(ws, manifest, args.get("started_by"))
+    return {"import_id": manifest.id, "files_removed": len(plan.files)}
+
+
 def _pipeline(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
     spec = parse_pipeline(args["spec"])
     queue = LocalJobQueue(ws, max_concurrency=args.get("max_concurrency", 2))
     log(f"Running pipeline '{spec.name}'...")
-    outcomes = run_pipeline(ws, queue, spec)
+    outcomes = run_pipeline(ws, queue, spec, args.get("started_by"))
     for o in outcomes:
         log(f"{o.step_id}: {o.action.value}")
     failed = [o for o in outcomes if o.action == Action.FAILED]
@@ -120,6 +131,7 @@ HANDLERS: dict[str, Handler] = {
     "scan": _scan,
     "import_run": _import_run,
     "remove_dicom": _remove_dicom,
+    "undo_import": _undo_import,
     "pipeline": _pipeline,
 }
 
@@ -160,7 +172,9 @@ def active_operation(ws: Workspace) -> Operation | None:
     return None
 
 
-def start_operation(ws: Workspace, kind: str, title: str, args: dict[str, Any]) -> int:
+def start_operation(
+    ws: Workspace, kind: str, title: str, args: dict[str, Any], started_by: str | None = None
+) -> int:
     """Create an operation and start its worker. Refuses while another one is running."""
     if kind not in HANDLERS:
         raise StepError(
@@ -177,7 +191,13 @@ def start_operation(ws: Workspace, kind: str, title: str, args: dict[str, Any]) 
             suggested_action="Wait for it to finish (or cancel it), then try again.",
         )
     with ws.session() as s:
-        op = Operation(kind=kind, title=title, args=args, status=JobStatus.QUEUED.value)
+        op = Operation(
+            kind=kind,
+            title=title,
+            args=args,
+            status=JobStatus.QUEUED.value,
+            started_by=started_by,
+        )
         s.add(op)
         s.flush()
         op_id = op.id
@@ -287,7 +307,7 @@ def run_operation(ws: Workspace, op_id: int) -> JobStatus:
     result: dict[str, Any] | None = None
     error: StepError | None = None
     try:
-        result = HANDLERS[op.kind](ws, op.args, log)
+        result = HANDLERS[op.kind](ws, {**op.args, "started_by": op.started_by}, log)
     except Cancelled:
         status, error = JobStatus.CANCELLED, StepError("CANCELLED", "The action was cancelled.")
     except StepError as err:

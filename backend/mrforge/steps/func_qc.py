@@ -2,7 +2,7 @@
 
 QC flags; it never decides (CLAUDE.md principle 6). This step reports head motion and shows
 the registration (and distortion correction) so that the researcher can judge them. Whether
-to keep or exclude a subject is a separate, recorded decision (Stage 6).
+to keep or exclude a subject is a separate, recorded decision (Stage 7).
 
 * Motion: the six realignment parameters of FEAT's motion correction, a plot, and framewise
   displacement (Power et al. 2012: the sum of the absolute frame-to-frame changes of the three

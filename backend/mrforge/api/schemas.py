@@ -23,6 +23,9 @@ class Health(BaseModel):
     version: str
     workspaces_root: str
     tools: dict[str, str | None]  # tool name -> version, or None when not found
+    disk_free_gb: float | None = None  # free space where the workspaces are kept
+    disk_total_gb: float | None = None
+    cpu_cores: int | None = None
 
 
 # -- workspaces -------------------------------------------------------------------------------
@@ -34,6 +37,7 @@ class WorkspaceInfo(BaseModel):
     created: datetime | None = None
     subjects: int = 0
     imports: int = 0
+    created_by: str | None = None  # researcher profile that created it
 
 
 class WorkspaceCreate(BaseModel):
@@ -92,6 +96,8 @@ class ImportSummary(BaseModel):
     organized: int
     dicom_removed: bool
     created: datetime
+    created_by: str | None = None
+    undone: datetime | None = None  # when the import was last undone
 
 
 class ImportKind(BaseModel):
@@ -162,6 +168,7 @@ class OperationInfo(BaseModel):
     finished: datetime | None
     result: dict[str, Any] | None
     error: ErrorBody | None
+    started_by: str | None = None
 
 
 class OperationStarted(BaseModel):
@@ -180,6 +187,7 @@ class JobInfo(BaseModel):
     started: datetime | None
     finished: datetime | None
     error: ErrorBody | None
+    started_by: str | None = None
 
 
 class LogText(BaseModel):
@@ -197,11 +205,14 @@ class AnatRequest(BaseModel):
 
 
 class ViewerImage(BaseModel):
-    name: str
-    role: Literal["underlay", "overlay"]
+    name: str  # plain-language name
+    group: str  # "Raw data", "Anatomical results", "Functional results", "Fieldmap results"
+    role: Literal["underlay", "overlay"]  # what it is usually shown as
     relpath: str
     url: str
     colormap: str | None = None
+    volumes: int | None = None  # for time series
+    size_bytes: int = 0
 
 
 class WorkspaceState(BaseModel):
@@ -229,3 +240,25 @@ class QcGroup(BaseModel):
     step: str
     title: str
     items: list[QcEntry]
+
+
+class ResearcherInfo(BaseModel):
+    id: int
+    name: str
+    last_seen: datetime | None = None
+
+
+class ResearcherCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
+class UndoPlanInfo(BaseModel):
+    """What undoing an import would do (shown before the user confirms)."""
+
+    subject: str
+    series: int  # series the import wrote
+    files: int  # files that would be removed from the data folder
+    size_bytes: int
+    only_copy: int  # images that have no other copy in the workspace
+    stale_steps: list[str]  # processing steps whose inputs would be gone
+    problems: list[str]  # files changed since the import (undo is refused)

@@ -12,7 +12,7 @@ export function DesignSystem() {
         pieces instead of inventing new styles.
       </Text>
 
-      <Heading size={type.sectionTitle}>Buttons</Heading>
+      <Heading as="h2" size={type.sectionTitle}>Buttons</Heading>
       <Flex gap={space.group}>
         <Button>Import series</Button>
         <Button variant="soft">Set task</Button>
@@ -22,7 +22,7 @@ export function DesignSystem() {
         </Button>
       </Flex>
 
-      <Heading size={type.sectionTitle}>Status and confidence</Heading>
+      <Heading as="h2" size={type.sectionTitle}>Status and confidence</Heading>
       <Flex gap={space.inline} wrap="wrap">
         {["Queued", "Running", "Completed", "Failed", "Interrupted", "Cancelled"].map((s) => (
           <StatusBadge key={s} status={s} />
@@ -35,12 +35,12 @@ export function DesignSystem() {
         <ActionBadge action="ask" />
       </Flex>
 
-      <Heading size={type.sectionTitle}>Messages</Heading>
+      <Heading as="h2" size={type.sectionTitle}>Messages</Heading>
       <Callout.Root color="amber">
         <Callout.Text>2 series need your input. They are not imported until you decide.</Callout.Text>
       </Callout.Root>
 
-      <Heading size={type.sectionTitle}>Table</Heading>
+      <Heading as="h2" size={type.sectionTitle}>Table</Heading>
       <Card>
         <Table.Root>
           <Table.Header>

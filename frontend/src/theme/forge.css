@@ -1,0 +1,22 @@
+/* Forge theme: the colours Radix Themes does not provide. Part of the design tokens
+   (with tokens.ts). Screens use these variables, never raw colours. */
+
+:root {
+  /* the sidebar is charcoal in light and dark mode */
+  --forge-sidebar-bg: #1c1b22;
+  --forge-sidebar-fg: #e8e6ee;
+  --forge-sidebar-muted: #9a97a6;
+  --forge-sidebar-hover: rgba(255, 255, 255, 0.07);
+  --forge-sidebar-border: rgba(255, 255, 255, 0.09);
+}
+
+/* Forge amber: Radix orange, shifted towards amber, with dark text on it (white on this
+   amber would not be readable). */
+.radix-themes[data-accent-color="orange"],
+.radix-themes[data-accent-color="orange"].dark,
+.dark .radix-themes[data-accent-color="orange"] {
+  --accent-9: #e8871e;
+  --accent-10: #d97706;
+  --accent-contrast: #1c1b22;
+  --focus-8: #e8871e;
+}

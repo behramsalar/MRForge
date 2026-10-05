@@ -1,6 +1,25 @@
 # Progress
 
-**Current stage:** Stage 5 (functional preprocessing, built on FEAT) accepted by the user (tag `stage5-accepted`). Stages 0-3 and 5 accepted (tags `stage0-accepted` ... `stage5-accepted`). Next: a UI overhaul (planned in plan mode), then Stage 4 (lab usability test) on the new design.
+**Current stage:** Stage 4 UI overhaul, all sub-steps built (branch `stage-4-ui-overhaul`); waiting for the user's manual check, then the lab user test. Stages 0-3 and 5 accepted (tags up to `stage5-accepted`).
+
+Built: O1 app shell and Forge theme (light/dark), O2 light researcher profiles, O3 Dashboard, O4 Data section (with undo of a whole import), O5 global Viewer, full processing (stage registry, confirmation dialog, live progress window), O6 Jobs history and Settings (disk space, cores), O7 polish (empty states, h1/h2 structure, keyboard check, `docs/design-system.md`).
+
+Plan change (2026-10-05): Stage 6 is now artifact rejection (MELODIC, component review, `fsl_regfilt`, optional ICA-AROMA); batch, presets (7e) and QC decisions are Stage 7; reports (with flexible QC pictures) Stage 8. See `docs/DECISIONS.md`.
+
+Last test status: `pytest -m "not fsl"` 445 passed; frontend `npm test` 22 passed, `tsc` clean; ruff and mypy clean. The `-m fsl` suite was not re-run since Stage 5. Not tested: full processing on a subject with several functional runs through the UI; fieldmap-less subject through the new progress window (a subject with a fieldmap was).
+
+Next action: user checks the Stage 4 manual checklist below; then a lab member runs the flow unaided (`docs/ux-findings.md`).
+
+### Stage 4 manual checklist
+1. `cd frontend && npm run build`, then `mrforge serve`; open http://127.0.0.1:8000.
+2. Create a workspace: it opens on the Dashboard with "Start your first import".
+3. Import scans (Data), check the series table, import; undo the import and redo it.
+4. Process: pick a subject, press Process, read the dialog, confirm. Press Details in the top bar: steps, current activity and elapsed time update.
+5. Type 200 in "Volumes discarded": the dialog explains the problem in words (no "unreachable" message).
+6. Kill `mrforge serve` mid-run and restart: the job shows "Stopped early"; Resume continues.
+7. Viewer: open the T1 and an overlay from Process results; switch light/dark and reload (the choice stays).
+8. Jobs: filters, "Show earlier attempts", View log on a row. Settings: tools, disk space.
+9. Pick another researcher name: new work is tagged with it.
 
 ## Stage 5 (Functional preprocessing, on FEAT)
 | Sub-step | Status |
@@ -57,7 +76,7 @@ Demo workspace with your real session imported: `~/Documents/mrforge-workspaces/
 - Several full-size copies exist while importing (DICOM copy, converted files, rawbids is hard-linked); `sourcedata/` and `imports/…/converted/` can be removed by hand once an import is final, but MRForge does not do this itself yet.
 - One `fsl_anat` per T1 input per subject: two runs with different labels on the same input would share the native `.anat` folder and several result names.
 - One `LocalJobQueue` per workspace at a time (two could start the same queued job).
-- Pipelines run steps sequentially; per-subject parallelism is Stage 6.
+- Pipelines run steps sequentially; per-subject parallelism is Stage 7.
 - No QC output yet for `bet`/`fsl_anat` (QC contract exists; real QC arrives in Stage 5).
 - `fsl_anat` leaves stray `imcp.e<PID>`/`imcp.o<PID>` files; ignored.
 - The claim "fsl_anat on a skull-stripped input skips registration" is from the script source, not an experiment.
@@ -78,4 +97,4 @@ Demo workspace with your real session imported: `~/Documents/mrforge-workspaces/
 - Fieldmap handling: your DICOM set contains gradient-echo field maps; types to confirm before Stage 5c.
 
 ## Next action
-Plan the UI overhaul (sidebar navigation, themed light/dark look, global viewer, dashboard, full-processing flow with a confirmation dialog). The Stage 5 REVIEW(domain) items are still open for the user. Pictures for the report page are improved in Stage 7 (user decision).
+O6 (Jobs history, Settings, bell and failure screens) and O7 (polish, design-system document, manual checklist), then the lab user test. Later stages that plug into full processing: artifact rejection, WM/CSF regression, ROI-to-ROI correlation (add to the stage registry in `backend/mrforge/processing.py`). The Stage 5 REVIEW(domain) items are still open for the user.

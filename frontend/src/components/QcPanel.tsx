@@ -22,7 +22,7 @@ export function QcPanel({ ws, subject }: { ws: string; subject: string }) {
   if (groups.length === 0) return null;
   return (
     <Flex direction="column" gap={space.group}>
-      <Heading size={type.sectionTitle}>Quality checks</Heading>
+      <Heading as="h2" size={type.sectionTitle}>Quality checks</Heading>
       <Text size={type.help} color="gray">
         These are signs to look at, not verdicts. MRForge never excludes data by itself.
       </Text>

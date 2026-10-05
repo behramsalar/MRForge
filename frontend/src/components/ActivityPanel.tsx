@@ -7,6 +7,7 @@ import type { ErrorBody, WorkspaceState } from "../api/types";
 import { elapsed } from "../lib/labels";
 import { space, type } from "../theme/tokens";
 import { ErrorCallout } from "./ErrorCallout";
+import { LiveProgressDialog } from "./LiveProgressDialog";
 import { LogButton } from "./LogButton";
 
 /** Always visible in a workspace: what is running now, and how the last action ended. */
@@ -38,14 +39,22 @@ export function ActivityPanel({ ws, state }: { ws: string; state: WorkspaceState
         </Callout.Icon>
         <Flex align="center" justify="between" gap={space.group} wrap="wrap" style={{ width: "100%" }}>
           <Text size={type.body}>
-            {running.title}…{" "}
+            {running.title}…{running.started_by ? ` (started by ${running.started_by})` : ""}{" "}
             <Text color="gray" size={type.help}>
               ({elapsed(running.started ?? running.created, null)})
               {runningJob ? ` Step: ${runningJob.label}` : ""}
             </Text>
           </Text>
           <Flex gap={space.inline}>
-            <LogButton ws={ws} target={{ kind: "operation", id: running.id }} label="Details" />
+            <LiveProgressDialog
+              ws={ws}
+              operationId={running.id}
+              trigger={
+                <Button size="2" variant="outline">
+                  Details
+                </Button>
+              }
+            />
             <Button
               size="2"
               color="red"

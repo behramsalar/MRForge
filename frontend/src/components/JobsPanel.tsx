@@ -35,11 +35,13 @@ export function JobsPanel({
   jobs,
   busy,
   action,
+  hideTable = false,
 }: {
   ws: string;
   jobs: JobInfo[];
   busy: boolean;
   action?: (job: JobInfo) => ReactNode; // a button for a finished step, e.g. "View result"
+  hideTable?: boolean; // only the failure messages (the Jobs page has its own history table)
 }) {
   useTick(jobs.some((j) => j.status === "Running"));
   const resume = useMutation({
@@ -48,9 +50,11 @@ export function JobsPanel({
   const rows = latestJobs(jobs);
   if (rows.length === 0) return null;
   const showRun = rows.some((j) => j.run);
+  const showWho = rows.some((j) => j.started_by);
   return (
     <Flex direction="column" gap={space.group}>
-      <Heading size={type.sectionTitle}>Progress</Heading>
+      {!hideTable && <Heading as="h2" size={type.sectionTitle}>Progress</Heading>}
+      {!hideTable && (
       <Card>
         <Table.Root>
           <Table.Header>
@@ -59,6 +63,7 @@ export function JobsPanel({
               {showRun && <Table.ColumnHeaderCell>Recording</Table.ColumnHeaderCell>}
               <Table.ColumnHeaderCell>Subject</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
+              {showWho && <Table.ColumnHeaderCell>Started by</Table.ColumnHeaderCell>}
               <Table.ColumnHeaderCell>Started</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell>Time</Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell />
@@ -73,6 +78,7 @@ export function JobsPanel({
                 <Table.Cell>
                   <StatusBadge status={j.status} />
                 </Table.Cell>
+                {showWho && <Table.Cell>{j.started_by ?? ""}</Table.Cell>}
                 <Table.Cell>{when(j.started)}</Table.Cell>
                 <Table.Cell>{elapsed(j.started, j.finished)}</Table.Cell>
                 <Table.Cell>{j.status === "Completed" && action ? action(j) : null}</Table.Cell>
@@ -81,6 +87,7 @@ export function JobsPanel({
           </Table.Body>
         </Table.Root>
       </Card>
+      )}
       {rows
         .filter((j) => j.error && (j.status === "Failed" || j.status === "Interrupted"))
         .map((j) => (

@@ -97,3 +97,23 @@ export function useTick(active: boolean): void {
     return () => clearInterval(id);
   }, [active]);
 }
+
+export function useOverview(ws: string) {
+  return useQuery({
+    queryKey: ["ws", ws, "overview"],
+    queryFn: () => call(api.GET("/api/workspaces/{ws_id}/overview", { params: { path: { ws_id: ws } } })),
+  });
+}
+
+export function useSubjectData(ws: string, subject: string | undefined) {
+  return useQuery({
+    queryKey: ["ws", ws, "subject-data", subject],
+    enabled: !!subject,
+    queryFn: () =>
+      call(
+        api.GET("/api/workspaces/{ws_id}/subjects/{label}/data", {
+          params: { path: { ws_id: ws, label: subject! } },
+        }),
+      ),
+  });
+}

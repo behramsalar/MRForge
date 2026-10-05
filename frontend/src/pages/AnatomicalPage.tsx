@@ -56,7 +56,7 @@ export function AnatomicalPage({ ws, state }: { ws: string; state: WorkspaceStat
       {withT1.length === 0 && subjects.data && (
         <Callout.Root>
           <Callout.Text>
-            There is no T1 image to process yet. <a href={href(ws, "import")}>Import scans first.</a>
+            There is no T1 image to process yet. <a href={href(ws, "data")}>Import scans first.</a>
           </Callout.Text>
         </Callout.Root>
       )}
@@ -145,7 +145,7 @@ export function AnatomicalPage({ ws, state }: { ws: string; state: WorkspaceStat
         action={(j) =>
           j.step === "fsl_anat" && j.subject ? (
             <Button asChild size="1">
-              <a href={href(ws, "view", j.subject)}>View result</a>
+              <a href={href(ws, "viewer", j.subject)}>View result</a>
             </Button>
           ) : null
         }

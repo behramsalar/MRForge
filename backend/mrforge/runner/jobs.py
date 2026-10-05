@@ -116,6 +116,7 @@ def create_job(
     session: str | None = None,
     pipeline_run_id: int | None = None,
     label: str | None = None,
+    started_by: str | None = None,
 ) -> int:
     """Validate inputs/params against the step's specs and queue a job. Returns the job id."""
     step, inputs_dict, params_dict = normalise_specs(step_name, inputs, params)
@@ -135,6 +136,7 @@ def create_job(
             param_hash=param_hash(params_dict),
             status=JobStatus.QUEUED.value,
             pipeline_run_id=pipeline_run_id,
+            started_by=started_by,
             output_dir=output_rel,
             run_dir=run_rel,
         )

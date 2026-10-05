@@ -28,7 +28,10 @@ REF = re.compile(r"\$\{([A-Za-z0-9_-]+)\.([A-Za-z0-9_]+)\}")
 
 
 class PipelineStep(BaseModel):
-    id: str
+    id: str  # what later steps refer to; unique in the pipeline
+    # Names the step's run folder and result descriptions (default: the id). Several steps
+    # can share one label when their inputs differ (for example one per recording).
+    label: str | None = None
     step: str
     subject: str | None = None
     session: str | None = None

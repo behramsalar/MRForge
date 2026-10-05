@@ -299,3 +299,15 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 ### BOLD_NOT_4D / MNI_TEMPLATE_MISSING / MNI_RESULT_UNEXPECTED
 - **What happened:** The standard-space step was given something that is not a time series, FSL's MNI template was not found, or the result had an unexpected size.
 - **Suggested action:** Choose the preprocessed (or cleaned) functional run; check the FSL installation; open the raw log and run the step again.
+
+## Undoing an import (after Stage 5)
+
+### NOTHING_TO_UNDO
+- **What happened:** The import has not written anything into the data folder (never imported, or already undone).
+- **Suggested action:** Nothing to do; change the decisions and import it.
+
+### UNDO_FILES_CHANGED
+- **What happened:** Some imported files were changed after the import, so nothing was removed.
+- **Probable cause:** MRForge never edits raw files; they were changed outside it.
+- **Suggested action:** Restore the original files, or ask whoever looks after MRForge for help.
+

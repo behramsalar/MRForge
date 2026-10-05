@@ -79,7 +79,7 @@ Running -> Interrupted        (set at startup if a Running job has no live proce
 
 - On startup the runner marks stale `Running` jobs `Interrupted`.
 - **[PROPOSAL]** Liveness is decided by a recorded PID plus process start time, not just PID, to survive PID reuse after a reboot.
-- Max concurrency is configurable. Jobs wait rather than oversubscribe (richer scheduling in Stage 6).
+- Max concurrency is configurable. Jobs wait rather than oversubscribe (richer scheduling in Stage 7).
 
 ## 6. Provenance
 

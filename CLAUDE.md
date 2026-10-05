@@ -32,7 +32,7 @@ The UI looks linear (Import → Anatomical → Functional → Denoising → QC �
 
 1. **The UI never builds shell commands.** The path is UI → API → Step objects → job runner. Only Step classes know FSL command lines.
 2. **No monolithic `preprocess_subject()`.** Every operation is a separate `Step` with declared inputs, parameters, outputs, dependencies, validation, logs and QC. An established FSL tool that itself bundles several operations (`fsl_anat`, FEAT pre-stats) is wrapped as ONE Step whose complete settings are recorded (for FEAT: the `design.fsf`); everything around it stays separate Steps. (Amended in Stage 5 with the user's approval.)
-3. **Raw data is immutable.** `sourcedata/` and `rawbids/` are never modified after creation. All results go to `derivatives/`.
+3. **Raw data is immutable.** `sourcedata/` and `rawbids/` are never modified after creation. All results go to `derivatives/`. The one exception is the user's explicit **undo of a whole import** (confirmed in the UI or CLI): it removes only the files that import wrote into `rawbids/` (checked against their recorded hashes); converted copies and scanner files stay. (Amended after Stage 5 with the user's approval.)
 4. **Provenance for every run.** Record command, parameters, input files (with hashes), output files, tool versions, return code, stdout, stderr, start and finish times.
 5. **Resume, don't redo.** A completed and valid step is never rerun. A failed pipeline resumes at the failed step.
 6. **Flag, don't decide.** QC can warn, but only the researcher accepts or excludes a subject, with a recorded reason.
@@ -266,15 +266,20 @@ Each stage lists what to build, then **how the user tests it**. Do not skip ahea
 5. Open the viewer on the T1 with the brain-extraction or segmentation overlay, and check that overlays align.
 6. Check that the UI only uses components and tokens from the design system (no one-off styles).
 
-### Stage 4 — Lab user test and design pass (user-led)
+### Stage 4 — UI overhaul and design pass, then lab user test
+
+The Stage 3 UI was a vertical slice. This stage (planned with the user, built after Stage 5) replaces it with the real design: a dark sidebar of functions (a tree for groups such as Process), a top bar with activity and the light/dark switch, a themed look (Forge amber, light and dark), a Dashboard, a Data section, a global Viewer, Jobs and Settings, and **full processing as the default way to start work**, with a confirmation dialog. Light researcher profiles (a name, no login) tag who started what. Plans and decisions: `docs/DECISIONS.md`.
+
+**Claude Code tasks (built)**
+- O1 app shell and theme, O2 researcher profiles, O3 Dashboard, O4 Data section, O5 global Viewer, full processing (stage registry: anatomical, functional, standard space; further stages such as artifact rejection, WM/CSF regression and ROI-to-ROI correlation are added to the registry), O6 Jobs and Settings, O7 polish and `docs/design-system.md`.
 
 **User tasks**
-- Have a less experienced lab member run the Stage 3 flow with no help from you. Watch silently and write down every hesitation and confusion in `docs/ux-findings.md`.
+- Have a less experienced lab member run the full flow with no help from you. Watch silently and write down every hesitation and confusion in `docs/ux-findings.md`.
 
-**Claude Code tasks**
+**Claude Code tasks (after the test)**
 - 4a. Turn `docs/ux-findings.md` into a prioritized fix list and propose it to the user.
 - 4b. Apply the approved fixes and refine the design system (tokens, components, copy, empty states, error wording).
-- 4c. Finalize `docs/design-system.md` and add a "UI rules" section to this file.
+- 4c. Finalize `docs/design-system.md` and the "UI rules" section of this file.
 
 **Manual test checklist**
 - A second, different lab member completes the flow with fewer or no stumbles than the first.
@@ -300,13 +305,31 @@ Core preprocessing is done by FSL's own FEAT (pre-stats only), driven from a `de
 4. Interrupt mid-pipeline and confirm resume starts at the right step.
 5. Review the list of `REVIEW(domain)` items with Claude Code.
 
-### Stage 6 — Batch, resources, QC decisions
+### Stage 6 — Artifact rejection (denoising)
+
+Moved ahead of batch work (user decision, 2026-10-05). It runs between Functional and Standard space in the full-processing stage registry; standard space then uses the cleaned data (see 5e).
+
+**Build** (each a separate `Step`, with its own QC, tests and a comparison against a manual FSL run)
+- 6a. MELODIC (single-subject ICA) on the FEAT result.
+- 6b. Component review screen: signal / noise / uncertain per component (spatial map, time course, power spectrum), decisions stored as provenance (who, when); components are only flagged, never classified without the researcher.
+- 6c. `fsl_regfilt` removes the chosen noise components.
+- 6d. ICA-AROMA as an optional automatic proposal that the researcher still confirms (if installed).
+- 6e. Before/after QC and the stage in the full-processing dialog (skippable).
+- 6f. WM/CSF/motion regression is NOT part of this stage (later, MVP 2).
+
+**Manual test checklist**
+1. Run MELODIC in the app and by hand on the same data; the components match.
+2. Classify components, remove them, and compare with a manual `fsl_regfilt` using the same list.
+3. Interrupt mid-run and resume. The standard-space step uses the cleaned data.
+
+### Stage 7 — Batch, presets, resources, QC decisions
 
 **Build**
-- 6a. Multi-subject selection and batch runs using the same pipeline (no special "group mode").
-- 6b. Resource scheduler: max simultaneous subjects, CPU threads per subject, total CPU cap, memory reserve, and Balanced / Max performance / Low impact presets. Jobs wait instead of oversubscribing the machine.
-- 6c. QC decision workflow: per-subject Accept / Review / Exclude with a required reason, stored as provenance. Motion summary (mean/median/max FD, number of volumes above threshold) with warnings that flag but never exclude.
-- 6d. Dataset dashboard (counts of processed / failed / needs review / excluded, subject table).
+- 7a. Multi-subject selection and batch runs using the same pipeline (no special "group mode").
+- 7b. Resource scheduler: max simultaneous subjects, CPU threads per subject, total CPU cap, memory reserve, and Balanced / Max performance / Low impact presets. Jobs wait instead of oversubscribing the machine.
+- 7c. QC decision workflow: per-subject Accept / Review / Exclude with a required reason, stored as provenance. Motion summary (mean/median/max FD, number of volumes above threshold) with warnings that flag but never exclude.
+- 7d. Dataset dashboard (counts of processed / failed / needs review / excluded, subject table).
+- 7e. Processing presets: a named bundle of the full-processing settings (stages on or off, smoothing, high-pass, fieldmap use, ...), chosen in the confirmation dialog and recorded with the run. Two example presets to start; users cannot yet build their own steps or reorder them (later, MVP 4).
 
 **Manual test checklist**
 1. Run the pipeline on 5–10 subjects. The machine stays responsive and the resource limits are respected (watch `htop`).
@@ -314,12 +337,12 @@ Core preprocessing is done by FSL's own FEAT (pre-stats only), driven from a `de
 3. Record QC decisions, restart the app, and confirm they persist with reasons.
 4. A high-motion subject is flagged but not excluded automatically.
 
-### Stage 7 — Reports and system page (completes MVP 1)
+### Stage 8 — Reports and system page (completes MVP 1)
 
 **Build**
-- 7a. HTML preprocessing report per subject: acquisition, structural and functional processing, motion, registration, QC, warnings, user decisions, software versions, parameters, commands.
-- 7b. Command history / provenance viewer (with **Copy command** and **Re-run**).
-- 7c. System status page (the Stage 0 environment checks in the UI).
+- 8a. HTML preprocessing report per subject (registration QC pictures built from separate slice images, like FEAT's, that the page can reorder, resize or hide): acquisition, structural and functional processing, motion, registration, QC, warnings, user decisions, software versions, parameters, commands.
+- 8b. Command history / provenance viewer (with **Copy command** and **Re-run**).
+- 8c. System status page (the Stage 0 environment checks in the UI).
 
 **Manual test checklist**
 - Generate a report for a processed subject and verify every number against the logs and `provenance.json`.
@@ -330,7 +353,7 @@ Core preprocessing is done by FSL's own FEAT (pre-stats only), driven from a `de
 
 Each follows the same pattern: backend step with tests and a comparison against manual FSL, quick check, then its screen in the agreed design, then a manual test checklist.
 
-- **MVP 2:** MELODIC, manual ICA component classification screen (signal / noise / uncertain → `fsl_regfilt`), WM/CSF/motion nuisance regression with mask preview, ICA-AROMA, before/after denoising QC, deterministic methods-text generator, motion scrubbing.
+- **MVP 2:** WM/CSF/motion nuisance regression with mask preview, deterministic methods-text generator, motion scrubbing (MELODIC, component classification and ICA-AROMA moved to Stage 6).
 - **MVP 3:** atlas abstraction and browser (Schaefer, AAL, Harvard-Oxford, Yeo, Brainnetome), custom ROIs, time-series extraction, connectivity matrices (Pearson/Spearman, Fisher z), interactive matrix linked to the viewer, connectivity report.
 - **MVP 4:** dataset snapshots, pipeline presets, versions and cloning, advanced QC (DVARS, tSNR, carpet plots), group analysis (FEAT, randomise, dual regression, NBS) as a separate product area.
 
@@ -339,7 +362,7 @@ Each follows the same pattern: backend step with tests and a comparison against 
 ## 9. Out of scope until told otherwise
 
 - Group-level statistics, task fMRI first-level analysis, diffusion processing.
-- Celery, PostgreSQL, multi-node compute, user accounts and authentication.
+- Celery, PostgreSQL, multi-node compute, and login/authentication (passwords, sessions, permissions). Light researcher profiles (a name picked on a shared computer, no password, used to tag and resume one's own work) are allowed since the UI overhaul; see `docs/DECISIONS.md`.
 - Any LLM-written scientific text.
 - Automatic subject exclusion.
 - Styling work during engine stages (Stages 0–2).
@@ -364,12 +387,17 @@ Regenerate typed client:     cd frontend && npm run gen:api   (API must be runni
 Frontend tests / types:      cd frontend && npm test ; npx tsc --noEmit
 ```
 
-## 11. Design system (set in Stage 3; refined in Stage 4)
+## 11. Design system (set in Stage 3; overhauled in Stage 4)
 
 ```text
-Component library:   Radix Themes (soft, rounded; indigo accent, slate grey)
-Design tokens file:  frontend/src/theme/tokens.ts   (only place for colours, spacing, text sizes)
-Reference page:      /?page=design  (see docs/design-system.md)
+Component library:   Radix Themes (no Tailwind)
+Look:                Forge: charcoal sidebar (dark in light and dark mode), amber accent,
+                     light / dark / follow-the-computer switch
+Design tokens:       frontend/src/theme/tokens.ts and frontend/src/theme/forge.css
+                     (the only places for colours, spacing, text sizes, status colours)
+App shell:           frontend/src/shell/  (sidebar items in nav.ts: one line per new function)
+Reference page:      #/design  (see docs/design-system.md)
 Rules:               reuse existing components; no one-off styles; plain-language copy;
                      advanced options collapsed by default; colours chosen by meaning
+                     (the same word always has the same colour); empty states invite an action
 ```

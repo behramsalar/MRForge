@@ -4,6 +4,41 @@
  */
 
 export interface paths {
+    "/api/researchers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Researchers */
+        get: operations["list_researchers_api_researchers_get"];
+        put?: never;
+        /** Create Researcher */
+        post: operations["create_researcher_api_researchers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Me */
+        get: operations["me_api_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -48,6 +83,46 @@ export interface paths {
         };
         /** Get Workspace */
         get: operations["get_workspace_api_workspaces__ws_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/subjects/{label}/data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Subject Files
+         * @description The raw images of a subject, for the Data page.
+         */
+        get: operations["subject_files_api_workspaces__ws_id__subjects__label__data_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overview
+         * @description Where every subject stands, for the dashboard.
+         */
+        get: operations["overview_api_workspaces__ws_id__overview_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -175,6 +250,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/imports/{import_id}/undo-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Undo Plan */
+        get: operations["get_undo_plan_api_workspaces__ws_id__imports__import_id__undo_plan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/imports/{import_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo Import Route
+         * @description Remove what an import wrote into the data folder so it can be decided and imported
+         *     again. Only done on purpose: the page asks for confirmation first.
+         */
+        post: operations["undo_import_route_api_workspaces__ws_id__imports__import_id__undo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/imports/{import_id}/remove-dicom": {
         parameters: {
             query?: never;
@@ -235,6 +348,27 @@ export interface paths {
         };
         /** Operation */
         get: operations["operation_api_workspaces__ws_id__operations__op_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/operations/{op_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Operation Progress Route
+         * @description Where a running (or finished) operation is: its steps, the running one and what it
+         *     is doing at this moment.
+         */
+        get: operations["operation_progress_route_api_workspaces__ws_id__operations__op_id__progress_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -402,6 +536,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/process/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process Plan
+         * @description What full processing would do for a subject (for the confirmation dialog).
+         */
+        post: operations["process_plan_api_workspaces__ws_id__process_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process
+         * @description Run the confirmed plan: every enabled stage, in order, as one pipeline.
+         */
+        post: operations["process_api_workspaces__ws_id__process_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/subjects/{label}/qc": {
         parameters: {
             query?: never;
@@ -429,7 +603,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Viewer Images */
+        /**
+         * Viewer Images
+         * @description Every raw image and result of a subject that the viewer can show.
+         */
         get: operations["viewer_images_api_workspaces__ws_id__subjects__label__images_get"];
         put?: never;
         post?: never;
@@ -501,6 +678,20 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActivityItem */
+        ActivityItem: {
+            /** Title */
+            title: string;
+            /** Status */
+            status: string;
+            /**
+             * When
+             * Format: date-time
+             */
+            when: string;
+            /** Started By */
+            started_by: string | null;
+        };
         /** AnatRequest */
         AnatRequest: {
             /** Subject */
@@ -524,6 +715,38 @@ export interface components {
              * @default false
              */
             subcortical_segmentation: boolean;
+        };
+        /** AnatomicalOptions */
+        AnatomicalOptions: {
+            /**
+             * Strong Bias
+             * @default false
+             */
+            strong_bias: boolean;
+            /**
+             * Subcortical Segmentation
+             * @default false
+             */
+            subcortical_segmentation: boolean;
+        };
+        /** DataFile */
+        DataFile: {
+            /** Relpath */
+            relpath: string;
+            /** Name */
+            name: string;
+            /** Datatype */
+            datatype: string;
+            /** Suffix */
+            suffix: string;
+            /** Recording */
+            recording: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Shape */
+            shape?: number[] | null;
+            /** Repetition Time S */
+            repetition_time_s?: number | null;
         };
         /**
          * ErrorBody
@@ -581,44 +804,45 @@ export interface components {
             /** Entries */
             entries: components["schemas"]["FsEntry"][];
         };
-        /** FunctionalOptions */
-        FunctionalOptions: {
+        /** FullOptions */
+        FullOptions: {
             /** Subject */
             subject: string;
-            /** Bold */
-            bold: string;
-            /** Session */
-            session?: string | null;
             /**
-             * Delete Volumes
-             * @default 5
+             * Stages
+             * @default {}
              */
-            delete_volumes: number;
+            stages: {
+                [key: string]: boolean;
+            };
             /**
-             * Smoothing Fwhm Mm
-             * @default 5
+             * @default {
+             *       "strong_bias": false,
+             *       "subcortical_segmentation": false
+             *     }
              */
-            smoothing_fwhm_mm: number;
+            anatomical: components["schemas"]["AnatomicalOptions"];
             /**
-             * Highpass Cutoff S
-             * @default 150
+             * @default {
+             *       "delete_volumes": 5,
+             *       "smoothing_fwhm_mm": 5,
+             *       "highpass_cutoff_s": 150,
+             *       "use_fieldmap": true,
+             *       "slice_timing": false
+             *     }
              */
-            highpass_cutoff_s: number | null;
-            /**
-             * Use Fieldmap
-             * @default true
-             */
-            use_fieldmap: boolean;
-            /**
-             * To Mni
-             * @default true
-             */
-            to_mni: boolean;
-            /**
-             * Slice Timing
-             * @default false
-             */
-            slice_timing: boolean;
+            functional: components["schemas"]["mrforge__processing__FunctionalOptions"];
+        };
+        /** FullPlan */
+        FullPlan: {
+            /** Subject */
+            subject: string;
+            /** Stages */
+            stages: components["schemas"]["StagePlan"][];
+            /** Steps */
+            steps: number;
+            /** Can Start */
+            can_start: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -635,6 +859,12 @@ export interface components {
             tools: {
                 [key: string]: string | null;
             };
+            /** Disk Free Gb */
+            disk_free_gb?: number | null;
+            /** Disk Total Gb */
+            disk_total_gb?: number | null;
+            /** Cpu Cores */
+            cpu_cores?: number | null;
         };
         /** ImportDetail */
         ImportDetail: {
@@ -668,6 +898,10 @@ export interface components {
              * Format: date-time
              */
             created: string;
+            /** Created By */
+            created_by?: string | null;
+            /** Undone */
+            undone?: string | null;
             /** Series */
             series: components["schemas"]["SeriesRow"][];
             /** Kinds */
@@ -724,6 +958,10 @@ export interface components {
              * Format: date-time
              */
             created: string;
+            /** Created By */
+            created_by?: string | null;
+            /** Undone */
+            undone?: string | null;
         };
         /** JobInfo */
         JobInfo: {
@@ -754,6 +992,8 @@ export interface components {
             /** Finished */
             finished: string | null;
             error: components["schemas"]["ErrorBody"] | null;
+            /** Started By */
+            started_by?: string | null;
         };
         /** LogText */
         LogText: {
@@ -786,11 +1026,113 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             error: components["schemas"]["ErrorBody"] | null;
+            /** Started By */
+            started_by?: string | null;
+        };
+        /** OperationProgress */
+        OperationProgress: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /** Status */
+            status: string;
+            /** Started */
+            started: string | null;
+            /** Finished */
+            finished: string | null;
+            /** Started By */
+            started_by: string | null;
+            /** Steps */
+            steps: components["schemas"]["ProgressStep"][];
+            /** Current */
+            current: number | null;
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
+            /**
+             * Log Tail
+             * @default []
+             */
+            log_tail: string[];
         };
         /** OperationStarted */
         OperationStarted: {
             /** Operation Id */
             operation_id: number;
+        };
+        /** Overview */
+        Overview: {
+            /** Subjects Total */
+            subjects_total: number;
+            /** Processed */
+            processed: number;
+            /** Needs Attention */
+            needs_attention: number;
+            /** Running */
+            running: number;
+            /** Stages */
+            stages: components["schemas"]["StageSummary"][];
+            /** Subjects */
+            subjects: components["schemas"]["SubjectOverview"][];
+            /** Running Now */
+            running_now: components["schemas"]["RunningItem"][];
+            /** Recent */
+            recent: components["schemas"]["ActivityItem"][];
+        };
+        /**
+         * PlanItem
+         * @description One thing a stage will do (for the anatomical stage the subject's T1; for the
+         *     functional stage one recording).
+         */
+        PlanItem: {
+            /** Title */
+            title: string;
+            /** Note */
+            note?: string | null;
+            /**
+             * Settings
+             * @default []
+             */
+            settings: components["schemas"]["PlanSetting"][];
+        };
+        /** PlanSetting */
+        PlanSetting: {
+            /** Name */
+            name: string;
+            /** Value */
+            value: string;
+        };
+        /** ProgressStep */
+        ProgressStep: {
+            /** Id */
+            id: string;
+            /** Step */
+            step: string;
+            /**
+             * Run
+             * @default
+             */
+            run: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "waiting" | "running" | "done" | "reused" | "failed" | "stopped";
+            /** Job Id */
+            job_id?: number | null;
+            /** Started */
+            started?: string | null;
+            /** Finished */
+            finished?: string | null;
+            /** Now */
+            now?: string | null;
+            /**
+             * Live
+             * @default []
+             */
+            live: string[];
         };
         /** QcEntry */
         QcEntry: {
@@ -845,6 +1187,20 @@ export interface components {
             /** Only In Dicom */
             only_in_dicom: string[];
         };
+        /** ResearcherCreate */
+        ResearcherCreate: {
+            /** Name */
+            name: string;
+        };
+        /** ResearcherInfo */
+        ResearcherInfo: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Last Seen */
+            last_seen?: string | null;
+        };
         /** RunStatus */
         RunStatus: {
             /** Bold */
@@ -855,6 +1211,15 @@ export interface components {
             volumes?: number | null;
             fieldmap: components["schemas"]["FieldmapStatus"];
             slice_timing: components["schemas"]["SliceTimingStatus"];
+        };
+        /** RunningItem */
+        RunningItem: {
+            /** Title */
+            title: string;
+            /** Started */
+            started: string | null;
+            /** Started By */
+            started_by: string | null;
         };
         /** ScanRequest */
         ScanRequest: {
@@ -955,6 +1320,63 @@ export interface components {
             /** Reason */
             reason?: string | null;
         };
+        /** StagePlan */
+        StagePlan: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Description */
+            description: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Default Enabled */
+            default_enabled: boolean;
+            /** Can Run */
+            can_run: boolean;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Already Done
+             * @default false
+             */
+            already_done: boolean;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["PlanItem"][];
+        };
+        /** StageStatus */
+        StageStatus: {
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "none" | "unavailable" | "waiting" | "running" | "partial" | "done" | "failed" | "stopped";
+            /** Detail */
+            detail?: string | null;
+        };
+        /** StageSummary */
+        StageSummary: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
+        };
+        /** SubjectData */
+        SubjectData: {
+            /** Label */
+            label: string;
+            /** Files */
+            files: components["schemas"]["DataFile"][];
+            /** Bytes Total */
+            bytes_total: number;
+        };
         /** SubjectFile */
         SubjectFile: {
             /** Relpath */
@@ -974,6 +1396,39 @@ export interface components {
              */
             has_anat_result: boolean;
         };
+        /** SubjectOverview */
+        SubjectOverview: {
+            /** Label */
+            label: string;
+            /** N Files */
+            n_files: number;
+            anatomical: components["schemas"]["StageStatus"];
+            functional: components["schemas"]["StageStatus"];
+            /** Last Activity */
+            last_activity?: string | null;
+            /** Last Activity By */
+            last_activity_by?: string | null;
+        };
+        /**
+         * UndoPlanInfo
+         * @description What undoing an import would do (shown before the user confirms).
+         */
+        UndoPlanInfo: {
+            /** Subject */
+            subject: string;
+            /** Series */
+            series: number;
+            /** Files */
+            files: number;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Only Copy */
+            only_copy: number;
+            /** Stale Steps */
+            stale_steps: string[];
+            /** Problems */
+            problems: string[];
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -991,6 +1446,8 @@ export interface components {
         ViewerImage: {
             /** Name */
             name: string;
+            /** Group */
+            group: string;
             /**
              * Role
              * @enum {string}
@@ -1002,6 +1459,13 @@ export interface components {
             url: string;
             /** Colormap */
             colormap?: string | null;
+            /** Volumes */
+            volumes?: number | null;
+            /**
+             * Size Bytes
+             * @default 0
+             */
+            size_bytes: number;
         };
         /** WorkspaceCreate */
         WorkspaceCreate: {
@@ -1026,6 +1490,8 @@ export interface components {
              * @default 0
              */
             imports: number;
+            /** Created By */
+            created_by?: string | null;
         };
         /**
          * WorkspaceState
@@ -1041,6 +1507,73 @@ export interface components {
             /** Subjects */
             subjects: string[];
         };
+        /** FunctionalOptions */
+        mrforge__functional__FunctionalOptions: {
+            /** Subject */
+            subject: string;
+            /** Bold */
+            bold: string;
+            /** Session */
+            session?: string | null;
+            /**
+             * Delete Volumes
+             * @default 5
+             */
+            delete_volumes: number;
+            /**
+             * Smoothing Fwhm Mm
+             * @default 5
+             */
+            smoothing_fwhm_mm: number;
+            /**
+             * Highpass Cutoff S
+             * @default 150
+             */
+            highpass_cutoff_s: number | null;
+            /**
+             * Use Fieldmap
+             * @default true
+             */
+            use_fieldmap: boolean;
+            /**
+             * To Mni
+             * @default true
+             */
+            to_mni: boolean;
+            /**
+             * Slice Timing
+             * @default false
+             */
+            slice_timing: boolean;
+        };
+        /** FunctionalOptions */
+        mrforge__processing__FunctionalOptions: {
+            /**
+             * Delete Volumes
+             * @default 5
+             */
+            delete_volumes: number;
+            /**
+             * Smoothing Fwhm Mm
+             * @default 5
+             */
+            smoothing_fwhm_mm: number;
+            /**
+             * Highpass Cutoff S
+             * @default 150
+             */
+            highpass_cutoff_s: number | null;
+            /**
+             * Use Fieldmap
+             * @default true
+             */
+            use_fieldmap: boolean;
+            /**
+             * Slice Timing
+             * @default false
+             */
+            slice_timing: boolean;
+        };
     };
     responses: never;
     parameters: never;
@@ -1050,6 +1583,79 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_researchers_api_researchers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearcherInfo"][];
+                };
+            };
+        };
+    };
+    create_researcher_api_researchers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResearcherCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearcherInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    me_api_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearcherInfo"] | null;
+                };
+            };
+        };
+    };
     health_api_health_get: {
         parameters: {
             query?: never;
@@ -1141,6 +1747,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    subject_files_api_workspaces__ws_id__subjects__label__data_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                label: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubjectData"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_api_workspaces__ws_id__overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Overview"];
                 };
             };
             /** @description Validation Error */
@@ -1388,6 +2057,70 @@ export interface operations {
             };
         };
     };
+    get_undo_plan_api_workspaces__ws_id__imports__import_id__undo_plan_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UndoPlanInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    undo_import_route_api_workspaces__ws_id__imports__import_id__undo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     remove_dicom_copy_api_workspaces__ws_id__imports__import_id__remove_dicom_post: {
         parameters: {
             query?: never;
@@ -1501,6 +2234,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OperationInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    operation_progress_route_api_workspaces__ws_id__operations__op_id__progress_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                op_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationProgress"];
                 };
             };
             /** @description Validation Error */
@@ -1780,7 +2545,77 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["FunctionalOptions"];
+                "application/json": components["schemas"]["mrforge__functional__FunctionalOptions"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    process_plan_api_workspaces__ws_id__process_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FullOptions"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FullPlan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    process_api_workspaces__ws_id__process_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FullOptions"];
             };
         };
         responses: {

@@ -14,16 +14,17 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sse_starlette.sse import EventSourceResponse
 
-from mrforge import __version__
+from mrforge import __version__, accounts
 from mrforge.api import schemas as S
-from mrforge.bids import parse_bids_name
 from mrforge.config import load_config
+from mrforge.datafiles import SubjectData, subject_data
 from mrforge.engine import latest_pipeline_run
 from mrforge.errors import StepError
 from mrforge.fsl_env import find_fsl
@@ -33,6 +34,7 @@ from mrforge.importing.classify import effective_all, load_rules, set_override
 from mrforge.importing.manifest import list_manifests, load_manifest, save_manifest
 from mrforge.importing.models import ImportManifest
 from mrforge.importing.sourcedata import removal_plan
+from mrforge.importing.undo import undo_plan
 from mrforge.models import Job, JobStatus, Subject
 from mrforge.operations import (
     cancel_operation,
@@ -41,9 +43,13 @@ from mrforge.operations import (
     recover_stale_operations,
     start_operation,
 )
+from mrforge.overview import Overview, build_overview
 from mrforge.pipeline import PipelineSpec, PipelineStep
+from mrforge.processing import FullOptions, FullPlan, plan_full_processing
+from mrforge.progress import OperationProgress, operation_progress
 from mrforge.provenance import read_provenance
 from mrforge.runner.jobs import get_job, list_jobs, process_alive, recover_stale_jobs
+from mrforge.viewerimages import find_images
 from mrforge.workspace import Workspace, WorkspaceError
 
 SAFE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
@@ -108,6 +114,21 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         )
         return JSONResponse(body.model_dump(), status_code=400)
 
+    @app.exception_handler(RequestValidationError)
+    async def invalid_request_handler(_: Request, err: RequestValidationError) -> JSONResponse:
+        first = err.errors()[0] if err.errors() else {}
+        where = [
+            str(p).replace("_", " ") for p in first.get("loc", ()) if p not in ("body", "query")
+        ]
+        what = f"'{where[-1]}'" if where else "one of the values"
+        body = S.ErrorBody(
+            code="INVALID_VALUE",
+            message=f"The value for {what} is not allowed.",
+            probable_cause=str(first.get("msg", "The value is outside the allowed range.")),
+            suggested_action="Change the value and try again.",
+        )
+        return JSONResponse(body.model_dump(), status_code=422)
+
     def ws_of(ws_id: str) -> Workspace:
         if not SAFE_NAME.fullmatch(ws_id):
             raise StepError("UNKNOWN_WORKSPACE", "There is no such workspace.")
@@ -142,6 +163,8 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             organized=len(m.organized),
             dicom_removed=m.dicom_removed is not None,
             created=m.created,
+            created_by=m.created_by,
+            undone=m.undone,
         )
 
     def job_info(job: Job, subject: str | None) -> S.JobInfo:
@@ -159,6 +182,7 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             started=job.started,
             finished=job.finished,
             error=_body(job.error, job.error_code or "", job.error_message),
+            started_by=job.started_by,
         )
 
     def all_jobs(ws: Workspace) -> list[S.JobInfo]:
@@ -177,6 +201,41 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             finished=op.finished,
             result=op.result,
             error=_body(op.error, "", None),
+            started_by=op.started_by,
+        )
+
+    # -- researcher profiles ------------------------------------------------------------------
+
+    def current_researcher(request: Request) -> accounts.Researcher | None:
+        """The researcher this request is for, from the profile the page picked (header
+        ``X-MRForge-User``). This is the ONE place that decides who is acting: a login system
+        would replace this function with a session check and nothing else would change."""
+        raw = request.headers.get("x-mrforge-user", "")
+        if not raw.isdigit():
+            return None
+        return accounts.get_researcher(int(raw))
+
+    Researcher = Depends(current_researcher)
+
+    @app.get("/api/researchers", response_model=list[S.ResearcherInfo])
+    def list_researchers() -> list[S.ResearcherInfo]:
+        return [
+            S.ResearcherInfo(id=r.id, name=r.name, last_seen=r.last_seen)
+            for r in accounts.list_researchers()
+        ]
+
+    @app.post("/api/researchers", response_model=S.ResearcherInfo)
+    def create_researcher(req: S.ResearcherCreate) -> S.ResearcherInfo:
+        r = accounts.create_researcher(req.name)
+        return S.ResearcherInfo(id=r.id, name=r.name, last_seen=r.last_seen)
+
+    @app.get("/api/me", response_model=S.ResearcherInfo | None)
+    def me(researcher: accounts.Researcher | None = Researcher) -> S.ResearcherInfo | None:
+        if researcher is None:
+            return None
+        accounts.touch(researcher.id)
+        return S.ResearcherInfo(
+            id=researcher.id, name=researcher.name, last_seen=researcher.last_seen
         )
 
     # -- health and workspaces ----------------------------------------------------------------
@@ -194,7 +253,20 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             tools["bids-validator"] = "installed"
         except StepError:
             tools["bids-validator"] = None
-        return S.Health(version=__version__, workspaces_root=str(root), tools=tools)
+        free = total = None
+        try:
+            usage = shutil.disk_usage(root if root.is_dir() else root.parent)
+            free, total = round(usage.free / 1e9, 1), round(usage.total / 1e9, 1)
+        except OSError:
+            pass
+        return S.Health(
+            version=__version__,
+            workspaces_root=str(root),
+            tools=tools,
+            disk_free_gb=free,
+            disk_total_gb=total,
+            cpu_cores=os.cpu_count(),
+        )
 
     @app.get("/api/workspaces", response_model=list[S.WorkspaceInfo])
     def list_workspaces() -> list[S.WorkspaceInfo]:
@@ -212,6 +284,7 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
                         created=data.get("created"),
                         subjects=n_subjects,
                         imports=len(list_manifests(ws)),
+                        created_by=ws.created_by,
                     )
                 )
             except (OSError, ValueError, StepError, WorkspaceError):
@@ -219,15 +292,17 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         return found
 
     @app.post("/api/workspaces", response_model=S.WorkspaceInfo)
-    def create_workspace(req: S.WorkspaceCreate) -> S.WorkspaceInfo:
+    def create_workspace(
+        req: S.WorkspaceCreate, who: accounts.Researcher | None = Researcher
+    ) -> S.WorkspaceInfo:
         root.mkdir(parents=True, exist_ok=True)
         slug = _slug(req.name)
         folder, n = root / slug, 2
         while folder.exists():
             folder, n = root / f"{slug}-{n}", n + 1
-        ws = Workspace.create(folder, req.name.strip())
+        ws = Workspace.create(folder, req.name.strip(), who.name if who else None)
         opened[folder.name] = ws
-        return S.WorkspaceInfo(id=folder.name, name=ws.name)
+        return S.WorkspaceInfo(id=folder.name, name=ws.name, created_by=ws.created_by)
 
     @app.get("/api/workspaces/{ws_id}", response_model=S.WorkspaceInfo)
     def get_workspace(ws_id: str) -> S.WorkspaceInfo:
@@ -235,8 +310,27 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         with ws.session() as s:
             n_subjects = len(list(s.scalars(select(Subject.id))))
         return S.WorkspaceInfo(
-            id=ws_id, name=ws.name, subjects=n_subjects, imports=len(list_manifests(ws))
+            id=ws_id,
+            name=ws.name,
+            subjects=n_subjects,
+            imports=len(list_manifests(ws)),
+            created_by=ws.created_by,
         )
+
+    @app.get("/api/workspaces/{ws_id}/subjects/{label}/data", response_model=SubjectData)
+    def subject_files(ws_id: str, label: str) -> SubjectData:
+        """The raw images of a subject, for the Data page."""
+        ws = ws_of(ws_id)
+        if not SAFE_NAME.fullmatch(label):
+            raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
+        return subject_data(ws, label)
+
+    @app.get("/api/workspaces/{ws_id}/overview", response_model=Overview)
+    def overview(ws_id: str) -> Overview:
+        """Where every subject stands, for the dashboard."""
+        ws = ws_of(ws_id)
+        refresh(ws)
+        return build_overview(ws)
 
     @app.get("/api/workspaces/{ws_id}/subjects", response_model=list[S.SubjectInfo])
     def list_subjects(ws_id: str) -> list[S.SubjectInfo]:
@@ -335,7 +429,9 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         return import_detail(ws, m)
 
     @app.post("/api/workspaces/{ws_id}/imports/scan", response_model=S.OperationStarted)
-    def scan(ws_id: str, req: S.ScanRequest) -> S.OperationStarted:
+    def scan(
+        ws_id: str, req: S.ScanRequest, who: accounts.Researcher | None = Researcher
+    ) -> S.OperationStarted:
         ws = ws_of(ws_id)
         source = _inside_home(req.source)
         if not source.exists():
@@ -349,11 +445,17 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             "scan",
             f"Reading scanner files from {source.name}",
             {"source": str(source), "subject": req.subject, "session": req.session},
+            started_by=who.name if who else None,
         )
         return S.OperationStarted(operation_id=op)
 
     @app.post("/api/workspaces/{ws_id}/imports/{import_id}/run", response_model=S.OperationStarted)
-    def run_import(ws_id: str, import_id: str, req: S.ImportRunRequest) -> S.OperationStarted:
+    def run_import(
+        ws_id: str,
+        import_id: str,
+        req: S.ImportRunRequest,
+        who: accounts.Researcher | None = Researcher,
+    ) -> S.OperationStarted:
         ws = ws_of(ws_id)
         m = load_manifest(ws, import_id)
         op = start_operation(
@@ -361,6 +463,7 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             "import_run",
             f"Importing {m.id} into {m.subject}",
             {"import_id": m.id, "remove_dicom": req.remove_dicom},
+            started_by=who.name if who else None,
         )
         return S.OperationStarted(operation_id=op)
 
@@ -378,15 +481,53 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             only_in_dicom=plan.only_in_dicom,
         )
 
+    @app.get("/api/workspaces/{ws_id}/imports/{import_id}/undo-plan", response_model=S.UndoPlanInfo)
+    def get_undo_plan(ws_id: str, import_id: str) -> S.UndoPlanInfo:
+        ws = ws_of(ws_id)
+        m = load_manifest(ws, import_id)
+        plan = undo_plan(ws, m)
+        return S.UndoPlanInfo(
+            subject=plan.subject,
+            series=plan.series,
+            files=len(plan.files),
+            size_bytes=plan.bytes,
+            only_copy=plan.only_copy,
+            stale_steps=plan.stale_steps,
+            problems=plan.problems,
+        )
+
+    @app.post("/api/workspaces/{ws_id}/imports/{import_id}/undo", response_model=S.OperationStarted)
+    def undo_import_route(
+        ws_id: str, import_id: str, who: accounts.Researcher | None = Researcher
+    ) -> S.OperationStarted:
+        """Remove what an import wrote into the data folder so it can be decided and imported
+        again. Only done on purpose: the page asks for confirmation first."""
+        ws = ws_of(ws_id)
+        m = load_manifest(ws, import_id)
+        op = start_operation(
+            ws,
+            "undo_import",
+            f"Undoing {m.id} ({m.subject})",
+            {"import_id": m.id},
+            started_by=who.name if who else None,
+        )
+        return S.OperationStarted(operation_id=op)
+
     @app.post(
         "/api/workspaces/{ws_id}/imports/{import_id}/remove-dicom",
         response_model=S.OperationStarted,
     )
-    def remove_dicom_copy(ws_id: str, import_id: str) -> S.OperationStarted:
+    def remove_dicom_copy(
+        ws_id: str, import_id: str, who: accounts.Researcher | None = Researcher
+    ) -> S.OperationStarted:
         ws = ws_of(ws_id)
         m = load_manifest(ws, import_id)
         op = start_operation(
-            ws, "remove_dicom", f"Removing the DICOM copy of {m.id}", {"import_id": m.id}
+            ws,
+            "remove_dicom",
+            f"Removing the DICOM copy of {m.id}",
+            {"import_id": m.id},
+            started_by=who.name if who else None,
         )
         return S.OperationStarted(operation_id=op)
 
@@ -441,6 +582,16 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         refresh(ws)
         return op_info(get_operation(ws, op_id))
 
+    @app.get(
+        "/api/workspaces/{ws_id}/operations/{op_id}/progress", response_model=OperationProgress
+    )
+    def operation_progress_route(ws_id: str, op_id: int) -> OperationProgress:
+        """Where a running (or finished) operation is: its steps, the running one and what it
+        is doing at this moment."""
+        ws = ws_of(ws_id)
+        refresh(ws)
+        return operation_progress(ws, get_operation(ws, op_id))
+
     @app.get("/api/workspaces/{ws_id}/operations/{op_id}/log", response_model=S.LogText)
     def operation_log(ws_id: str, op_id: int) -> S.LogText:
         ws = ws_of(ws_id)
@@ -479,7 +630,12 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
 
     # -- anatomical preprocessing -------------------------------------------------------------
 
-    def _start_pipeline(ws: Workspace, spec: PipelineSpec, title: str) -> S.OperationStarted:
+    def _start_pipeline(
+        ws: Workspace,
+        spec: PipelineSpec,
+        title: str,
+        who: accounts.Researcher | None = None,
+    ) -> S.OperationStarted:
         refresh(ws)
         if any(j.status == JobStatus.RUNNING.value for j in list_jobs(ws)):
             raise StepError(
@@ -488,11 +644,19 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
                 probable_cause="It was started earlier and has not finished yet.",
                 suggested_action="Wait for it to finish, or cancel it, then try again.",
             )
-        op = start_operation(ws, "pipeline", title, {"spec": spec.model_dump(mode="json")})
+        op = start_operation(
+            ws,
+            "pipeline",
+            title,
+            {"spec": spec.model_dump(mode="json")},
+            started_by=who.name if who else None,
+        )
         return S.OperationStarted(operation_id=op)
 
     @app.post("/api/workspaces/{ws_id}/anat", response_model=S.OperationStarted)
-    def run_anat(ws_id: str, req: S.AnatRequest) -> S.OperationStarted:
+    def run_anat(
+        ws_id: str, req: S.AnatRequest, who: accounts.Researcher | None = Researcher
+    ) -> S.OperationStarted:
         ws = ws_of(ws_id)
         if not (ws.abspath(req.t1)).is_file() or not req.t1.startswith("rawbids/"):
             raise StepError(
@@ -517,10 +681,10 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         for st in steps:
             st.session = req.session
         spec = PipelineSpec(name=f"anatomical-{req.subject}", subject=req.subject, steps=steps)
-        return _start_pipeline(ws, spec, f"Anatomical preprocessing of {req.subject}")
+        return _start_pipeline(ws, spec, f"Anatomical preprocessing of {req.subject}", who)
 
     @app.post("/api/workspaces/{ws_id}/resume", response_model=S.OperationStarted)
-    def resume(ws_id: str) -> S.OperationStarted:
+    def resume(ws_id: str, who: accounts.Researcher | None = Researcher) -> S.OperationStarted:
         """Continue the latest pipeline where it stopped; finished steps are not repeated."""
         from mrforge.pipeline import parse_pipeline
 
@@ -532,7 +696,7 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
                 "There is nothing to resume yet.",
                 suggested_action="Start the processing first.",
             )
-        return _start_pipeline(ws, parse_pipeline(last.spec), f"Resuming {last.name}")
+        return _start_pipeline(ws, parse_pipeline(last.spec), f"Resuming {last.name}", who)
 
     # -- functional preprocessing -------------------------------------------------------------
 
@@ -545,11 +709,39 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         return check_ready(ws, label, session)
 
     @app.post("/api/workspaces/{ws_id}/functional", response_model=S.OperationStarted)
-    def run_functional(ws_id: str, req: FunctionalOptions) -> S.OperationStarted:
+    def run_functional(
+        ws_id: str, req: FunctionalOptions, who: accounts.Researcher | None = Researcher
+    ) -> S.OperationStarted:
         ws = ws_of(ws_id)
         spec = build_pipeline(ws, req)
         run = Path(req.bold).name.removesuffix("_bold.nii.gz").split("_", 1)[-1]
-        return _start_pipeline(ws, spec, f"Functional preprocessing of {req.subject} ({run})")
+        return _start_pipeline(ws, spec, f"Functional preprocessing of {req.subject} ({run})", who)
+
+    @app.post("/api/workspaces/{ws_id}/process/plan", response_model=FullPlan)
+    def process_plan(ws_id: str, req: FullOptions) -> FullPlan:
+        """What full processing would do for a subject (for the confirmation dialog)."""
+        ws = ws_of(ws_id)
+        if not SAFE_NAME.fullmatch(req.subject):
+            raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
+        return plan_full_processing(ws, req)[0]
+
+    @app.post("/api/workspaces/{ws_id}/process", response_model=S.OperationStarted)
+    def process(
+        ws_id: str, req: FullOptions, who: accounts.Researcher | None = Researcher
+    ) -> S.OperationStarted:
+        """Run the confirmed plan: every enabled stage, in order, as one pipeline."""
+        ws = ws_of(ws_id)
+        if not SAFE_NAME.fullmatch(req.subject):
+            raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
+        plan, spec = plan_full_processing(ws, req)
+        if spec is None or not plan.can_start:
+            raise StepError(
+                "NOTHING_TO_RUN",
+                "There is nothing to run with these choices.",
+                probable_cause="Every stage is switched off, or the needed images are missing.",
+                suggested_action="Tick a stage that can run, or import the missing scans.",
+            )
+        return _start_pipeline(ws, spec, f"Full processing of {req.subject}", who)
 
     @app.get("/api/workspaces/{ws_id}/subjects/{label}/qc", response_model=list[S.QcGroup])
     def subject_qc(ws_id: str, label: str) -> list[S.QcGroup]:
@@ -606,56 +798,26 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
 
     @app.get("/api/workspaces/{ws_id}/subjects/{label}/images", response_model=list[S.ViewerImage])
     def viewer_images(ws_id: str, label: str) -> list[S.ViewerImage]:
+        """Every raw image and result of a subject that the viewer can show."""
         ws = ws_of(ws_id)
         if not SAFE_NAME.fullmatch(label):
             raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
-        specs: list[tuple[str, str, str, str | None]] = [
-            # (file name ending, display name, role, colormap)
-            ("_desc-biascorr_T1w.nii.gz", "T1, bias-corrected", "underlay", None),
-            ("_desc-brain_T1w.nii.gz", "T1, brain only", "underlay", None),
-            ("_desc-brain_mask.nii.gz", "Brain mask", "overlay", "red"),
-            ("_dseg.nii.gz", "Tissue segmentation (CSF, GM, WM)", "overlay", "winter"),
-            ("_label-GM_probseg.nii.gz", "Grey matter probability", "overlay", "green"),
-            ("_label-WM_probseg.nii.gz", "White matter probability", "overlay", "blue"),
-            ("_label-CSF_probseg.nii.gz", "CSF probability", "overlay", "cool"),
-            ("_desc-bet_T1w.nii.gz", "T1, brain-extracted with bet", "underlay", None),
-            ("_desc-bet_mask.nii.gz", "bet brain mask", "overlay", "red"),
-        ]
-        found: list[S.ViewerImage] = []
-
-        def add(path: Path, name: str, role: Any, cmap: str | None) -> None:
-            rel = ws.relpath(path)
-            found.append(
+        out: list[S.ViewerImage] = []
+        for f in find_images(ws, label):
+            rel = ws.relpath(f.path)
+            out.append(
                 S.ViewerImage(
-                    name=name,
-                    role=role,
+                    name=f.described.name,
+                    group=f.described.group,
+                    role=f.described.role,  # type: ignore[arg-type]
                     relpath=rel,
                     url=f"/api/workspaces/{ws_id}/file/{rel}",
-                    colormap=cmap,
+                    colormap=f.described.colormap,
+                    volumes=f.volumes,
+                    size_bytes=f.size_bytes,
                 )
             )
-
-        for raw in sorted((ws.root / "rawbids" / label).glob("**/anat/*_T1w.nii.gz")):
-            add(raw, "T1, original", "underlay", None)
-        anat_dirs = sorted((ws.derivatives_dir / label).glob("**/anat"))
-        for ending, name, role, cmap in specs:
-            for d in anat_dirs:
-                for f in sorted(d.glob(f"*{ending}")):
-                    if "space-" not in f.name:
-                        add(f, name, role, cmap)
-
-        # functional example volume in T1 space: an overlay to judge the registration
-        def run_name(f: Path) -> str:
-            entities = parse_bids_name(f.name)[0]
-            skip = ("sub", "ses", "space", "desc")
-            return " ".join(f"{k}-{v}" for k, v in entities.items() if k not in skip)
-
-        for d in sorted((ws.derivatives_dir / label).glob("**/func")):
-            for f in sorted(d.glob("*_space-T1w_desc-distorted_boldref.nii.gz")):
-                add(f, f"Functional {run_name(f)}, before distortion correction", "overlay", "gray")
-            for f in sorted(d.glob("*_space-T1w_desc-feat_boldref.nii.gz")):
-                add(f, f"Functional {run_name(f)}, aligned to the T1", "overlay", "gray")
-        return found
+        return out
 
     @app.get("/api/workspaces/{ws_id}/file/{relpath:path}")
     def serve_file(ws_id: str, relpath: str) -> FileResponse:

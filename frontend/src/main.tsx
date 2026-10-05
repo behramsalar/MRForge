@@ -1,16 +1,21 @@
 import "@radix-ui/themes/styles.css";
-import { Theme } from "@radix-ui/themes";
+import "./theme/forge.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { StrictMode, Suspense, lazy } from "react";
+import { StrictMode, Suspense, lazy, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
-import { WorkspaceLayout } from "./components/WorkspaceLayout";
 import { useRoute } from "./lib/router";
 import { AnatomicalPage } from "./pages/AnatomicalPage";
+import { Dashboard } from "./pages/Dashboard";
 import { DesignSystem } from "./pages/DesignSystem";
-import { FunctionalPage } from "./pages/FunctionalPage";
-import { ImportPage } from "./pages/ImportPage";
+import { DataPage } from "./pages/DataPage";
+import { JobsPage } from "./pages/JobsPage";
+import { ProcessPage } from "./pages/ProcessPage";
+import { Settings } from "./pages/Settings";
 import { Workspaces } from "./pages/Workspaces";
-import { theme } from "./theme/tokens";
+import { AppShell } from "./shell/AppShell";
+import { ResearcherProvider } from "./shell/ResearcherProvider";
+import { ThemeProvider } from "./shell/ThemeProvider";
+import { WorkspaceProvider, useWorkspace } from "./shell/WorkspaceContext";
 
 // The viewer (NiiVue) is big, so it is only downloaded when someone opens it.
 const ViewerPage = lazy(() => import("./pages/ViewerPage").then((m) => ({ default: m.ViewerPage })));
@@ -19,36 +24,47 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: true, staleTime: 2000 } },
 });
 
+function WorkspacePage({ page, extra, extra2 }: { page: string; extra?: string; extra2?: string }) {
+  const { ws, state } = useWorkspace();
+  switch (page) {
+    case "data":
+      return <DataPage ws={ws} extra={extra} state={state} />;
+    case "process":
+      return <ProcessPage ws={ws} tab={extra} state={state} />;
+    case "viewer":
+      return (
+        <Suspense fallback={<p>Loading the viewer…</p>}>
+          <ViewerPage ws={ws} subject={extra} image={extra2} />
+        </Suspense>
+      );
+    case "jobs":
+      return <JobsPage ws={ws} state={state} />;
+    case "anatomical":
+      return <AnatomicalPage ws={ws} state={state} />;
+    default:
+      return <Dashboard ws={ws} state={state} />;
+  }
+}
+
 function App() {
   const route = useRoute();
   if (route.page === "design") return <DesignSystem />;
-  const ws = route.workspace;
-  if (!ws) return <Workspaces />;
-  return (
-    <WorkspaceLayout ws={ws} page={route.page}>
-      {(state) =>
-        route.page === "anat" ? (
-          <AnatomicalPage ws={ws} state={state} />
-        ) : route.page === "func" ? (
-          <FunctionalPage ws={ws} state={state} />
-        ) : route.page === "view" ? (
-          <Suspense fallback={<p>Loading the viewer…</p>}>
-            <ViewerPage ws={ws} subject={route.extra} />
-          </Suspense>
-        ) : (
-          <ImportPage ws={ws} importId={route.extra} state={state} />
-        )
-      }
-    </WorkspaceLayout>
-  );
+  let body: ReactNode;
+  if (route.workspace) body = <WorkspacePage page={route.page} extra={route.extra} extra2={route.extra2} />;
+  else if (route.page === "settings") body = <Settings />;
+  else body = <Workspaces />;
+  const shell = <AppShell route={route}>{body}</AppShell>;
+  return route.workspace ? <WorkspaceProvider ws={route.workspace}>{shell}</WorkspaceProvider> : shell;
 }
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Theme {...theme}>
+    <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <ResearcherProvider>
+          <App />
+        </ResearcherProvider>
       </QueryClientProvider>
-    </Theme>
+    </ThemeProvider>
   </StrictMode>,
 );

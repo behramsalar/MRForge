@@ -91,7 +91,7 @@ export function FunctionalPage({ ws, state }: { ws: string; state: WorkspaceStat
       {withBold.length === 0 && subjects.data && (
         <Callout.Root>
           <Callout.Text>
-            There is no functional scan to process yet. <a href={href(ws, "import")}>Import scans first.</a>
+            There is no functional scan to process yet. <a href={href(ws, "data")}>Import scans first.</a>
           </Callout.Text>
         </Callout.Root>
       )}
@@ -100,7 +100,7 @@ export function FunctionalPage({ ws, state }: { ws: string; state: WorkspaceStat
         <Callout.Root color="amber">
           <Callout.Text>
             {ready.data.anat_reason}{" "}
-            <a href={href(ws, "anat")}>Go to anatomical processing.</a>
+            <a href={href(ws, "process", "anat")}>Go to anatomical processing.</a>
           </Callout.Text>
         </Callout.Root>
       )}
@@ -254,7 +254,7 @@ export function FunctionalPage({ ws, state }: { ws: string; state: WorkspaceStat
         action={(j) =>
           j.step === "func_qc" && j.subject ? (
             <Button asChild size="1" variant="soft">
-              <a href={href(ws, "view", j.subject)}>Open in viewer</a>
+              <a href={href(ws, "viewer", j.subject)}>Open in viewer</a>
             </Button>
           ) : null
         }
