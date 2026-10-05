@@ -145,3 +145,22 @@ def test_the_overview_route(tmp_path: Path, monkeypatch) -> None:  # type: ignor
     assert empty["subjects_total"] == 0 and empty["subjects"] == [] and empty["running"] == 0
     assert [s["id"] for s in empty["stages"]] == ["import", "anatomical", "functional"]
     assert client.get("/api/workspaces/nothing/overview").status_code == 404
+
+
+def test_a_failed_task_that_was_repeated_successfully_is_not_shown_as_recent_failure(
+    tmp_path: Path,
+) -> None:
+    from mrforge.models import Operation
+
+    ws = Workspace.create(tmp_path / "ws")
+    with ws.session() as s:
+        s.add_all(
+            [
+                Operation(kind="scan", title="Reading test.zip", status="Failed"),
+                Operation(kind="scan", title="Reading test.zip", status="Completed"),
+                Operation(kind="scan", title="Reading other.zip", status="Failed"),
+            ]
+        )
+    shown = [(a.title, a.status) for a in build_overview(ws).recent]
+    assert ("Reading test.zip", "Failed") not in shown
+    assert ("Reading other.zip", "Failed") in shown

@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from mrforge.functional import check_ready
-from mrforge.models import File, Job, JobStatus, Subject
+from mrforge.models import File, Job, JobStatus, Operation, Subject
 from mrforge.operations import list_operations
 from mrforge.runner.jobs import list_jobs
 from mrforge.workspace import Workspace
@@ -67,6 +67,15 @@ class Overview(BaseModel):
     subjects: list[SubjectOverview]
     running_now: list[RunningItem]
     recent: list[ActivityItem]
+
+
+def _repeated_since(op: Operation, ops: list[Operation]) -> bool:
+    """A failed or stopped task that was later done again successfully is old news."""
+    if op.status == JobStatus.COMPLETED.value:
+        return False
+    return any(
+        o.id > op.id and o.title == op.title and o.status == JobStatus.COMPLETED.value for o in ops
+    )
 
 
 def _job_state(status: str) -> State:
@@ -200,8 +209,9 @@ def build_overview(ws: Workspace) -> Overview:
             when=o.finished or o.started or o.created,
             started_by=o.started_by,
         )
-        for o in sorted(ops, key=lambda o: o.id, reverse=True)[:8]
-    ]
+        for o in sorted(ops, key=lambda o: o.id, reverse=True)
+        if not _repeated_since(o, ops)
+    ][:8]
     return Overview(
         subjects_total=len(subjects),
         processed=processed,
