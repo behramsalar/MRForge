@@ -11,7 +11,7 @@ import type { ComponentType, CSSProperties } from "react";
 
 /** A function inside a group (for example Anatomical inside Process); ``id`` is the part of
  * the address after the page name. */
-export type NavChild = { id: string; label: string };
+export type NavChild = { id: string; label: string; section?: string }; // section: small heading shown above this entry
 
 export type NavItem = {
   id: string; // the page name in the address
@@ -31,10 +31,11 @@ export const WORKSPACE_NAV: NavItem[] = [
     id: "process",
     label: "Process",
     icon: MixerHorizontalIcon,
-    // New kinds of processing are added here (and a page for them in ProcessPage).
+    // New kinds of preprocessing go here (and a page in ProcessPage). Analysis (ROI-to-ROI,
+    // diffusion) will be its own group next to Process, shown once it exists.
     children: [
       { id: "full", label: "Full processing" },
-      { id: "anat", label: "Anatomical" },
+      { id: "anat", label: "Anatomical", section: "Step by step" },
       { id: "func", label: "Functional" },
     ],
   },

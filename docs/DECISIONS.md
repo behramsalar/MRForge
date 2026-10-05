@@ -112,3 +112,9 @@ The user could not change an import once written (skipping a series or renaming 
 - Artifact rejection (MELODIC, component review, fsl_regfilt, optional ICA-AROMA) becomes Stage 6, before batch work; batch/resources/QC decisions is Stage 7, reports Stage 8. Reason: it is a large function that changes what standard space receives.
 - Processing presets (bundles of the dialog's settings) are added to Stage 7 (7e), two example presets first. Free pipeline building is deferred (MVP 4). Reason: few real variants exist yet and free ordering allows scientifically invalid pipelines.
 - Registration QC pictures will be built from separate slice images (as FEAT does) so the report page can reorder and resize them (Stage 8). Report pictures stay as they are until then.
+
+## 2026-10-05 Sidebar structure and UI feedback after O7
+- Process group: Full processing first, then a 'Step by step' section (Anatomical, Functional, later Artifact rejection). Analysis (ROI-to-ROI) becomes its own group when it exists; diffusion gets its own group. Different full pipelines (for example per scanner type) are presets chosen inside Full processing, not menu items (Stage 7e).
+- Batch (Stage 7): the subject picker of Full processing becomes multi-select / 'all subjects'; the Dashboard table gets checkboxes. Artifact rejection (Stage 6): a stage in the Full processing dialog; its component-review screen is a page under Process > Step by step and is linked from Jobs and the Dashboard ('needs your review').
+- Reports get their own sidebar entry in Stage 8. Removing a workspace is done by deleting its folder (accepted by the user).
+- Area and stage colours (blue, cyan, violet, plum, indigo) are separate from the state colours green / amber / red / orange (tokens.ts).

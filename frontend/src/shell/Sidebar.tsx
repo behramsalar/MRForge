@@ -1,6 +1,6 @@
 import { ChevronDownIcon, ChevronRightIcon, DoubleArrowLeftIcon, DoubleArrowRightIcon } from "@radix-ui/react-icons";
 import { DropdownMenu, Theme } from "@radix-ui/themes";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useWorkspaces } from "../api/hooks";
 import { areaColor } from "../theme/tokens";
 import { href, type Route } from "../lib/router";
@@ -76,14 +76,16 @@ function Group({ item, ws, route, collapsed }: { item: NavItem; ws: string; rout
       {shown && (
         <div className="nav-children">
           {item.children?.map((c) => (
-            <a
-              key={c.id}
-              className="nav-child"
-              href={href(ws, item.id, c.id)}
-              aria-current={here && current === c.id ? "page" : undefined}
-            >
-              {c.label}
-            </a>
+            <Fragment key={c.id}>
+              {c.section && <div className="nav-section">{c.section}</div>}
+              <a
+                className="nav-child"
+                href={href(ws, item.id, c.id)}
+                aria-current={here && current === c.id ? "page" : undefined}
+              >
+                {c.label}
+              </a>
+            </Fragment>
           ))}
         </div>
       )}
