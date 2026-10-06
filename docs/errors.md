@@ -344,3 +344,7 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 - **What happened:** The component time courses do not fit the functional image (different number of volumes), the labels name components that do not exist, or the cleaned image has an unexpected shape.
 - **Probable cause:** The components or labels belong to another run of the component analysis.
 - **Suggested action:** Run the component analysis (MELODIC) again for this image and label the components again.
+
+### AROMA_NOT_INSTALLED / AROMA_FAILED / AROMA_RESULT_MISMATCH
+- **What happened:** ICA-AROMA is not installed, did not produce a classification, or classified a different set of components than the current MELODIC result.
+- **Suggested action:** Run `scripts/install_aroma.sh`, or label the components yourself. After a MELODIC re-run, run ICA-AROMA again.

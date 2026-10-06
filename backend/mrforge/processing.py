@@ -21,6 +21,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from mrforge.aroma_env import find_aroma
 from mrforge.bids import parse_bids_name
 from mrforge.datafiles import subject_data
 from mrforge.functional import (
@@ -58,6 +59,10 @@ class ArtifactOptions(BaseModel):
     # (non-aggressive) removal is fsl_regfilt's default and what ICA-AROMA uses.
     uncertain_as: Literal["signal", "noise"] = "signal"
     aggressive: bool = False
+    # Who labels the components. "manual": you (the processing pauses). "aroma_review":
+    # ICA-AROMA proposes, you confirm (pauses). "aroma_auto": ICA-AROMA's classification is used
+    # as it is (no pause). REVIEW(domain): the automatic mode trusts ICA-AROMA's fixed rules.
+    mode: Literal["manual", "aroma_review", "aroma_auto"] = "manual"
 
 
 class FullOptions(BaseModel):
@@ -117,6 +122,7 @@ class PlanContext:
     bold: dict[str, str] = field(default_factory=dict)
     brain_mask: dict[str, str] = field(default_factory=dict)
     affine: dict[str, str] = field(default_factory=dict)
+    motion: dict[str, str] = field(default_factory=dict)
     runs: dict[str, str] = field(default_factory=dict)  # slug -> raw BOLD path
     ready: set[str] = field(default_factory=set)  # stages that are planned or already satisfied
 
@@ -380,6 +386,7 @@ class FunctionalStage(Stage):
             ctx.bold[slug] = f"${{{feat_id}.preproc_bold}}"
             ctx.brain_mask[slug] = f"${{{feat_id}.brain_mask}}"
             ctx.affine[slug] = f"${{{feat_id}.to_t1_affine}}"
+            ctx.motion[slug] = f"${{{feat_id}.motion}}"
         if enabled:
             ctx.ready.add(self.id)
         return stage
@@ -389,9 +396,9 @@ class ArtifactStage(Stage):
     id = "artifact_rejection"
     label = "Artifact rejection"
     description = (
-        "Finds independent components in each run (MELODIC), then waits for you to label each "
-        "one as signal or noise, and removes the noise. Standard space then uses the cleaned "
-        "data. The processing pauses at the labelling and continues when you save."
+        "Finds independent components in each run (MELODIC), labels each one as signal or noise "
+        "(you, or ICA-AROMA), and removes the noise. Standard space then uses the cleaned data. "
+        "When you label, the processing pauses and continues when you save."
     )
     default_enabled = False  # it needs you: the pipeline waits for your decision
     depends_on = ("functional",)
@@ -403,6 +410,13 @@ class ArtifactStage(Stage):
             stage.reason = "Functional preprocessing has to be included."
             return stage
         opts = ctx.opts.artifact
+        uses_aroma = opts.mode != "manual"
+        if uses_aroma and find_aroma() is None:
+            stage.can_run = False
+            stage.reason = (
+                "ICA-AROMA is not installed. Choose to label the components yourself, or run "
+                "scripts/install_aroma.sh."
+            )
         slugs = list(ctx.runs) or []
         discarded = ctx.opts.functional.delete_volumes
         for slug in slugs:
@@ -417,14 +431,17 @@ class ArtifactStage(Stage):
                     f"Run {slug.replace('_', ' ')} would have only {volumes} volumes left; "
                     f"component analysis needs at least {MIN_VOLUMES}."
                 )
+            who = {
+                "manual": "you (processing pauses until you save)",
+                "aroma_review": "ICA-AROMA proposes, you confirm (processing pauses)",
+                "aroma_auto": "ICA-AROMA decides (no pause)",
+            }[opts.mode]
             stage.items.append(
                 PlanItem(
                     title=f"Run {slug.replace('_', ' ')}",
                     settings=[
                         PlanSetting(name="Components", value="number found by MELODIC"),
-                        PlanSetting(
-                            name="Labelling", value="you (processing pauses until you save)"
-                        ),
+                        PlanSetting(name="Labelling", value=who),
                         PlanSetting(
                             name="Removal",
                             value="aggressive" if opts.aggressive else "partial (non-aggressive)",
@@ -441,7 +458,6 @@ class ArtifactStage(Stage):
             return stage
         assert ctx.anat is not None
         for slug in slugs:
-            summary = self._summary_path(ctx, slug)
             ctx.steps.append(
                 PipelineStep(
                     id=f"melodic__{slug}",
@@ -455,16 +471,41 @@ class ArtifactStage(Stage):
                     },
                 )
             )
+        if uses_aroma:
+            for slug in slugs:
+                ctx.steps.append(
+                    PipelineStep(
+                        id=f"aroma_classify__{slug}",
+                        label="aroma_classify",
+                        step="aroma_classify",
+                        inputs={
+                            "melodic_summary": f"${{melodic__{slug}.summary}}",
+                            "bold": ctx.bold[slug],
+                            "motion": ctx.motion[slug],
+                            "to_t1_affine": ctx.affine[slug],
+                            "t1_to_mni_warp": ctx.anat["t1_to_mni_warp"],
+                            "brain_mask": ctx.brain_mask[slug],
+                        },
+                    )
+                )
+        for slug in slugs:
+            summary = self._summary_path(ctx, slug)
+            automatic = opts.mode == "aroma_auto"
+            labels_inputs: dict[str, Any] = {"melodic_summary": f"${{melodic__{slug}.summary}}"}
+            if automatic:
+                labels_inputs["aroma"] = f"${{aroma_classify__{slug}.classification}}"
+            else:
+                labels_inputs["decision"] = decision_path(summary)
             ctx.steps.append(
                 PipelineStep(
                     id=f"ica_labels__{slug}",
                     label="ica_labels",
                     step="ica_labels",
-                    inputs={
-                        "melodic_summary": f"${{melodic__{slug}.summary}}",
-                        "decision": decision_path(summary),
+                    inputs=labels_inputs,
+                    params={
+                        "uncertain_as": opts.uncertain_as,
+                        "mode": "aroma" if automatic else "manual",
                     },
-                    params={"uncertain_as": opts.uncertain_as},
                 )
             )
         for slug in slugs:

@@ -10,24 +10,30 @@ its result, so later steps depend on exactly those labels (they run again if the
 from __future__ import annotations
 
 import json
-from typing import Literal
+from datetime import UTC, datetime
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from mrforge.icalabels import problem_with, read_labels
+from mrforge.errors import StepError
+from mrforge.icalabels import problem_with, read_labels, read_summary
 from mrforge.steps.base import Problem, Step, StepContext, StepResult
 from mrforge.steps.registry import register_step
 
 
 class IcaLabelsInput(BaseModel):
     melodic_summary: str  # the MELODIC result (names the decomposition the labels belong to)
-    decision: str  # where the decision file is (it may not exist yet)
+    decision: str | None = None  # manual mode: where the decision file is (may not exist yet)
+    aroma: str | None = None  # automatic mode: ICA-AROMA's classification
 
 
 class IcaLabelsParams(BaseModel):
     # REVIEW(domain): what to do with components the researcher marked "uncertain". Keeping
     # them (as signal) removes less; removing them (as noise) removes more.
     uncertain_as: Literal["signal", "noise"] = "signal"
+    # "manual": the researcher decides (the pipeline waits). "aroma": ICA-AROMA's classification
+    # is used as it is, without waiting (the researcher chose this when starting the pipeline).
+    mode: Literal["manual", "aroma"] = "manual"
 
 
 class IcaLabelsOutput(BaseModel):
@@ -47,6 +53,22 @@ class IcaLabelsStep(Step[IcaLabelsInput, IcaLabelsParams, IcaLabelsOutput]):
         return IcaLabelsOutput(labels=ctx.bids_name("labels", ".json", desc=self.desc(ctx, "ica")))
 
     def ready(self, ctx: StepContext[IcaLabelsInput, IcaLabelsParams]) -> Problem | None:
+        if ctx.params.mode == "aroma":
+            return (
+                None
+                if ctx.inputs.aroma
+                else Problem(
+                    code="ICA_LABELS_SETUP",
+                    message="Automatic labelling needs ICA-AROMA's classification.",
+                    suggested_action="Include the ICA-AROMA step before this one.",
+                )
+            )
+        if not ctx.inputs.decision:
+            return Problem(
+                code="ICA_LABELS_SETUP",
+                message="No decision file is given for manual labelling.",
+                suggested_action="Start the pipeline again from the Pipelines page.",
+            )
         saved = read_labels(ctx.workspace, ctx.inputs.decision)
         why = problem_with(ctx.workspace, ctx.inputs.melodic_summary, saved)
         if why is None:
@@ -60,7 +82,12 @@ class IcaLabelsStep(Step[IcaLabelsInput, IcaLabelsParams, IcaLabelsOutput]):
         )
 
     def run(self, ctx: StepContext[IcaLabelsInput, IcaLabelsParams]) -> StepResult:
-        saved = read_labels(ctx.workspace, ctx.inputs.decision)
+        saved: dict[str, Any] | None
+        if ctx.params.mode == "aroma":
+            saved = self._from_aroma(ctx)
+        else:
+            assert ctx.inputs.decision is not None
+            saved = read_labels(ctx.workspace, ctx.inputs.decision)
         assert saved is not None  # ready() checked it
         labels: dict[str, str] = saved["labels"]
         noise = sorted(
@@ -79,8 +106,32 @@ class IcaLabelsStep(Step[IcaLabelsInput, IcaLabelsParams, IcaLabelsOutput]):
             "decided_by": saved.get("who"),
             "decided_at": saved.get("when"),
             "source": saved.get("source"),
+            "mode": ctx.params.mode,
             "mixing_sha256": saved["mixing_sha256"],
         }
         out = self.expected_outputs(ctx)
         (ctx.output_dir / out.labels).write_text(json.dumps(result, indent=2) + "\n")
         return StepResult()
+
+    def _from_aroma(self, ctx: StepContext[IcaLabelsInput, IcaLabelsParams]) -> dict[str, Any]:
+        """ICA-AROMA's motion components as noise, the rest as signal, as a decision record."""
+        assert ctx.inputs.aroma is not None
+        data = json.loads(ctx.input_path(ctx.inputs.aroma).read_text())
+        summary = read_summary(ctx.workspace, ctx.inputs.melodic_summary)
+        if data.get("mixing_sha256") != summary.get("mixing_sha256"):
+            raise StepError(
+                code="AROMA_RESULT_MISMATCH",
+                message="ICA-AROMA classified a different set of components.",
+                probable_cause="The component analysis was run again after ICA-AROMA.",
+                suggested_action="Run ICA-AROMA again.",
+            )
+        noise = {int(n) for n in data["motion_components"]}
+        n = int(summary["n_components"])
+        return {
+            "labels": {str(k): ("noise" if k in noise else "signal") for k in range(1, n + 1)},
+            "n_components": n,
+            "mixing_sha256": summary["mixing_sha256"],
+            "who": f"ICA-AROMA {data.get('tool_version', '')} (automatic)".replace("  ", " "),
+            "when": datetime.now(UTC).isoformat(),
+            "source": "aroma",
+        }

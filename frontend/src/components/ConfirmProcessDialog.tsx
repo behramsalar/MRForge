@@ -1,4 +1,4 @@
-import { Badge, Button, Callout, Checkbox, Dialog, Flex, Switch, Text, TextField } from "@radix-ui/themes";
+import { Badge, Button, Callout, Checkbox, Dialog, Flex, RadioGroup, Switch, Text, TextField } from "@radix-ui/themes";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
@@ -18,7 +18,7 @@ const DEFAULTS: FullOptions = {
     use_fieldmap: true,
     slice_timing: false,
   },
-  artifact: { uncertain_as: "signal", aggressive: false },
+  artifact: { uncertain_as: "signal", aggressive: false, mode: "manual" },
 };
 
 function StageBlock({
@@ -100,6 +100,8 @@ export function ConfirmProcessDialog({
       onStarted?.();
     },
   });
+  const health = useQuery({ queryKey: ["health"], queryFn: () => call(api.GET("/api/health")) });
+  const aromaInstalled = !!health.data?.tools["ica-aroma"];
   const f = opts.functional!;
   const setF = (change: Partial<NonNullable<FullOptions["functional"]>>) =>
     setOpts({ ...opts, functional: { ...f, ...change } });
@@ -193,6 +195,28 @@ export function ConfirmProcessDialog({
               </Text>
               {artifactOn && (
                 <>
+                  <Flex direction="column" gap="1">
+                    <Text size={type.help} weight="medium">
+                      Who labels the components?
+                    </Text>
+                    <RadioGroup.Root
+                      value={r.mode ?? "manual"}
+                      onValueChange={(v) => setOpts({ ...opts, artifact: { ...r, mode: v as NonNullable<typeof r.mode> } })}
+                    >
+                      <RadioGroup.Item value="manual">You (the processing pauses until you have labelled them)</RadioGroup.Item>
+                      <RadioGroup.Item value="aroma_review" disabled={!aromaInstalled}>
+                        ICA-AROMA proposes, you confirm (the processing pauses)
+                      </RadioGroup.Item>
+                      <RadioGroup.Item value="aroma_auto" disabled={!aromaInstalled}>
+                        ICA-AROMA decides (no pause; you can look at the result afterwards)
+                      </RadioGroup.Item>
+                    </RadioGroup.Root>
+                    {!aromaInstalled && (
+                      <Text size={type.caption} color="gray">
+                        ICA-AROMA is not installed on this computer, so only labelling by you is available.
+                      </Text>
+                    )}
+                  </Flex>
                   <Text as="label" size={type.help}>
                     <Flex gap={space.inline} align="center">
                       <Switch

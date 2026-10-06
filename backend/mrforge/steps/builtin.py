@@ -1,6 +1,7 @@
 """Importing this module registers every built-in step."""
 
 from mrforge.steps import (  # noqa: F401
+    aroma_classify,
     bet,
     fake,
     feat_preproc,

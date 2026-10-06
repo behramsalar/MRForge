@@ -368,11 +368,11 @@ def test_artifact_settings_reach_the_steps(tmp_path: Path) -> None:
         tmp_path, artifact=ArtifactOptions(uncertain_as="noise", aggressive=True)
     )
     by = {s.id: s for s in spec.steps}  # type: ignore[union-attr]
-    assert by["ica_labels__task-rest"].params == {"uncertain_as": "noise"}
+    assert by["ica_labels__task-rest"].params == {"uncertain_as": "noise", "mode": "manual"}
     assert by["regfilt__task-rest"].params == {"aggressive": True}
 
 
-def test_two_recordings_are_analysed_before_the_first_pause(tmp_path: Path) -> None:
+def test_every_recording_is_analysed_before_the_first_pause(tmp_path: Path) -> None:
     ws = workspace(tmp_path, runs=(BOLD, BOLD2), volumes=45)
     _, spec = plan(ws, stages={"artifact_rejection": True})
     order = [s.id for s in spec.steps if s.step in ("melodic", "ica_labels", "regfilt")]  # type: ignore[union-attr]
@@ -380,7 +380,7 @@ def test_two_recordings_are_analysed_before_the_first_pause(tmp_path: Path) -> N
     assert len(runs) == 2
     first, second = runs
     assert order == [
-        f"melodic__{first}", f"ica_labels__{first}",
-        f"melodic__{second}", f"ica_labels__{second}",
+        f"melodic__{first}", f"melodic__{second}",
+        f"ica_labels__{first}", f"ica_labels__{second}",
         f"regfilt__{first}", f"regfilt__{second}",
     ]  # fmt: skip

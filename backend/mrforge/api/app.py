@@ -23,6 +23,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from mrforge import __version__, accounts
 from mrforge.api import schemas as S
+from mrforge.aroma_env import find_aroma
 from mrforge.config import load_config
 from mrforge.datafiles import SubjectData, subject_data
 from mrforge.engine import latest_pipeline_run
@@ -254,6 +255,8 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             tools["bids-validator"] = "installed"
         except StepError:
             tools["bids-validator"] = None
+        aroma = find_aroma()
+        tools["ica-aroma"] = aroma.version if aroma else None
         free = total = None
         try:
             usage = shutil.disk_usage(root if root.is_dir() else root.parent)

@@ -83,7 +83,12 @@ export function ComponentReviewPage({ ws }: { ws: string }) {
   }, [rec?.recording, label]);
   useEffect(() => {
     setEditing(false);
-    const initial = toLabels(rec?.labels ?? {});
+    const saved = toLabels(rec?.labels ?? {});
+    const proposal = toLabels(rec?.proposal ?? {});
+    // Nothing of yours saved yet: start from ICA-AROMA's proposal if there is one. It is not
+    // saved as a draft (savedKey) until you change something, and nothing is final until you
+    // press Save and continue.
+    const initial = Object.keys(saved).length === 0 ? proposal : saved;
     setLabels(initial);
     savedKey.current = JSON.stringify(initial);
   }, [rec?.recording, label, decided]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -207,6 +212,14 @@ export function ComponentReviewPage({ ws }: { ws: string }) {
           <Callout.Text>
             The components were found again (MELODIC was re-run), so the labels you made earlier no longer fit and are not used.
             Please label them again.
+          </Callout.Text>
+        </Callout.Root>
+      )}
+      {rec && !decided && Object.keys(rec.labels).length === 0 && Object.keys(rec.proposal).length > 0 && (
+        <Callout.Root color="blue">
+          <Callout.Text>
+            The labels are filled in by {rec.proposal_source ?? "an automatic method"} as a proposal. Look at each component and change
+            what you disagree with; nothing is final until you press Save and continue.
           </Callout.Text>
         </Callout.Root>
       )}

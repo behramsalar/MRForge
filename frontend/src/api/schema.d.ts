@@ -783,6 +783,12 @@ export interface components {
              * @default false
              */
             aggressive: boolean;
+            /**
+             * Mode
+             * @default manual
+             * @enum {string}
+             */
+            mode: "manual" | "aroma_review" | "aroma_auto";
         };
         /** DataFile */
         DataFile: {
@@ -890,7 +896,8 @@ export interface components {
             /**
              * @default {
              *       "uncertain_as": "signal",
-             *       "aggressive": false
+             *       "aggressive": false,
+             *       "mode": "manual"
              *     }
              */
             artifact: components["schemas"]["ArtifactOptions"];
@@ -996,6 +1003,15 @@ export interface components {
             decided_by?: string | null;
             /** Decided At */
             decided_at?: string | null;
+            /**
+             * Proposal
+             * @default {}
+             */
+            proposal: {
+                [key: string]: string;
+            };
+            /** Proposal Source */
+            proposal_source?: string | null;
         };
         /** ImportDetail */
         ImportDetail: {

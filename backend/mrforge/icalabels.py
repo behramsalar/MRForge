@@ -20,6 +20,7 @@ LABELS = ("signal", "noise", "uncertain")
 SUMMARY_SUFFIX = "_desc-melodic_components.json"
 DECISION_SUFFIX = "_desc-icalabels_decision.json"
 DRAFT_SUFFIX = "_desc-icalabels_draft.json"
+AROMA_SUFFIX = "_desc-aroma_classification.json"
 
 
 def decision_path(summary_rel: str) -> str:
@@ -28,6 +29,30 @@ def decision_path(summary_rel: str) -> str:
 
 def draft_path(summary_rel: str) -> str:
     return summary_rel.removesuffix(SUMMARY_SUFFIX) + DRAFT_SUFFIX
+
+
+def aroma_path(summary_rel: str) -> str:
+    return summary_rel.removesuffix(SUMMARY_SUFFIX) + AROMA_SUFFIX
+
+
+def read_proposal(ws: Workspace, summary_rel: str) -> dict[str, str] | None:
+    """ICA-AROMA's proposal for these components (motion components as noise, the rest as
+    signal), if it was run on this very decomposition."""
+    path = ws.abspath(aroma_path(summary_rel))
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text())
+        summary = read_summary(ws, summary_rel)
+    except (OSError, ValueError):
+        return None
+    if data.get("mixing_sha256") != summary.get("mixing_sha256"):
+        return None
+    noise = {int(n) for n in data["motion_components"]}
+    return {
+        str(n): ("noise" if n in noise else "signal")
+        for n in range(1, int(summary["n_components"]) + 1)
+    }
 
 
 def read_summary(ws: Workspace, summary_rel: str) -> dict[str, Any]:

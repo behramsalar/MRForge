@@ -14,6 +14,7 @@ from mrforge.icalabels import (
     draft_path,
     problem_with,
     read_labels,
+    read_proposal,
     write_labels,
 )
 from mrforge.workspace import Workspace
@@ -45,6 +46,10 @@ class IcaRecording(BaseModel):
     labels: dict[str, str] = {}
     decided_by: str | None = None
     decided_at: str | None = None
+    # ICA-AROMA's proposal (when it was run on these components): shown pre-filled, but nothing
+    # is decided until the researcher saves.
+    proposal: dict[str, str] = {}
+    proposal_source: str | None = None
 
 
 def _recording(name: str, subject: str) -> str:
@@ -88,12 +93,15 @@ def _read(ws: Workspace, ws_id: str, subject: str, summary: Path, data: Any) -> 
     ]
     summary_rel = ws.relpath(summary)
     status, labels, who, when = _label_state(ws, summary_rel)
+    proposal = read_proposal(ws, summary_rel) or {}
     return IcaRecording(
         recording=_recording(summary.name, subject),
         label_status=status,
         labels=labels,
         decided_by=who,
         decided_at=when,
+        proposal=proposal,
+        proposal_source="ICA-AROMA" if proposal else None,
         n_components=int(data["n_components"]),
         n_volumes=int(data["n_volumes"]),
         tr_s=float(data["tr_s"]),

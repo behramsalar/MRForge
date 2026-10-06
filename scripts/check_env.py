@@ -94,11 +94,17 @@ def check_bids_validator() -> Check:
 
 
 def check_aroma() -> Check:
-    for name in ("ICA_AROMA.py", "aroma", "icaaroma"):
-        path = shutil.which(name)
-        if path:
-            return Check("ICA-AROMA", PASS, path)
-    return Check("ICA-AROMA", OPTIONAL, "not found (only needed for denoising, MVP 2)")
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+    from mrforge.aroma_env import find_aroma
+
+    found = find_aroma()
+    if found:
+        return Check("ICA-AROMA", PASS, f"{found.version} ({found.script})")
+    return Check(
+        "ICA-AROMA",
+        OPTIONAL,
+        "not found (optional; automatic component labelling. scripts/install_aroma.sh installs it)",
+    )
 
 
 def _ram_bytes() -> int | None:
