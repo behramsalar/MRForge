@@ -1,14 +1,14 @@
 # Progress
 
-**Current stage:** Stage 6 (artifact rejection) in progress on branch `stage-6-artifact-rejection`; Stage 4 accepted and merged (`stage4-accepted`); Stages 0-3 and 5 accepted.
+**Current stage:** Stage 6 (artifact rejection) built, waiting for the user's acceptance. Branch `stage-6-artifact-rejection`. Stages 0-5 accepted (Stage 4 tag `stage4-accepted`).
 
-Stage 6 sub-steps: 6a `melodic` (done: fixed seed, per-component pictures and maps, maps on the T1) | 6b "Waiting for you" state, `ica_labels` gate, label saving (done) | 6c `regfilt` (done, identical to a manual `fsl_regfilt`) | 6d labelling on the review screen (done) | 6e artifact stage in the full-processing dialog (done; run end to end on a copy of the demo data) | 6f ICA-AROMA (not started; needs your approval to install it).
+Stage 6 sub-steps: 6a `melodic` | 6b "Waiting for you" state, `ica_labels` gate, label saving | 6c `regfilt` | 6d labelling on the review screen | 6e artifact stage in the full-processing dialog | 6f ICA-AROMA (reference implementation in `tools/ICA-AROMA`, `scripts/install_aroma.sh`): all done.
 
-Last test status: `pytest -m "not fsl"` 476 passed, 19 deselected; frontend 26 passed, `tsc`, ruff and mypy clean. Real FSL: melodic, regfilt and fixed-seed tests pass; full flow on a copy of `sub-ali` (357 volumes): MELODIC 6 min (57 components), pause, labels saved, regfilt, standard space on cleaned data: all done. The whole `-m fsl` suite was not re-run since Stage 5.
+Last test status: `pytest -m "not fsl"` 483 passed, 20 deselected; `pytest -m "fsl and not slow"` 15 passed; the slow real-data AROMA comparison passed on its own (138 s); the slow `fsl_anat`/FEAT tests (`-m "fsl and slow"`, about 40 min) were not re-run in this stage; frontend 26 passed, `tsc`, ruff and mypy clean.
 
-REVIEW(domain) items of Stage 6: z threshold 2.3 of the maps; automatic dimensionality; fixed seed 1; partial (non-aggressive) removal default; uncertain kept as signal; variance-removed metric definition; slice summary every 5 mm; MELODIC `--nobet` with FEAT's mask.
+End-to-end runs on a copy of the demo data (`mri-test-data/full-art`, 355 volumes, 57 components): manual labelling (pause, labels, resume) and ICA-AROMA automatic (no pause; AROMA proposed 38 of 57 as motion; partial removal took out 57% of the variance). Not tested: two functional runs through the whole flow with real data; the dashboard stage table does not show the artifact stage.
 
-Stage 6 manual checklist: see CLAUDE.md Stage 6; to try the review screen without touching real workspaces see `mri-test-data/ica-real` (MELODIC result) and `mri-test-data/full-art` (full flow).
+Known issues / open: standard-space output keeps the name `desc-preproc`; CLAUDE.md's Stage 6 lettering (6a-6f) differs from what was built (proposal below).
 
 ## Stage 5 (Functional preprocessing, on FEAT)
 | Sub-step | Status |
