@@ -21,6 +21,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from mrforge.bids import parse_bids_name
 from mrforge.errors import StepError
 from mrforge.fsl_env import find_fsl
 from mrforge.niftiutil import image_info, is_readable_nifti
@@ -67,10 +68,16 @@ def standard_brain(env: dict[str, str] | None, resolution_mm: int) -> Path | Non
 @register_step
 class FuncToMniStep(Step[FuncToMniInput, FuncToMniParams, FuncToMniOutput]):
     name = "func_to_mni"
-    version = "1"
+    version = "2"  # 2: the result is named for the data it comes from (preproc or denoised)
     InputSpec, ParamSpec, OutputSpec = FuncToMniInput, FuncToMniParams, FuncToMniOutput
     requires_fsl = True
     datatype = "func"
+
+    @staticmethod
+    def _data_desc(ctx: StepContext[FuncToMniInput, FuncToMniParams]) -> str:
+        """The name says which data went in: "denoised" after noise removal, else "preproc"."""
+        found = parse_bids_name(ctx.inputs.bold)[0].get("desc", "")
+        return "denoised" if found.startswith("denoised") else "preproc"
 
     def expected_outputs(
         self, ctx: StepContext[FuncToMniInput, FuncToMniParams]
@@ -78,7 +85,7 @@ class FuncToMniStep(Step[FuncToMniInput, FuncToMniParams, FuncToMniOutput]):
         n = ctx.bids_name
         space = {"space": STANDARD_SPACE}
         return FuncToMniOutput(
-            bold_mni=n("bold", **space, desc=self.desc(ctx, "preproc")),
+            bold_mni=n("bold", **space, desc=self.desc(ctx, self._data_desc(ctx))),
             warp=n(
                 "xfm",
                 **{"from": "boldref", "to": STANDARD_SPACE, "mode": "image"},

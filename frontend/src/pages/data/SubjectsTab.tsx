@@ -1,6 +1,7 @@
-import { Badge, Button, Card, Flex, Heading, Table, Text } from "@radix-ui/themes";
+import { Button, Card, Flex, Heading, Table, Text } from "@radix-ui/themes";
 import { useState } from "react";
-import { useSubjectData, useSubjects } from "../../api/hooks";
+import { useOverview, useSubjectData, useSubjects } from "../../api/hooks";
+import { SubjectsTable } from "../../components/SubjectsTable";
 import { EmptyState } from "../../components/ui/Layout";
 import { datatypeLabel, describeShape, humanSize, seconds } from "../../lib/labels";
 import { href } from "../../lib/router";
@@ -9,8 +10,9 @@ import { space, type } from "../../theme/tokens";
 /** The raw images of each subject: what each file is, its size, and a way to look at it. */
 export function SubjectsTab({ ws }: { ws: string }) {
   const subjects = useSubjects(ws);
+  const overview = useOverview(ws);
   const [chosen, setChosen] = useState<string | undefined>();
-  const label = chosen ?? subjects.data?.[0]?.label;
+  const label = chosen ?? overview.data?.subjects.find((s) => s.n_files > 0)?.label ?? subjects.data?.[0]?.label;
   const data = useSubjectData(ws, label);
   if (subjects.data && subjects.data.length === 0) {
     return (
@@ -23,23 +25,17 @@ export function SubjectsTab({ ws }: { ws: string }) {
     );
   }
   return (
-    <Flex gap={space.group} align="start" wrap="wrap">
-      <Flex direction="column" gap="2" style={{ flex: "0 0 220px" }}>
-        {(subjects.data ?? []).map((s) => (
-          <Button
-            key={s.label}
-            variant={s.label === label ? "solid" : "soft"}
-            color={s.label === label ? undefined : "gray"}
-            style={{ justifyContent: "space-between" }}
-            onClick={() => setChosen(s.label)}
-          >
-            {s.label}
-            <Badge variant="soft" color="gray">
-              {s.files.length}
-            </Badge>
+    <Flex direction="column" gap={space.group}>
+      <SubjectsTable
+        subjects={(overview.data?.subjects ?? []).filter((s) => s.n_files > 0)}
+        selected={label ? [label] : []}
+        onSelect={(l) => setChosen(l[0])}
+        extra={(r) => (
+          <Button asChild size="1" variant="soft" color="gray">
+            <a href={href(ws, "subject", r.label)}>Subject page</a>
           </Button>
-        ))}
-      </Flex>
+        )}
+      />
       <Card size="3" style={{ flex: "1 1 520px", minWidth: 0 }}>
         <Flex direction="column" gap={space.group}>
           <Flex justify="between" align="center" gap={space.group} wrap="wrap">

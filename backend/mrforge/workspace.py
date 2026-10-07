@@ -58,6 +58,7 @@ class Workspace:
                     "name": name,
                     "created": created.isoformat(),
                     "schema_version": SCHEMA_VERSION,
+                    "names_version": 2,  # result naming of Stage 6.5 (see migrate_names)
                     "created_by": created_by,
                 },
                 indent=2,

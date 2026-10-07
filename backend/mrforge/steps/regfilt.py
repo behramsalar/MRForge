@@ -51,7 +51,7 @@ def noise_list(argument: list[int]) -> str:
 @register_step
 class RegfiltStep(Step[RegfiltInput, RegfiltParams, RegfiltOutput]):
     name = "regfilt"
-    version = "1"
+    version = "2"  # 2: result named desc-denoised (was desc-cleaned)
     InputSpec, ParamSpec, OutputSpec = RegfiltInput, RegfiltParams, RegfiltOutput
     requires_fsl = True
     datatype = "func"
@@ -59,7 +59,7 @@ class RegfiltStep(Step[RegfiltInput, RegfiltParams, RegfiltOutput]):
     def expected_outputs(self, ctx: StepContext[RegfiltInput, RegfiltParams]) -> RegfiltOutput:
         n = ctx.bids_name
         return RegfiltOutput(
-            cleaned_bold=n("bold", desc=self.desc(ctx, "cleaned")),
+            cleaned_bold=n("bold", desc=self.desc(ctx, "denoised")),
             picture=n("cleaning", ".png", desc=self.desc(ctx, "variance")),
             metrics=n("cleaning", ".json", desc=self.desc(ctx, "metrics")),
         )

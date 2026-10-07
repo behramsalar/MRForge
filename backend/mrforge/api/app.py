@@ -22,6 +22,8 @@ from sqlalchemy import select
 from sse_starlette.sse import EventSourceResponse
 
 from mrforge import __version__, accounts
+from mrforge.analysis_ready import ReadyReport
+from mrforge.analysis_ready import refresh as refresh_analysis_ready
 from mrforge.api import schemas as S
 from mrforge.aroma_env import find_aroma
 from mrforge.config import load_config
@@ -756,6 +758,9 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         titles = {
             "func_qc": "Head motion and registration",
             "func_to_mni": "Alignment to standard space",
+            "melodic": "Independent components (MELODIC)",
+            "aroma_classify": "Components proposed as noise (ICA-AROMA)",
+            "regfilt": "Noise removal",
         }
         latest: dict[str, Job] = {}
         with ws.session() as s:
@@ -822,6 +827,12 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
                 )
             )
         return out
+
+    @app.get("/api/workspaces/{ws_id}/analysis-ready", response_model=ReadyReport)
+    def analysis_ready(ws_id: str) -> ReadyReport:
+        """The final file of every recording for group analysis, and whether they were all made
+        with the same settings (the folder and manifest are refreshed first)."""
+        return refresh_analysis_ready(ws_of(ws_id))
 
     @app.get("/api/workspaces/{ws_id}/subjects/{label}/ica", response_model=list[IcaRecording])
     def ica_results(ws_id: str, label: str) -> list[IcaRecording]:

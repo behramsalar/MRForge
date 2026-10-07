@@ -10,6 +10,7 @@ import { DesignSystem } from "./pages/DesignSystem";
 import { DataPage } from "./pages/DataPage";
 import { JobsPage } from "./pages/JobsPage";
 import { ProcessPage } from "./pages/ProcessPage";
+import { SubjectPage } from "./pages/SubjectPage";
 import { Settings } from "./pages/Settings";
 import { Workspaces } from "./pages/Workspaces";
 import { AppShell } from "./shell/AppShell";
@@ -31,6 +32,8 @@ function WorkspacePage({ page, extra, extra2 }: { page: string; extra?: string; 
       return <DataPage ws={ws} extra={extra} state={state} />;
     case "process":
       return <ProcessPage ws={ws} tab={extra} state={state} />;
+    case "subject":
+      return <SubjectPage ws={ws} label={extra} tab={extra2} state={state} />;
     case "viewer":
       return (
         <Suspense fallback={<p>Loading the viewer…</p>}>

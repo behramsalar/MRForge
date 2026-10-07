@@ -1,4 +1,5 @@
-import { Badge, Button, Callout, Card, Checkbox, Flex, Grid, Heading, Text } from "@radix-ui/themes";
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { Badge, Button, Callout, Card, Checkbox, Flex, Grid, Heading, Switch, Table, Text, TextField } from "@radix-ui/themes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "../../api/client";
@@ -19,6 +20,93 @@ function lastOperation(state: WorkspaceState | null, kind: string, importId: str
   return [...(state?.operations ?? [])]
     .reverse()
     .find((o) => o.kind === kind && (o.result?.import_id === importId || o.title.includes(importId)));
+}
+
+const IMPORTS_PAGE = 8;
+
+/** The imports as a compact table (a study can have one per subject): search, status filter,
+ * paging. The chosen import is highlighted; clicking a row opens it below. */
+function ImportsList({ ws, imports, selected }: { ws: string; imports: ImportSummary[]; selected?: string }) {
+  const [query, setQuery] = useState("");
+  const [onlyOpen, setOnlyOpen] = useState(false);
+  const [page, setPage] = useState(0);
+  const shown = imports
+    .filter((i) => (!onlyOpen || i.needs_input > 0 || i.organized === 0))
+    .filter((i) => `${i.subject} ${i.session ?? ""} ${i.source_name}`.toLowerCase().includes(query.trim().toLowerCase()))
+    .reverse();
+  const pages = Math.max(1, Math.ceil(shown.length / IMPORTS_PAGE));
+  const at = Math.min(page, pages - 1);
+  const rows = shown.slice(at * IMPORTS_PAGE, at * IMPORTS_PAGE + IMPORTS_PAGE);
+  return (
+    <Card size="2">
+      <Flex direction="column" gap={space.group}>
+        {imports.length > IMPORTS_PAGE && (
+          <Flex gap={space.group} align="center" wrap="wrap" justify="between">
+            <TextField.Root placeholder="Search imports" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} aria-label="Search imports" style={{ minWidth: 220 }}>
+              <TextField.Slot>
+                <MagnifyingGlassIcon />
+              </TextField.Slot>
+            </TextField.Root>
+            <Text as="label" size={type.help}>
+              <Flex gap="2" align="center">
+                <Switch checked={onlyOpen} onCheckedChange={(v) => { setOnlyOpen(v); setPage(0); }} />
+                Only imports that are not finished
+              </Flex>
+            </Text>
+          </Flex>
+        )}
+        <Table.Root>
+          <Table.Header>
+            <Table.Row>
+              <Table.ColumnHeaderCell>Subject</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell>Source</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell>Added</Table.ColumnHeaderCell>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {rows.map((i) => {
+              const st = importState(i);
+              return (
+                <Table.Row
+                  key={i.id}
+                  onClick={() => (location.hash = href(ws, "data", i.id))}
+                  style={{ cursor: "pointer", background: i.id === selected ? "var(--accent-a3)" : undefined }}
+                >
+                  <Table.RowHeaderCell>
+                    {i.subject}
+                    {i.session ? ` · ${i.session}` : ""}
+                  </Table.RowHeaderCell>
+                  <Table.Cell>
+                    <Text size={type.help} style={{ wordBreak: "break-all" }}>{i.source_name}</Text>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Badge color={st.color} variant="soft">{st.label}</Badge>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Text size={type.caption} color="gray">
+                      {when(i.created)}
+                      {i.created_by ? ` · ${i.created_by}` : ""}
+                    </Text>
+                  </Table.Cell>
+                </Table.Row>
+              );
+            })}
+          </Table.Body>
+        </Table.Root>
+        {shown.length === 0 && <Text size={type.help} color="gray">No import matches.</Text>}
+        {pages > 1 && (
+          <Flex justify="between" align="center">
+            <Text size={type.help} color="gray">{at * IMPORTS_PAGE + 1}-{Math.min(shown.length, at * IMPORTS_PAGE + IMPORTS_PAGE)} of {shown.length}</Text>
+            <Flex gap="2">
+              <Button size="1" variant="soft" color="gray" disabled={at === 0} onClick={() => setPage(at - 1)}>Previous</Button>
+              <Button size="1" variant="soft" color="gray" disabled={at >= pages - 1} onClick={() => setPage(at + 1)}>Next</Button>
+            </Flex>
+          </Flex>
+        )}
+      </Flex>
+    </Card>
+  );
 }
 
 function importState(i: ImportSummary): { label: string; color: "green" | "amber" | "gray" } {
@@ -80,39 +168,13 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
 
   return (
     <Flex direction="column" gap={space.section}>
-      <Flex gap={space.group} align="stretch" wrap="wrap">
+      <Flex gap={space.group} align="center" wrap="wrap" justify="between">
+        <Heading as="h2" size={type.sectionTitle}>
+          Imports
+        </Heading>
         <NewImportDialog ws={ws} disabled={busy} onStarted={setScanOp} />
-        {imports.map((i) => {
-          const st = importState(i);
-          return (
-            <Card key={i.id} asChild size="2" style={{ minWidth: 210 }}>
-              <a
-                href={href(ws, "data", i.id)}
-                style={{ textDecoration: "none", outline: i.id === selected ? "2px solid var(--accent-9)" : undefined }}
-              >
-                <Flex direction="column" gap="1">
-                  <Text weight="bold" size={type.body}>
-                    {i.subject}
-                    {i.session ? ` · ${i.session}` : ""}
-                  </Text>
-                  <Text size={type.caption} color="gray" style={{ wordBreak: "break-all" }}>
-                    {i.source_name}
-                  </Text>
-                  <Flex gap={space.inline} wrap="wrap" mt="1">
-                    <Badge color={st.color} variant="soft">
-                      {st.label}
-                    </Badge>
-                  </Flex>
-                  <Text size={type.caption} color="gray">
-                    {when(i.created)}
-                    {i.created_by ? ` · ${i.created_by}` : ""}
-                  </Text>
-                </Flex>
-              </a>
-            </Card>
-          );
-        })}
       </Flex>
+      <ImportsList ws={ws} imports={imports} selected={selected} />
       <Grid columns={{ initial: "1", lg: "minmax(0, 1fr) 340px" }} gap={space.group} align="start">
       <Flex direction="column" gap={space.group} style={{ minWidth: 0 }}>
         {detail.error && <ErrorCallout error={(detail.error as ApiError).body} />}

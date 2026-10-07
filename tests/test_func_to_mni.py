@@ -164,3 +164,14 @@ def test_matches_manual_fsl_and_lands_on_the_mni_brain(fsl: FslInstall, tmp_path
 
     again = run_step(ws, LocalJobQueue(ws), "func_to_mni", "sub-001", INPUTS, {})
     assert again.action == Action.REUSED
+
+
+def test_the_result_is_named_for_the_data_it_comes_from(tmp_path: Path) -> None:
+    ws = Workspace.create(tmp_path / "ws")
+    names = {}
+    for desc in ("preproc", "denoised"):
+        inputs = {**INPUTS, "bold": f"{D}/func/sub-001_task-rest_desc-{desc}_bold.nii.gz"}
+        step, ctx = build_context(ws, "func_to_mni", "sub-001", None, inputs, {})
+        names[desc] = step.expected_outputs(ctx).bold_mni
+    assert names["preproc"] == "sub-001_task-rest_space-MNI152NLin6Asym_desc-preproc_bold.nii.gz"
+    assert names["denoised"] == "sub-001_task-rest_space-MNI152NLin6Asym_desc-denoised_bold.nii.gz"

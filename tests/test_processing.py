@@ -384,3 +384,70 @@ def test_every_recording_is_analysed_before_the_first_pause(tmp_path: Path) -> N
         f"ica_labels__{first}", f"ica_labels__{second}",
         f"regfilt__{first}", f"regfilt__{second}",
     ]  # fmt: skip
+
+
+def make_earlier_results(ws: Workspace, cleaned: bool = False) -> None:
+    """Pretend FEAT (and optionally the noise removal) ran earlier: create the files."""
+    from mrforge.results import _outputs, existing_cleaned
+
+    dummy = {"bold": BOLD, "t1_head": BOLD, "t1_brain": BOLD, "t1_seg": BOLD}
+    out, folder = _outputs(ws, "feat_preproc", "sub-001", dummy, "feat_preproc")
+    for name in (out.preproc_bold, out.brain_mask, out.to_t1_affine, out.motion):
+        path = ws.root / folder / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("x")
+    if cleaned:
+        d2 = {"bold": BOLD, "mixing": BOLD, "labels": BOLD, "brain_mask": BOLD}
+        out2, folder2 = _outputs(ws, "regfilt", "sub-001", d2, "regfilt")
+        (ws.root / folder2 / out2.cleaned_bold).write_text("x")
+        assert existing_cleaned(ws, "sub-001", BOLD) is not None
+
+
+def only(stage: str) -> dict[str, bool]:
+    return {s.id: s.id == stage for s in STAGES}
+
+
+def test_artifact_rejection_can_be_run_on_its_own_after_functional_preprocessing(
+    tmp_path: Path,
+) -> None:
+    ws = workspace(tmp_path, volumes=45, anat_done=True)
+    make_earlier_results(ws)
+    p, spec = plan(ws, stages=only("artifact_rejection"))
+    assert p.can_start and [s.step for s in spec.steps] == ["melodic", "ica_labels", "regfilt"]  # type: ignore[union-attr]
+    mel = spec.steps[0]  # type: ignore[union-attr]
+    assert (
+        mel.inputs["bold"].endswith("desc-preproc_bold.nii.gz") and "${" not in mel.inputs["bold"]
+    )
+
+
+def test_without_earlier_results_a_single_stage_explains_what_is_missing(tmp_path: Path) -> None:
+    ws = workspace(tmp_path, volumes=45, anat_done=True)
+    p, spec = plan(ws, stages=only("artifact_rejection"))
+    stage = next(s for s in p.stages if s.id == "artifact_rejection")
+    assert not stage.can_run and "Functional" in (stage.reason or "")
+    assert spec is None
+
+
+def test_standard_space_alone_uses_the_cleaned_data_when_there_is_any(tmp_path: Path) -> None:
+    ws = workspace(tmp_path, volumes=45, anat_done=True)
+    make_earlier_results(ws, cleaned=True)
+    p, spec = plan(ws, stages=only("standard_space"))
+    mni = spec.steps[0]  # type: ignore[union-attr]
+    assert mni.step == "func_to_mni" and mni.inputs["bold"].endswith("desc-denoised_bold.nii.gz")
+    item = next(s for s in p.stages if s.id == "standard_space").items[0]
+    assert "denoised" in {x.name: x.value for x in item.settings}["Data"]
+
+
+def test_standard_space_alone_without_cleaning_uses_the_preprocessed_data(tmp_path: Path) -> None:
+    ws = workspace(tmp_path, volumes=45, anat_done=True)
+    make_earlier_results(ws)
+    _, spec = plan(ws, stages=only("standard_space"))
+    assert spec.steps[0].inputs["bold"].endswith("desc-preproc_bold.nii.gz")  # type: ignore[union-attr]
+
+
+def test_an_old_cleaned_image_is_not_used_when_preprocessing_runs_again(tmp_path: Path) -> None:
+    ws = workspace(tmp_path, volumes=45, anat_done=True)
+    make_earlier_results(ws, cleaned=True)
+    _, spec = plan(ws, stages={"functional": True, "standard_space": True})
+    mni = next(s for s in spec.steps if s.step == "func_to_mni")  # type: ignore[union-attr]
+    assert mni.inputs["bold"] == "${feat_preproc__task-rest.preproc_bold}"

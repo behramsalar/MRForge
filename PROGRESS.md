@@ -1,14 +1,14 @@
 # Progress
 
-**Current stage:** Stage 6 (artifact rejection) built, waiting for the user's acceptance. Branch `stage-6-artifact-rejection`. Stages 0-5 accepted (Stage 4 tag `stage4-accepted`).
+**Current stage:** Stage 6.5 (structure pass) built, waiting for the user's check. Branch `stage-6b-structure-pass`. Stage 6 accepted and merged (`stage6-accepted`).
 
-Stage 6 sub-steps: 6a `melodic` | 6b "Waiting for you" state, `ica_labels` gate, label saving | 6c `regfilt` | 6d labelling on the review screen | 6e artifact stage in the full-processing dialog | 6f ICA-AROMA (reference implementation in `tools/ICA-AROMA`, `scripts/install_aroma.sh`): all done.
+Stage 6.5 sub-steps: S1 sidebar headings and single-stage runs | S2 subjects table (search, filters, paging) used everywhere | S3 subject page (stage cards, motion numbers, interim Results tab, analysis-ready note) | S4 viewer buttons only for images | S5 naming (`desc-denoised`, standard space named for its input), `mrforge workspace migrate`, the analysis-ready folder and manifest with a settings-difference warning on the Dashboard: all done.
 
-Last test status: `pytest -m "not fsl"` 483 passed, 20 deselected; `pytest -m "fsl and not slow"` 15 passed; the slow real-data AROMA comparison passed on its own (138 s); the slow `fsl_anat`/FEAT tests (`-m "fsl and slow"`, about 40 min) were not re-run in this stage; frontend 26 passed, `tsc`, ruff and mypy clean.
+Last test status: `pytest -m "not fsl"` 506 passed, 20 deselected; frontend 26 passed, `tsc`, ruff and mypy clean. The migration was run on a copy and on the user's `fulldeneme` workspace (all steps reusable afterwards). Real-FSL tests were not re-run for this step (no FSL code changed except step names).
 
-End-to-end runs on a copy of the demo data (`mri-test-data/full-art`, 355 volumes, 57 components): manual labelling (pause, labels, resume) and ICA-AROMA automatic (no pause; AROMA proposed 38 of 57 as motion; partial removal took out 57% of the variance). Not tested: two functional runs through the whole flow with real data; the dashboard stage table does not show the artifact stage.
+Known issues / open: the Results tab is interim (reports in Stage 8); the Philips fieldmap pipeline is being prepared by the user; other workspaces still use the old names until `mrforge workspace migrate` is run on them (they will be purged).
 
-Known issues / open: standard-space output keeps the name `desc-preproc`; CLAUDE.md's Stage 6 lettering (6a-6f) differs from what was built (proposal below).
+Stage 6.5 manual checklist: see CLAUDE.md. Next: Stage 7 (batch, presets, resources, QC decisions).
 
 ## Stage 5 (Functional preprocessing, on FEAT)
 | Sub-step | Status |

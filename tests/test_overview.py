@@ -143,7 +143,13 @@ def test_the_overview_route(tmp_path: Path, monkeypatch) -> None:  # type: ignor
     ws_id = client.post("/api/workspaces", json={"name": "w"}).json()["id"]
     empty = client.get(f"/api/workspaces/{ws_id}/overview").json()
     assert empty["subjects_total"] == 0 and empty["subjects"] == [] and empty["running"] == 0
-    assert [s["id"] for s in empty["stages"]] == ["import", "anatomical", "functional"]
+    assert [s["id"] for s in empty["stages"]] == [
+        "import",
+        "anatomical",
+        "preprocessing",
+        "artifact_rejection",
+        "standard_space",
+    ]
     assert client.get("/api/workspaces/nothing/overview").status_code == 404
 
 
@@ -164,3 +170,71 @@ def test_a_failed_task_that_was_repeated_successfully_is_not_shown_as_recent_fai
     shown = [(a.title, a.status) for a in build_overview(ws).recent]
     assert ("Reading test.zip", "Failed") not in shown
     assert ("Reading other.zip", "Failed") in shown
+
+
+def chips(row) -> dict[str, str]:  # type: ignore[no-untyped-def]
+    return {c.id: c.state for c in row.stages}
+
+
+def test_every_subject_has_the_same_five_stage_chips(tmp_path: Path) -> None:
+    row = subject(workspace(tmp_path))
+    assert [c.id for c in row.stages] == [
+        "import", "anatomical", "preprocessing", "artifact_rejection", "standard_space",
+    ]  # fmt: skip
+    assert chips(row)["import"] == "none" or chips(row)["import"] == "done"
+    assert not row.complete
+
+
+def test_a_subject_is_complete_when_the_standard_pipeline_is_done(tmp_path: Path) -> None:
+    ws = workspace(tmp_path)
+    anat_done(ws)
+    for step in ("feat_preproc", "func_qc"):
+        add_job(ws, step, "Completed", "task-rest")
+    row = subject(ws)
+    assert chips(row)["preprocessing"] == "done" and not row.complete  # standard space missing
+    add_job(ws, "func_to_mni", "Completed", "task-rest")
+    row = subject(ws)
+    assert chips(row)["standard_space"] == "done" and row.complete
+    assert chips(row)["artifact_rejection"] == "none"  # optional: not done, not required
+
+
+def test_artifact_rejection_waiting_for_the_researcher_shows_as_review(tmp_path: Path) -> None:
+    ws = workspace(tmp_path)
+    add_job(ws, "melodic", "Completed", "task-rest")
+    add_job(ws, "ica_labels", "Waiting", "task-rest")
+    assert chips(subject(ws))["artifact_rejection"] == "review"
+    add_job(ws, "ica_labels", "Completed", "task-rest")
+    add_job(ws, "regfilt", "Completed", "task-rest")
+    assert chips(subject(ws))["artifact_rejection"] == "done"
+
+
+def test_a_failed_standard_space_step_is_flagged_on_its_own_chip(tmp_path: Path) -> None:
+    ws = workspace(tmp_path)
+    anat_done(ws)
+    for step in ("feat_preproc", "func_qc"):
+        add_job(ws, step, "Completed", "task-rest")
+    add_job(ws, "func_to_mni", "Failed", "task-rest")
+    row = subject(ws)
+    assert chips(row)["preprocessing"] == "done" and chips(row)["standard_space"] == "failed"
+    assert not row.complete
+
+
+def test_motion_numbers_are_taken_from_the_qc_record(tmp_path: Path) -> None:
+    ws = workspace(tmp_path)
+    folder = ws.derivatives_dir / "sub-001" / "func"
+    folder.mkdir(parents=True)
+    (folder / "sub-001_task-rest_desc-metrics_qc.json").write_text(
+        json.dumps(
+            {
+                "fd_mean_mm": 0.1234,
+                "fd_max_mm": 0.9,
+                "fd_above_threshold": 3,
+                "n_volumes": 355,
+                "fd_threshold_mm": 0.5,
+            }
+        )  # fmt: skip
+    )
+    qc = subject(ws).qc
+    assert (
+        qc is not None and qc.fd_mean_mm == 0.123 and qc.volumes_above == 3 and qc.n_volumes == 355
+    )

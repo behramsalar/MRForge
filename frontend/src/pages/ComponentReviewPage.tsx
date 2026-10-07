@@ -26,6 +26,7 @@ import { LABEL_COLOURS, LABEL_NAMES, counts, nextUnlabelled, noiseList, toLabels
 import { when } from "../lib/labels";
 import { space, type } from "../theme/tokens";
 import { useWorkspace } from "../shell/WorkspaceContext";
+import { ConfirmProcessDialog } from "../components/ConfirmProcessDialog";
 
 const Z_DEFAULT = 2.3; // REVIEW(domain): the common display threshold for MELODIC z-maps
 
@@ -163,6 +164,7 @@ export function ComponentReviewPage({ ws }: { ws: string }) {
     setEditing(false);
   };
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [runOpen, setRunOpen] = useState(false);
   const complete = n.unlabelled === 0 && total > 0;
 
   return (
@@ -199,12 +201,18 @@ export function ComponentReviewPage({ ws }: { ws: string }) {
             {rec.n_components} components from {rec.n_volumes} volumes (TR {rec.tr_s} s)
           </Text>
         )}
+        {label && (
+          <Button size="2" variant="soft" style={{ marginLeft: "auto" }} disabled={waiting} onClick={() => setRunOpen(true)}>
+            {rec ? "Run artifact rejection again…" : "Run artifact rejection…"}
+          </Button>
+        )}
       </Flex>
+      {label && <ConfirmProcessDialog ws={ws} subject={label} open={runOpen} onOpenChange={setRunOpen} onlyStage="artifact_rejection" />}
       {results.error && <ErrorCallout error={(results.error as ApiError).body} />}
       {results.data && !rec && (
         <EmptyState
           title="No components yet"
-          text="Component analysis (MELODIC) has not been run for this subject. It will appear here once it has."
+          text="Component analysis (MELODIC) has not been run for this subject. Use the button above to run artifact rejection (the preprocessing must be done first)."
         />
       )}
       {rec?.label_status === "stale" && (
