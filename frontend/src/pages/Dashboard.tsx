@@ -1,8 +1,9 @@
 import {
   ArchiveIcon,
   CheckCircledIcon,
+  Cross2Icon,
+  EyeOpenIcon,
   ExclamationTriangleIcon,
-  LightningBoltIcon,
   PersonIcon,
 } from "@radix-ui/react-icons";
 import { Badge, Button, Callout, Card, Flex, Grid, Heading, Text } from "@radix-ui/themes";
@@ -72,7 +73,7 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
           </Flex>
         </Callout.Root>
       )}
-      <Grid columns={{ initial: "1", sm: "2", lg: "4" }} gap={space.group}>
+      <Grid columns={{ initial: "1", sm: "2", lg: "5" }} gap={space.group}>
         <StatCard label="Subjects" value={o?.subjects_total ?? "-"} icon={<PersonIcon width={22} height={22} />} />
         <StatCard
           label="Processed"
@@ -82,16 +83,23 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
           icon={<CheckCircledIcon width={22} height={22} />}
         />
         <StatCard
-          label="Need attention"
-          value={o?.needs_attention ?? "-"}
-          color={o?.needs_attention ? "red" : "gray"}
+          label="Needs your review"
+          value={o?.needs_review ?? "-"}
+          color={o?.needs_review ? "amber" : "gray"}
+          hint="labels or quality decision"
+          icon={<EyeOpenIcon width={22} height={22} />}
+        />
+        <StatCard
+          label="Failed"
+          value={o?.failed ?? "-"}
+          color={o?.failed ? "red" : "gray"}
           icon={<ExclamationTriangleIcon width={22} height={22} />}
         />
         <StatCard
-          label="Running now"
-          value={o?.running ?? "-"}
-          color={o?.running ? "orange" : "gray"}
-          icon={<LightningBoltIcon width={22} height={22} />}
+          label="Excluded"
+          value={o?.excluded ?? "-"}
+          hint="by you, with a reason"
+          icon={<Cross2Icon width={22} height={22} />}
         />
       </Grid>
 

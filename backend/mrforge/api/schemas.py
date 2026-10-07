@@ -8,6 +8,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from mrforge.presets import PresetOptions
+from mrforge.resources import Machine, ResourcePolicy
+
 
 class ErrorBody(BaseModel):
     """A plain-language error: what happened, why, and what to do next."""
@@ -272,3 +275,20 @@ class IcaLabelsRequest(BaseModel):
 class IcaLabelsSaved(BaseModel):
     path: str
     complete: bool
+
+
+class ResourcesInfo(BaseModel):
+    policy: ResourcePolicy
+    machine: Machine
+    presets: dict[str, ResourcePolicy]
+
+
+class QcDecisionRequest(BaseModel):
+    decision: Literal["accept", "review", "exclude"]
+    reason: str
+
+
+class PresetRequest(BaseModel):
+    name: str
+    description: str = ""
+    options: PresetOptions

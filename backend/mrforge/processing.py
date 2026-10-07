@@ -68,6 +68,7 @@ class ArtifactOptions(BaseModel):
 
 class FullOptions(BaseModel):
     subject: str
+    preset: str | None = None  # name of the preset these choices came from (recorded only)
     # Stages switched off on purpose; missing means "as planned by default".
     stages: dict[str, bool] = {}
     anatomical: AnatomicalOptions = AnatomicalOptions()
@@ -92,6 +93,27 @@ class PlanItem(BaseModel):
     settings: list[PlanSetting] = []
 
 
+class BatchOptions(BaseModel):
+    """The same choices as for one subject, applied to several."""
+
+    subjects: list[str]
+    stages: dict[str, bool] = {}
+    anatomical: AnatomicalOptions = AnatomicalOptions()
+    functional: FunctionalOptions = FunctionalOptions()
+    artifact: ArtifactOptions = ArtifactOptions()
+    preset: str | None = None  # name of the preset the choices came from (recorded only)
+
+    def for_subject(self, label: str) -> FullOptions:
+        return FullOptions(
+            subject=label,
+            stages=self.stages,
+            anatomical=self.anatomical,
+            functional=self.functional,
+            artifact=self.artifact,
+            preset=self.preset,
+        )
+
+
 class StagePlan(BaseModel):
     id: str
     label: str
@@ -109,6 +131,22 @@ class FullPlan(BaseModel):
     stages: list[StagePlan]
     steps: int  # number of steps in the pipeline that would run
     can_start: bool
+
+
+class BatchSubjectPlan(BaseModel):
+    subject: str
+    can_start: bool
+    steps: int
+    reason: str | None = None  # plain language, when it cannot run
+
+
+class BatchPlan(BaseModel):
+    """What a batch would do: the shared stage descriptions (from the first runnable subject)
+    and one line per subject."""
+
+    stages: list[StagePlan]
+    subjects: list[BatchSubjectPlan]
+    runnable: int
 
 
 @dataclass
@@ -638,6 +676,34 @@ STAGES: list[Stage] = [
 ]
 
 
+def plan_batch(ws: Workspace, opts: BatchOptions) -> tuple[BatchPlan, list[PipelineSpec]]:
+    """Plan every subject with the same choices; the specs of those that can run."""
+    lines: list[BatchSubjectPlan] = []
+    specs: list[PipelineSpec] = []
+    first_plan: FullPlan | None = None
+    runnable_plan: FullPlan | None = None
+    for label in opts.subjects:
+        plan, spec = plan_full_processing(ws, opts.for_subject(label))
+        first_plan = first_plan or plan
+        if plan.can_start and runnable_plan is None:
+            runnable_plan = plan
+        reasons = [p.reason for p in plan.stages if p.enabled and not p.can_run and p.reason]
+        lines.append(
+            BatchSubjectPlan(
+                subject=label,
+                can_start=plan.can_start and spec is not None,
+                steps=plan.steps,
+                reason=None if plan.can_start else (reasons[0] if reasons else "Nothing can run."),
+            )
+        )
+        if spec is not None and plan.can_start:
+            specs.append(spec)
+    shown = runnable_plan or first_plan
+    return BatchPlan(
+        stages=shown.stages if shown else [], subjects=lines, runnable=len(specs)
+    ), specs
+
+
 def plan_full_processing(ws: Workspace, opts: FullOptions) -> tuple[FullPlan, PipelineSpec | None]:
     """The plan for the dialog and, if anything can run, the pipeline that does it."""
     ctx = PlanContext(ws=ws, opts=opts)
@@ -647,7 +713,12 @@ def plan_full_processing(ws: Workspace, opts: FullOptions) -> tuple[FullPlan, Pi
         plans.append(stage.plan(ctx, enabled))
     runnable = [p for p in plans if p.enabled and p.can_run]
     spec = (
-        PipelineSpec(name=f"full-{opts.subject}", subject=opts.subject, steps=ctx.steps)
+        PipelineSpec(
+            name=f"full-{opts.subject}",
+            subject=opts.subject,
+            steps=ctx.steps,
+            preset=opts.preset,
+        )
         if ctx.steps
         else None
     )

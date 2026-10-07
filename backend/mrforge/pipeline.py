@@ -42,6 +42,7 @@ class PipelineStep(BaseModel):
 class PipelineSpec(BaseModel):
     name: str
     subject: str | None = None
+    preset: str | None = None  # the preset the choices came from, kept with the run
     steps: list[PipelineStep]
 
 

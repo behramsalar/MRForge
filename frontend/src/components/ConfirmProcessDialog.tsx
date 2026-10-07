@@ -1,9 +1,9 @@
-import { Badge, Button, Callout, Checkbox, Dialog, Flex, RadioGroup, Switch, Text, TextField } from "@radix-ui/themes";
+import { Badge, Button, Callout, Checkbox, Dialog, Flex, RadioGroup, Select, Switch, Text, TextArea, TextField } from "@radix-ui/themes";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import { ApiError, call } from "../api/call";
-import type { FullOptions, StagePlan } from "../api/types";
+import type { FullOptions, Preset, StagePlan } from "../api/types";
 import { space, type } from "../theme/tokens";
 import { ErrorCallout } from "./ErrorCallout";
 
@@ -72,6 +72,15 @@ function StageBlock({
 /** The confirmation before full processing: what will run, with the default settings, anything
  * left out and why, and a way to change the settings. Stages come from the plan, so a new
  * stage shows up here without changes to this dialog. */
+/** The choices without the subject, in a stable form, to see whether they still equal a preset. */
+function signature(o: Pick<FullOptions, "stages" | "anatomical" | "functional" | "artifact">): string {
+  const sort = (v: unknown): unknown =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([k, x]) => [k, sort(x)]))
+      : v;
+  return JSON.stringify(sort({ s: o.stages ?? {}, a: o.anatomical, f: o.functional, r: o.artifact }));
+}
+
 export function ConfirmProcessDialog({
   ws,
   subject,
@@ -79,10 +88,12 @@ export function ConfirmProcessDialog({
   onOpenChange,
   onStarted,
   onlyStage,
+  subjects,
 }: {
   ws: string;
   subject: string;
   onlyStage?: string; // run just this stage (the others are unticked; earlier results are used)
+  subjects?: string[]; // several subjects at once (a batch): the same choices for all of them
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStarted?: () => void;
@@ -94,14 +105,70 @@ export function ConfirmProcessDialog({
     stages: onlyStage ? Object.fromEntries(STAGE_IDS.map((id) => [id, id === onlyStage])) : {},
   });
   const [showMore, setShowMore] = useState(false);
-  const request: FullOptions = { ...opts, subject };
+  const presets = useQuery({ queryKey: ["presets"], queryFn: () => call(api.GET("/api/presets")), enabled: open });
+  const [presetId, setPresetId] = useState<string>("custom");
+  const chosenPreset = (presets.data ?? []).find((x) => x.id === presetId);
+  // The preset is recorded with the run only while the choices still equal it.
+  const presetName = chosenPreset && signature(chosenPreset.options as never) === signature(opts) ? chosenPreset.name : undefined;
+  const applyPreset = (id: string) => {
+    setPresetId(id);
+    const x = presets.data?.find((q) => q.id === id);
+    if (!x) return;
+    setOpts({
+      ...opts,
+      stages: onlyStage ? opts.stages : x.options.stages,
+      anatomical: x.options.anatomical,
+      functional: x.options.functional,
+      artifact: x.options.artifact,
+    });
+  };
+  const [saving, setSaving] = useState(false);
+  const [presetNameInput, setPresetNameInput] = useState("");
+  const [presetText, setPresetText] = useState("");
+  const savePreset = useMutation({
+    mutationFn: () =>
+      call(
+        api.POST("/api/presets", {
+          body: {
+            name: presetNameInput,
+            description: presetText,
+            options: { stages: opts.stages, anatomical: opts.anatomical, functional: opts.functional, artifact: opts.artifact },
+          },
+        }),
+      ),
+    onSuccess: (saved) => {
+      void client.invalidateQueries({ queryKey: ["presets"] });
+      setSaving(false);
+      setPresetId(saved.id);
+    },
+  });
+  const removePreset = useMutation({
+    mutationFn: (id: string) => call(api.DELETE("/api/presets/{preset_id}", { params: { path: { preset_id: id } } })),
+    onSuccess: () => {
+      setPresetId("custom");
+      void client.invalidateQueries({ queryKey: ["presets"] });
+    },
+  });
+  const request: FullOptions = { ...opts, subject, preset: presetName };
+  const batch = subjects && subjects.length > 0 ? subjects : null;
+  const batchRequest = { subjects: batch ?? [], stages: opts.stages, anatomical: opts.anatomical, functional: opts.functional, artifact: opts.artifact, preset: presetName };
   const plan = useQuery({
-    queryKey: ["ws", ws, "plan", JSON.stringify(request)],
+    queryKey: ["ws", ws, "plan", batch ? JSON.stringify(batchRequest) : JSON.stringify(request)],
     enabled: open,
-    queryFn: () => call(api.POST("/api/workspaces/{ws_id}/process/plan", { params: { path: { ws_id: ws } }, body: request })),
+    queryFn: async () => {
+      if (batch) {
+        const b = await call(api.POST("/api/workspaces/{ws_id}/process/plan-batch", { params: { path: { ws_id: ws } }, body: batchRequest }));
+        return { stages: b.stages, can_start: b.runnable > 0, steps: 0, batch: b };
+      }
+      const one = await call(api.POST("/api/workspaces/{ws_id}/process/plan", { params: { path: { ws_id: ws } }, body: request }));
+      return { ...one, batch: null };
+    },
   });
   const start = useMutation({
-    mutationFn: () => call(api.POST("/api/workspaces/{ws_id}/process", { params: { path: { ws_id: ws } }, body: request })),
+    mutationFn: () =>
+      batch
+        ? call(api.POST("/api/workspaces/{ws_id}/process-batch", { params: { path: { ws_id: ws } }, body: batchRequest }))
+        : call(api.POST("/api/workspaces/{ws_id}/process", { params: { path: { ws_id: ws } }, body: request })),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ["ws", ws] });
       onOpenChange(false);
@@ -120,12 +187,45 @@ export function ConfirmProcessDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Content maxWidth="640px">
-        <Dialog.Title>{onlyStage ? `Run one stage for ${subject}` : `Process ${subject}`}</Dialog.Title>
+        <Dialog.Title>
+          {batch ? `Process ${batch.length} subjects` : onlyStage ? `Run one stage for ${subject}` : `Process ${subject}`}
+        </Dialog.Title>
         <Dialog.Description size={type.help} color="gray">
-          MRForge will run these stages one after another. Work that is already finished and unchanged is not
-          repeated. You can close the page while it runs.
+          MRForge will run these stages one after another{batch ? " for every subject, a few subjects at a time" : ""}. Work
+          that is already finished and unchanged is not repeated. You can close the page while it runs.
         </Dialog.Description>
         <Flex direction="column" gap={space.group} mt="4">
+          <Flex gap="2" align="end" wrap="wrap">
+            <Flex direction="column" gap="1" style={{ minWidth: 260 }}>
+              <Text size={type.help} weight="medium">
+                Settings
+              </Text>
+              <Select.Root value={presetName ? presetId : "custom"} onValueChange={applyPreset}>
+                <Select.Trigger aria-label="Preset" />
+                <Select.Content>
+                  <Select.Item value="custom">Custom (my own choices)</Select.Item>
+                  {(presets.data ?? []).map((x: Preset) => (
+                    <Select.Item key={x.id} value={x.id}>
+                      {x.name}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </Flex>
+            <Button size="1" variant="soft" color="gray" onClick={() => setSaving(true)}>
+              Save these settings as a preset…
+            </Button>
+            {chosenPreset && !chosenPreset.builtin && (
+              <Button size="1" variant="ghost" color="red" onClick={() => removePreset.mutate(chosenPreset.id)}>
+                Delete this preset
+              </Button>
+            )}
+          </Flex>
+          {chosenPreset && presetName && (
+            <Text size={type.caption} color="gray">
+              {chosenPreset.description}
+            </Text>
+          )}
           {plan.error && <ErrorCallout error={(plan.error as ApiError).body} />}
           {p?.stages.map((st) => (
             <StageBlock
@@ -134,6 +234,24 @@ export function ConfirmProcessDialog({
               onToggle={(enabled) => setOpts({ ...opts, stages: { ...opts.stages, [st.id]: enabled } })}
             />
           ))}
+
+          {p?.batch && (
+            <Flex direction="column" gap="1">
+              <Text size={type.help} weight="medium">
+                Subjects ({p.batch.runnable} of {p.batch.subjects.length} can run)
+              </Text>
+              <div style={{ maxHeight: 150, overflow: "auto", border: "1px solid var(--gray-a5)", borderRadius: "var(--radius-2)", padding: "var(--space-2)" }}>
+                {p.batch.subjects.map((s) => (
+                  <Flex key={s.subject} justify="between" gap={space.group}>
+                    <Text size={type.help}>{s.subject}</Text>
+                    <Text size={type.caption} color={s.can_start ? "gray" : "orange"}>
+                      {s.can_start ? `${s.steps} steps planned` : `cannot run: ${s.reason}`}
+                    </Text>
+                  </Flex>
+                ))}
+              </div>
+            </Flex>
+          )}
 
           <Button variant="ghost" size="1" style={{ alignSelf: "flex-start" }} onClick={() => setShowMore(!showMore)}>
             {showMore ? "Hide settings" : "Change settings"}
@@ -272,6 +390,27 @@ export function ConfirmProcessDialog({
           )}
           {start.error && <ErrorCallout error={(start.error as ApiError).body} />}
         </Flex>
+        <Dialog.Root open={saving} onOpenChange={setSaving}>
+          <Dialog.Content maxWidth="420px">
+            <Dialog.Title>Save as a preset</Dialog.Title>
+            <Dialog.Description size={type.help} color="gray">
+              Everyone who uses this computer can choose it later. Saving with the same name replaces your earlier preset.
+            </Dialog.Description>
+            <Flex direction="column" gap="2" mt="3">
+              <TextField.Root placeholder="Name, e.g. Pilot study, 6 mm" value={presetNameInput} onChange={(e) => setPresetNameInput(e.target.value)} aria-label="Preset name" autoFocus />
+              <TextArea placeholder="What is it for? (optional)" value={presetText} onChange={(e) => setPresetText(e.target.value)} aria-label="Description" />
+              {savePreset.error && <ErrorCallout error={(savePreset.error as ApiError).body} />}
+            </Flex>
+            <Flex justify="end" gap="2" mt="4">
+              <Button variant="soft" color="gray" onClick={() => setSaving(false)}>
+                Cancel
+              </Button>
+              <Button disabled={!presetNameInput.trim() || savePreset.isPending} onClick={() => savePreset.mutate()}>
+                Save preset
+              </Button>
+            </Flex>
+          </Dialog.Content>
+        </Dialog.Root>
         <Flex justify="end" gap={space.group} mt="4">
           <Dialog.Close>
             <Button variant="soft" color="gray">
@@ -279,7 +418,7 @@ export function ConfirmProcessDialog({
             </Button>
           </Dialog.Close>
           <Button size="3" disabled={!p?.can_start || start.isPending} onClick={() => start.mutate()}>
-            Start processing
+            {batch ? `Start processing ${p?.batch?.runnable ?? batch.length} subjects` : "Start processing"}
           </Button>
         </Flex>
       </Dialog.Content>

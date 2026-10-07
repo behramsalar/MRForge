@@ -4,24 +4,26 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Overview } from "../api/types";
 import { when } from "../lib/labels";
 import { space, type } from "../theme/tokens";
+import { DECISION_COLOUR, DECISION_LABEL } from "./QualityDecisionCard";
 import { StageChips } from "./StageChips";
 
 type Row = Overview["subjects"][number];
-type Filter = "all" | "todo" | "attention" | "complete";
+type Filter = "all" | "todo" | "attention" | "complete" | "excluded";
 
 const PAGE = 20;
 
 const NEEDS_ATTENTION = ["failed", "stopped", "review"];
 
 function attention(r: Row): boolean {
-  return r.stages.some((c) => NEEDS_ATTENTION.includes(c.state));
+  return r.stages.some((c) => NEEDS_ATTENTION.includes(c.state)) || !!r.motion_flag || r.qc_decision === "review";
 }
 
 const FILTERS: Record<Filter, (r: Row) => boolean> = {
   all: () => true,
-  todo: (r) => !r.complete && !attention(r),
-  attention: attention,
-  complete: (r) => r.complete,
+  todo: (r) => !r.complete && !attention(r) && r.qc_decision !== "exclude",
+  attention: (r) => attention(r) && r.qc_decision !== "exclude",
+  complete: (r) => r.complete && r.qc_decision !== "exclude",
+  excluded: (r) => r.qc_decision === "exclude",
 };
 
 /**
@@ -60,6 +62,7 @@ export function SubjectsTable({
       todo: subjects.filter(FILTERS.todo).length,
       attention: subjects.filter(FILTERS.attention).length,
       complete: subjects.filter(FILTERS.complete).length,
+      excluded: subjects.filter(FILTERS.excluded).length,
     }),
     [subjects],
   );
@@ -90,6 +93,7 @@ export function SubjectsTable({
             <SegmentedControl.Item value="todo">To do ({counts.todo})</SegmentedControl.Item>
             <SegmentedControl.Item value="attention">Needs attention ({counts.attention})</SegmentedControl.Item>
             <SegmentedControl.Item value="complete">Complete ({counts.complete})</SegmentedControl.Item>
+            {counts.excluded > 0 && <SegmentedControl.Item value="excluded">Excluded ({counts.excluded})</SegmentedControl.Item>}
           </SegmentedControl.Root>
         </Flex>
         <Table.Root>
@@ -99,9 +103,14 @@ export function SubjectsTable({
                 <Table.ColumnHeaderCell style={{ width: 32 }}>
                   <Checkbox
                     aria-label="Select all shown"
-                    checked={rows.length > 0 && rows.every((r) => chosen.includes(r.label))}
+                    checked={rows.length > 0 && rows.filter((r) => r.qc_decision !== "exclude").every((r) => chosen.includes(r.label))}
                     onCheckedChange={(on) =>
-                      onSelect(on === true ? [...new Set([...chosen, ...rows.map((r) => r.label)])] : chosen.filter((l) => !rows.some((r) => r.label === l)))
+                      // Excluded subjects are not ticked by "select all" (you can still tick one by hand).
+                      onSelect(
+                        on === true
+                          ? [...new Set([...chosen, ...rows.filter((r) => r.qc_decision !== "exclude").map((r) => r.label)])]
+                          : chosen.filter((l) => !rows.some((r) => r.label === l)),
+                      )
                     }
                   />
                 </Table.ColumnHeaderCell>
@@ -121,6 +130,7 @@ export function SubjectsTable({
                 style={{
                   cursor: onOpen || onSelect ? "pointer" : undefined,
                   background: chosen.includes(r.label) ? "var(--accent-a3)" : undefined,
+                  opacity: r.qc_decision === "exclude" ? 0.55 : 1,
                 }}
               >
                 {onSelect && multi && (
@@ -136,6 +146,11 @@ export function SubjectsTable({
                         Complete
                       </Badge>
                     )}
+                    {r.qc_decision && (
+                      <Badge color={DECISION_COLOUR[r.qc_decision as "accept" | "review" | "exclude"]} variant="soft" size="1" title={r.qc_reason ?? undefined}>
+                        {DECISION_LABEL[r.qc_decision as "accept" | "review" | "exclude"]}
+                      </Badge>
+                    )}
                   </Flex>
                 </Table.RowHeaderCell>
                 <Table.Cell>
@@ -143,9 +158,16 @@ export function SubjectsTable({
                 </Table.Cell>
                 <Table.Cell>
                   {r.qc ? (
-                    <Text size={type.help} title={`${r.qc.volumes_above} of ${r.qc.n_volumes} volumes above ${r.qc.threshold_mm} mm`}>
-                      mean FD {r.qc.fd_mean_mm} mm
-                    </Text>
+                    <Flex direction="column">
+                      <Text size={type.help} title={`${r.qc.volumes_above} of ${r.qc.n_volumes} volumes above ${r.qc.threshold_mm} mm`}>
+                        mean FD {r.qc.fd_mean_mm} mm
+                      </Text>
+                      {r.motion_flag && (
+                        <Text size={type.caption} color="amber">
+                          check motion
+                        </Text>
+                      )}
+                    </Flex>
                   ) : (
                     <Text size={type.help} color="gray">
                       -

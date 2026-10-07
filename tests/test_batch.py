@@ -137,3 +137,68 @@ def test_killing_the_batch_worker_is_recorded_and_the_batch_can_be_started_again
     assert get_operation(ws, op_id).status == "Interrupted"
     again = start_operation(ws, "batch", "Batch again", payload)
     assert wait_for(ws, again, 90) == "Completed"
+
+
+def test_a_batch_plan_has_one_line_per_subject_and_says_why_one_cannot_run(tmp_path: Path) -> None:
+    from test_processing import workspace as processing_workspace
+
+    from mrforge.processing import BatchOptions, plan_batch
+
+    ws = processing_workspace(tmp_path)  # sub-001 with a T1 and a run
+    ws.get_or_create_subject("sub-002")  # nothing imported for it
+    plan, specs = plan_batch(ws, BatchOptions(subjects=["sub-001", "sub-002"]))
+    lines = {ln.subject: ln for ln in plan.subjects}
+    assert lines["sub-001"].can_start and lines["sub-001"].steps > 0
+    assert not lines["sub-002"].can_start and lines["sub-002"].reason
+    assert plan.runnable == 1 and [s.subject for s in specs] == ["sub-001"]
+    assert [s.id for s in plan.stages][0] == "anatomical"  # the stage texts for the dialog
+
+
+def test_progress_of_a_batch_is_given_per_subject(tmp_path: Path) -> None:
+    from mrforge.progress import operation_progress
+
+    ws = Workspace.create(tmp_path / "ws")
+    specs = [fake_spec("sub-001", duration=2.0), fake_spec("sub-002", fail_at="start")]
+    op_id = start_operation(
+        ws,
+        "batch",
+        "Batch",
+        {"specs": [s.model_dump(mode="json") for s in specs], "max_subjects": 2},
+    )
+    saw_running = False
+    deadline = time.monotonic() + 60
+    while time.monotonic() < deadline:
+        p = operation_progress(ws, get_operation(ws, op_id))
+        saw_running = saw_running or any(s.state == "running" for s in p.subjects)
+        if p.status not in ("Queued", "Running"):
+            break
+        time.sleep(0.3)
+    p = operation_progress(ws, get_operation(ws, op_id))
+    assert saw_running
+    assert {s.subject: s.state for s in p.subjects} == {"sub-001": "done", "sub-002": "failed"}
+    assert (p.done, p.total) == (1, 2)
+
+
+def test_resume_after_a_batch_restarts_the_batch_not_a_single_subject(
+    tmp_path: Path, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    from fastapi.testclient import TestClient
+
+    from mrforge.api.app import create_app
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    client = TestClient(create_app(tmp_path / "workspaces"))
+    ws_id = client.post("/api/workspaces", json={"name": "w"}).json()["id"]
+    ws = Workspace.open(tmp_path / "workspaces" / ws_id)
+    specs = [fake_spec("sub-001"), fake_spec("sub-002", fail_at="start")]
+    first = start_operation(
+        ws,
+        "batch",
+        "Processing 2 subjects",
+        {"specs": [s.model_dump(mode="json") for s in specs], "max_subjects": 2},
+    )
+    assert wait_for(ws, first) == "Failed"
+    resumed = client.post(f"/api/workspaces/{ws_id}/resume").json()["operation_id"]
+    op = get_operation(ws, resumed)
+    assert op.kind == "batch" and op.title.startswith("Resuming Processing 2 subjects")
+    wait_for(ws, resumed)

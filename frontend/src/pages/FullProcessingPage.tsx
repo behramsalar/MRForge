@@ -15,9 +15,10 @@ import { space, type } from "../theme/tokens";
  * A subject that is already complete is not offered processing first: its results are. */
 export function FullProcessingPage({ ws, state }: { ws: string; state: WorkspaceState | null }) {
   const overview = useOverview(ws);
-  const [chosen, setChosen] = useState<string | undefined>();
+  const [picked, setPicked] = useState<string[]>([]);
   const [confirm, setConfirm] = useState(false);
   const rows = (overview.data?.subjects ?? []).filter((s) => s.n_files > 0);
+  const chosen = picked.length === 1 ? picked[0] : undefined;
   const row = rows.find((s) => s.label === chosen);
   const busy = !!state?.operations.some((o) => o.status === "Queued" || o.status === "Running");
   const jobs = (state?.jobs ?? []).filter((j) => j.subject === chosen);
@@ -38,9 +39,24 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
       {rows.length > 0 && (
         <>
           <Text size={type.help} color="gray">
-            Choose a subject.
+            Tick one or more subjects. Several subjects are processed together, a few at a time.
           </Text>
-          <SubjectsTable subjects={rows} selected={chosen ? [chosen] : []} onSelect={(l) => setChosen(l[0])} />
+          <SubjectsTable subjects={rows} selected={picked} onSelect={setPicked} multi />
+          {picked.length > 1 && (
+            <Card size="2" style={{ position: "sticky", bottom: "var(--space-3)", zIndex: 2, boxShadow: "var(--shadow-4)" }}>
+              <Flex justify="between" align="center" gap={space.group} wrap="wrap">
+                <Text weight="medium">{picked.length} subjects selected</Text>
+                <Flex gap="2">
+                  <Button variant="soft" color="gray" onClick={() => setPicked([])}>
+                    Clear
+                  </Button>
+                  <Button size="3" disabled={busy} onClick={() => setConfirm(true)}>
+                    Process {picked.length} subjects…
+                  </Button>
+                </Flex>
+              </Flex>
+            </Card>
+          )}
         </>
       )}
       {row && (
@@ -87,6 +103,9 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
         </Card>
       )}
       {row && <ConfirmProcessDialog ws={ws} subject={row.label} open={confirm} onOpenChange={setConfirm} />}
+      {picked.length > 1 && (
+        <ConfirmProcessDialog ws={ws} subject={picked[0]} subjects={picked} open={confirm} onOpenChange={setConfirm} />
+      )}
       {row && <JobsPanel ws={ws} jobs={jobs} busy={busy} />}
     </Flex>
   );

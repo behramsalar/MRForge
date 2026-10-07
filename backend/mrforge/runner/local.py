@@ -6,6 +6,7 @@ import os
 import signal
 import subprocess
 import sys
+import threading
 import time
 from collections import deque
 from pathlib import Path
@@ -14,6 +15,7 @@ from sqlalchemy import select
 
 from mrforge.errors import StepError
 from mrforge.models import Job, JobStatus
+from mrforge.resources import load_policy, why_not_now, worker_pids
 from mrforge.runner.jobs import (
     get_job,
     kill_orphans,
@@ -26,6 +28,10 @@ from mrforge.runner.queue import JobQueue
 from mrforge.workspace import Workspace
 
 POLL_INTERVAL_S = 0.1
+
+
+_START_LOCK = threading.Lock()  # checking the limits and starting a job is one step
+_STARTED: dict[int, subprocess.Popen[bytes]] = {}  # jobs started by this process
 
 
 class LocalJobQueue(JobQueue):
@@ -103,7 +109,16 @@ class LocalJobQueue(JobQueue):
     def _pump(self) -> None:
         self._reap()
         while self._pending and self._busy() < self.max_concurrency:
-            self._start(self._pending.popleft())
+            with _START_LOCK:
+                # Jobs this process started count at once, even before they show up in the
+                # process list; others (another workspace, another server) come from the list.
+                mine = {pid for pid, proc in _STARTED.items() if proc.poll() is None}
+                for pid in [p for p in _STARTED if p not in mine]:
+                    del _STARTED[pid]
+                running = len(mine | worker_pids())
+                if why_not_now(load_policy(), running) is not None:
+                    return  # waits for free capacity; the next tick tries again
+                self._start(self._pending.popleft())
 
     def _busy(self) -> int:
         """Workers in use: ours, plus live ones started by an earlier server process."""
@@ -126,6 +141,7 @@ class LocalJobQueue(JobQueue):
                 start_new_session=True,  # own process group: outlives parent, killable as a unit
             )
         self._running[job_id] = proc
+        _STARTED[proc.pid] = proc
 
     def _reap(self) -> None:
         for job_id, proc in list(self._running.items()):

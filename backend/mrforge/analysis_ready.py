@@ -21,6 +21,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from mrforge.provenance import PROVENANCE_FILENAME, Provenance
+from mrforge.qc_decisions import current as current_decision
 from mrforge.workspace import Workspace
 
 FOLDER = "analysis-ready"
@@ -36,6 +37,9 @@ class ReadyRow(BaseModel):
     settings: dict[str, str]  # what was done, in plain words
     decided_by: str | None
     finished: datetime | None
+    excluded: bool = False  # the researcher excluded this subject: no link, listed with the reason
+    qc_decision: str | None = None
+    qc_reason: str | None = None
 
 
 class Difference(BaseModel):
@@ -144,6 +148,24 @@ def refresh(ws: Workspace) -> ReadyReport:
         recording = record.parent.name.removeprefix("func_to_mni_")
         bold_input = next((f.path for f in prov.inputs if f.path.endswith("_bold.nii.gz")), "")
         settings, who = _settings(runs, recording, bold_input)
+        decision = current_decision(ws, prov.subject)
+        if decision is not None and decision.decision == "exclude":
+            rows.append(
+                ReadyRow(
+                    subject=prov.subject,
+                    recording=recording,
+                    file="",
+                    mask=None,
+                    source=image,
+                    settings=settings,
+                    decided_by=who,
+                    finished=prov.finished,
+                    excluded=True,
+                    qc_decision="exclude",
+                    qc_reason=decision.reason,
+                )
+            )
+            continue
         link = folder / _final_link(image.rsplit("/", 1)[-1])
         _relative_link(link, ws.abspath(image))
         wanted.add(link)
@@ -163,6 +185,8 @@ def refresh(ws: Workspace) -> ReadyReport:
                 settings=settings,
                 decided_by=who,
                 finished=prov.finished,
+                qc_decision=decision.decision if decision else None,
+                qc_reason=decision.reason if decision else None,
             )
         )
     if folder.is_dir():
@@ -173,7 +197,7 @@ def refresh(ws: Workspace) -> ReadyReport:
         folder=ws.relpath(folder),
         manifest=ws.relpath(folder / f"{MANIFEST}.tsv"),
         rows=rows,
-        differences=_differences(rows),
+        differences=_differences([r for r in rows if not r.excluded]),
     )
     _write_manifest(ws, folder, report)
     return report
@@ -209,5 +233,6 @@ def _write_manifest(ws: Workspace, folder: Path, report: ReadyReport) -> None:
                 [r.subject, r.recording, r.file, r.mask or "", r.source]
                 + [r.settings.get(k, "") for k in keys]
                 + [r.decided_by or "", r.finished.isoformat() if r.finished else ""]
+                + [r.qc_decision or "", r.qc_reason or "", "excluded" if r.excluded else "included"]
             )
     (folder / f"{MANIFEST}.json").write_text(report.model_dump_json(indent=2) + "\n")

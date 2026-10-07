@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sse_starlette.sse import EventSourceResponse
 
-from mrforge import __version__, accounts
+from mrforge import __version__, accounts, presets, qc_decisions, resources
 from mrforge.analysis_ready import ReadyReport
 from mrforge.analysis_ready import refresh as refresh_analysis_ready
 from mrforge.api import schemas as S
@@ -48,10 +48,19 @@ from mrforge.operations import (
     start_operation,
 )
 from mrforge.overview import Overview, build_overview
-from mrforge.pipeline import PipelineSpec, PipelineStep
-from mrforge.processing import FullOptions, FullPlan, plan_full_processing
+from mrforge.pipeline import PipelineSpec, PipelineStep, parse_pipeline
+from mrforge.presets import Preset
+from mrforge.processing import (
+    BatchOptions,
+    BatchPlan,
+    FullOptions,
+    FullPlan,
+    plan_batch,
+    plan_full_processing,
+)
 from mrforge.progress import OperationProgress, operation_progress
 from mrforge.provenance import read_provenance
+from mrforge.qc_decisions import MotionThresholds, QcDecisionEntry
 from mrforge.runner.jobs import get_job, list_jobs, process_alive, recover_stale_jobs
 from mrforge.viewerimages import find_images
 from mrforge.workspace import Workspace, WorkspaceError
@@ -273,6 +282,20 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             disk_total_gb=total,
             cpu_cores=os.cpu_count(),
         )
+
+    @app.get("/api/resources", response_model=S.ResourcesInfo)
+    def get_resources() -> S.ResourcesInfo:
+        """How much of the computer MRForge may use, the presets, and what the machine has."""
+        return S.ResourcesInfo(
+            policy=resources.load_policy(),
+            machine=resources.machine(),
+            presets={n: resources.preset_policy(n) for n in ("balanced", "max", "low")},
+        )
+
+    @app.put("/api/resources", response_model=S.ResourcesInfo)
+    def set_resources(policy: resources.ResourcePolicy) -> S.ResourcesInfo:
+        resources.save_policy(policy)
+        return get_resources()
 
     @app.get("/api/workspaces", response_model=list[S.WorkspaceInfo])
     def list_workspaces() -> list[S.WorkspaceInfo]:
@@ -659,6 +682,34 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         )
         return S.OperationStarted(operation_id=op)
 
+    def _start_batch(
+        ws: Workspace,
+        specs: list[PipelineSpec],
+        title: str,
+        who: accounts.Researcher | None = None,
+        preset: str | None = None,
+    ) -> S.OperationStarted:
+        refresh(ws)
+        if any(j.status == JobStatus.RUNNING.value for j in list_jobs(ws)):
+            raise StepError(
+                "JOBS_RUNNING",
+                "A processing step is still running in this workspace.",
+                probable_cause="It was started earlier and has not finished yet.",
+                suggested_action="Wait for it to finish, or cancel it, then try again.",
+            )
+        op = start_operation(
+            ws,
+            "batch",
+            title,
+            {
+                "specs": [x.model_dump(mode="json") for x in specs],
+                "max_subjects": 2,  # becomes the resource setting in the next step
+                "preset": preset,
+            },
+            started_by=who.name if who else None,
+        )
+        return S.OperationStarted(operation_id=op)
+
     @app.post("/api/workspaces/{ws_id}/anat", response_model=S.OperationStarted)
     def run_anat(
         ws_id: str, req: S.AnatRequest, who: accounts.Researcher | None = Researcher
@@ -692,9 +743,21 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
     @app.post("/api/workspaces/{ws_id}/resume", response_model=S.OperationStarted)
     def resume(ws_id: str, who: accounts.Researcher | None = Researcher) -> S.OperationStarted:
         """Continue the latest pipeline where it stopped; finished steps are not repeated."""
-        from mrforge.pipeline import parse_pipeline
 
         ws = ws_of(ws_id)
+        newest = next(
+            (o for o in reversed(list_operations(ws)) if o.kind in ("pipeline", "batch")), None
+        )
+        if newest is not None and newest.kind == "batch":
+            specs = [parse_pipeline(d) for d in newest.args["specs"]]  # type: ignore[attr-defined]
+            preset = newest.args.get("preset")
+            return _start_batch(
+                ws,
+                specs,
+                f"Resuming {newest.title}",
+                who,
+                preset if isinstance(preset, str) else None,
+            )
         last = latest_pipeline_run(ws)
         if last is None:
             raise StepError(
@@ -748,6 +811,32 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
                 suggested_action="Tick a stage that can run, or import the missing scans.",
             )
         return _start_pipeline(ws, spec, f"Full processing of {req.subject}", who)
+
+    @app.post("/api/workspaces/{ws_id}/process/plan-batch", response_model=BatchPlan)
+    def process_plan_batch(ws_id: str, req: BatchOptions) -> BatchPlan:
+        """What processing several subjects would do: the stages, and one line per subject."""
+        ws = ws_of(ws_id)
+        if not req.subjects or not all(SAFE_NAME.fullmatch(x) for x in req.subjects):
+            raise StepError("UNKNOWN_SUBJECT", "Choose at least one subject.")
+        return plan_batch(ws, req)[0]
+
+    @app.post("/api/workspaces/{ws_id}/process-batch", response_model=S.OperationStarted)
+    def process_batch(
+        ws_id: str, req: BatchOptions, who: accounts.Researcher | None = Researcher
+    ) -> S.OperationStarted:
+        """Process several subjects with the same choices, a few at a time, as one batch."""
+        ws = ws_of(ws_id)
+        if not req.subjects or not all(SAFE_NAME.fullmatch(x) for x in req.subjects):
+            raise StepError("UNKNOWN_SUBJECT", "Choose at least one subject.")
+        plan, specs = plan_batch(ws, req)
+        if not specs:
+            raise StepError(
+                "NOTHING_TO_RUN",
+                "There is nothing to run for these subjects with these choices.",
+                probable_cause="Every stage is switched off, or the needed images are missing.",
+                suggested_action="Tick a stage that can run, or import the missing scans.",
+            )
+        return _start_batch(ws, specs, f"Processing {len(specs)} subjects", who, req.preset)
 
     @app.get("/api/workspaces/{ws_id}/subjects/{label}/qc", response_model=list[S.QcGroup])
     def subject_qc(ws_id: str, label: str) -> list[S.QcGroup]:
@@ -827,6 +916,62 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
                 )
             )
         return out
+
+    @app.get(
+        "/api/workspaces/{ws_id}/subjects/{label}/qc-decision", response_model=list[QcDecisionEntry]
+    )
+    def qc_history(ws_id: str, label: str) -> list[QcDecisionEntry]:
+        """Every quality decision about the subject, oldest first (the last one is current)."""
+        ws = ws_of(ws_id)
+        if not SAFE_NAME.fullmatch(label):
+            raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
+        return qc_decisions.history(ws, label)
+
+    @app.put("/api/workspaces/{ws_id}/subjects/{label}/qc-decision", response_model=QcDecisionEntry)
+    def qc_decide(
+        ws_id: str,
+        label: str,
+        req: S.QcDecisionRequest,
+        who: accounts.Researcher | None = Researcher,
+    ) -> QcDecisionEntry:
+        """Record the researcher's decision (accept, review or exclude) with a reason."""
+        ws = ws_of(ws_id)
+        if not SAFE_NAME.fullmatch(label):
+            raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
+        row = next((r for r in build_overview(ws).subjects if r.label == label), None)
+        motion = (
+            {"fd_mean_mm": row.qc.fd_mean_mm, "fd_max_mm": row.qc.fd_max_mm,
+             "volumes_above": float(row.qc.volumes_above), "n_volumes": float(row.qc.n_volumes)}
+            if row and row.qc
+            else None
+        )  # fmt: skip
+        entry = qc_decisions.record(
+            ws, label, req.decision, req.reason, who.name if who else None, motion
+        )
+        refresh_analysis_ready(ws)  # an excluded subject leaves the folder, and comes back later
+        return entry
+
+    @app.get("/api/presets", response_model=list[Preset])
+    def get_presets() -> list[Preset]:
+        return presets.list_presets()
+
+    @app.post("/api/presets", response_model=Preset)
+    def add_preset(req: S.PresetRequest) -> Preset:
+        """Save the dialog's settings under a name (saving again with the same name replaces it)."""
+        return presets.save_preset(req.name, req.description, req.options)
+
+    @app.delete("/api/presets/{preset_id}")
+    def remove_preset(preset_id: str) -> dict[str, bool]:
+        presets.delete_preset(preset_id)
+        return {"ok": True}
+
+    @app.get("/api/qc-settings", response_model=MotionThresholds)
+    def get_qc_settings() -> MotionThresholds:
+        return qc_decisions.load_thresholds()
+
+    @app.put("/api/qc-settings", response_model=MotionThresholds)
+    def set_qc_settings(t: MotionThresholds) -> MotionThresholds:
+        return qc_decisions.save_thresholds(t)
 
     @app.get("/api/workspaces/{ws_id}/analysis-ready", response_model=ReadyReport)
     def analysis_ready(ws_id: str) -> ReadyReport:

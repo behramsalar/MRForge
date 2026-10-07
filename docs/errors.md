@@ -348,3 +348,18 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 ### AROMA_NOT_INSTALLED / AROMA_FAILED / AROMA_RESULT_MISMATCH
 - **What happened:** ICA-AROMA is not installed, did not produce a classification, or classified a different set of components than the current MELODIC result.
 - **Suggested action:** Run `scripts/install_aroma.sh`, or label the components yourself. After a MELODIC re-run, run ICA-AROMA again.
+
+## Batch, decisions and presets (Stage 7)
+
+### BATCH_SUBJECTS_FAILED
+- **What happened:** In a batch, some subjects did not finish (for example "2 of 12 subjects did not finish (sub-004, sub-009)").
+- **Probable cause:** See each subject's own explanation in the progress window; the other subjects are not affected.
+- **Suggested action:** Fix the cause, then Resume: finished work is not repeated, only the unfinished subjects run.
+
+### REASON_REQUIRED
+- **What happened:** A quality decision was saved without a reason.
+- **Suggested action:** Type a short reason; it is kept with your name and the date.
+
+### PRESET_NAME_REQUIRED / PRESET_NAME_TAKEN / PRESET_BUILTIN
+- **What happened:** A preset needs a name; a built-in preset already has that name; or a built-in preset cannot be deleted.
+- **Suggested action:** Choose another name; delete only presets you saved yourself.

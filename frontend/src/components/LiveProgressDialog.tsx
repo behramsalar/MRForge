@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { api } from "../api/client";
 import { ApiError, call } from "../api/call";
 import { useTick } from "../api/hooks";
-import type { ProgressStep } from "../api/types";
+import type { ProgressStep, SubjectProgress } from "../api/types";
 import { elapsed } from "../lib/labels";
 import { href } from "../lib/router";
 import { space, type } from "../theme/tokens";
@@ -42,49 +42,61 @@ const label: Record<ProgressStep["state"], string> = {
   stopped: "Stopped early",
 };
 
-/**
- * Live view of a running operation: how far it is, which step runs now and what the tool is
- * doing at this moment (refreshed every two seconds while it runs).
- */
-export function LiveProgressDialog({ ws, operationId, trigger }: { ws: string; operationId: number; trigger: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const progress = useQuery({
-    queryKey: ["ws", ws, "progress", operationId],
-    enabled: open,
-    refetchInterval: (q) => (q.state.data && !["Queued", "Running"].includes(q.state.data.status) ? false : 2000),
-    queryFn: () =>
-      call(
-        api.GET("/api/workspaces/{ws_id}/operations/{op_id}/progress", {
-          params: { path: { ws_id: ws, op_id: operationId } },
-        }),
-      ),
-  });
-  const p = progress.data;
-  useTick(open && !!p && ["Queued", "Running"].includes(p.status));
-  const running = p?.steps.find((s) => s.state === "running");
+
+const subjectLabel: Record<string, string> = {
+  queued: "Waiting for its turn",
+  running: "Running",
+  waiting: "Partly done",
+  review: "Waiting for you",
+  done: "Done",
+  failed: "Failed",
+};
+
+function subjectIcon(state: string): ReactNode {
+  if (state === "done") return <CheckIcon color="var(--green-9)" />;
+  if (state === "failed") return <Cross2Icon color="var(--red-9)" />;
+  if (state === "running") return <Spinner />;
+  if (state === "review") return <PersonIcon color="var(--amber-9)" />;
+  return <ClockIcon color="var(--gray-8)" />;
+}
+
+/** A batch: one line per subject (running first), each opening to its own steps. */
+function BatchSubjects({ ws, subjects }: { ws: string; subjects: SubjectProgress[] }) {
+  const order = ["running", "review", "failed", "queued", "waiting", "done"];
+  const sorted = [...subjects].sort((a, b) => order.indexOf(a.state) - order.indexOf(b.state));
+  const counts = subjects.reduce<Record<string, number>>((acc, s) => ({ ...acc, [s.state]: (acc[s.state] ?? 0) + 1 }), {});
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger>{trigger}</Dialog.Trigger>
-      <Dialog.Content maxWidth="640px">
-        <Dialog.Title>{p?.title ?? "Progress"}</Dialog.Title>
-        <Dialog.Description size={type.help} color="gray">
-          {p
-            ? `${p.status === "Running" || p.status === "Queued" ? "Running for " : "Took "}${elapsed(p.started, p.finished)}${p.started_by ? ` · started by ${p.started_by}` : ""}`
-            : "Loading…"}
-        </Dialog.Description>
-        <Flex direction="column" gap={space.group} mt="4">
-          {progress.error && <ErrorCallout error={(progress.error as ApiError).body} />}
-          {p && p.total > 0 && (
-            <Flex direction="column" gap="1">
-              <Progress value={Math.round((100 * p.done) / p.total)} color="orange" aria-label="Progress" />
-              <Text size={type.help} color="gray">
-                {p.done} of {p.total} steps finished
-                {p.current !== null && p.current !== undefined && running ? ` · now step ${p.current + 1}` : ""}
-              </Text>
+    <Flex direction="column" gap="2">
+      <Text size={type.help} color="gray">
+        {["running", "queued", "review", "failed", "done"].filter((k) => counts[k]).map((k) => `${counts[k]} ${subjectLabel[k].toLowerCase()}`).join(" · ")}
+      </Text>
+      <div style={{ maxHeight: 360, overflow: "auto" }}>
+        {sorted.map((sub) => (
+          <details key={sub.subject} open={sub.state === "running" || sub.state === "failed" || sub.state === "review"}>
+            <summary style={{ cursor: "pointer", listStyle: "revert" }}>
+              <Flex display="inline-flex" align="center" gap="2">
+                {subjectIcon(sub.state)}
+                <Text weight="medium">{sub.subject}</Text>
+                <Text size={type.caption} color="gray">
+                  {subjectLabel[sub.state]} · {sub.done} of {sub.total} steps
+                </Text>
+              </Flex>
+            </summary>
+            <Flex direction="column" gap="2" style={{ paddingLeft: 16, paddingTop: 6, paddingBottom: 8 }}>
+              {sub.steps.map((st) => (
+                <StepRow key={st.id} s={st} ws={ws} />
+              ))}
             </Flex>
-          )}
-          {p?.steps.map((s) => (
-            <Flex key={s.id} direction="column" gap="1">
+          </details>
+        ))}
+      </div>
+    </Flex>
+  );
+}
+
+function StepRow({ s, ws }: { s: ProgressStep; ws: string }) {
+  return (
+      <Flex direction="column" gap="1">
               <Flex align="center" gap={space.inline}>
                 <Flex style={{ width: 20 }} justify="center">
                   {icon(s.state)}
@@ -131,7 +143,54 @@ export function LiveProgressDialog({ ws, operationId, trigger }: { ws: string; o
                 </Flex>
               )}
             </Flex>
+  );
+}
+
+/**
+ * Live view of a running operation: how far it is, which step runs now and what the tool is
+ * doing at this moment (refreshed every two seconds while it runs).
+ */
+export function LiveProgressDialog({ ws, operationId, trigger }: { ws: string; operationId: number; trigger: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const progress = useQuery({
+    queryKey: ["ws", ws, "progress", operationId],
+    enabled: open,
+    refetchInterval: (q) => (q.state.data && !["Queued", "Running"].includes(q.state.data.status) ? false : 2000),
+    queryFn: () =>
+      call(
+        api.GET("/api/workspaces/{ws_id}/operations/{op_id}/progress", {
+          params: { path: { ws_id: ws, op_id: operationId } },
+        }),
+      ),
+  });
+  const p = progress.data;
+  useTick(open && !!p && ["Queued", "Running"].includes(p.status));
+  const running = p?.steps.find((s) => s.state === "running");
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger>{trigger}</Dialog.Trigger>
+      <Dialog.Content maxWidth="640px">
+        <Dialog.Title>{p?.title ?? "Progress"}</Dialog.Title>
+        <Dialog.Description size={type.help} color="gray">
+          {p
+            ? `${p.status === "Running" || p.status === "Queued" ? "Running for " : "Took "}${elapsed(p.started, p.finished)}${p.started_by ? ` · started by ${p.started_by}` : ""}`
+            : "Loading…"}
+        </Dialog.Description>
+        <Flex direction="column" gap={space.group} mt="4">
+          {progress.error && <ErrorCallout error={(progress.error as ApiError).body} />}
+          {p && p.total > 0 && (
+            <Flex direction="column" gap="1">
+              <Progress value={Math.round((100 * p.done) / p.total)} color="orange" aria-label="Progress" />
+              <Text size={type.help} color="gray">
+                {p.done} of {p.total} {p.subjects.length ? "subjects" : "steps"} finished
+                {!p.subjects.length && p.current !== null && p.current !== undefined && running ? ` · now step ${p.current + 1}` : ""}
+              </Text>
+            </Flex>
+          )}
+          {p?.steps.map((s) => (
+            <StepRow key={s.id} s={s} ws={ws} />
           ))}
+          {p?.subjects.length ? <BatchSubjects ws={ws} subjects={p.subjects} /> : null}
           {p && p.total === 0 && (
             <pre style={{ whiteSpace: "pre-wrap", fontSize: "var(--font-size-1)", margin: 0 }}>
               {p.log_tail.length ? p.log_tail.join("\n") : "Working…"}

@@ -9,6 +9,7 @@ import type { StageChip, WorkspaceState } from "../api/types";
 import { ConfirmProcessDialog } from "../components/ConfirmProcessDialog";
 import { JobsPanel } from "../components/JobsPanel";
 import { QcPanel } from "../components/QcPanel";
+import { QualityDecisionCard } from "../components/QualityDecisionCard";
 import { StageBadge } from "../components/ui/Badges";
 import { EmptyState, PageHeader } from "../components/ui/Layout";
 import { href } from "../lib/router";
@@ -129,7 +130,10 @@ export function SubjectPage({ ws, label, tab, state }: { ws: string; label?: str
       </Button>
       <PageHeader
         title={label}
-        description={row?.complete ? "Processing of this subject is complete." : "Where this subject stands, and what is left to do."}
+        description={
+          (row?.complete ? "Processing of this subject is complete." : "Where this subject stands, and what is left to do.") +
+          (row?.preset ? ` Last processed with the preset "${row.preset}".` : "")
+        }
         actions={
           <Button size="3" variant={row?.complete ? "soft" : "solid"} color={row?.complete ? "gray" : undefined} disabled={busy} onClick={() => setRun("all")}>
             {row?.complete ? "Process everything again…" : `Process ${label}…`}
@@ -160,6 +164,7 @@ export function SubjectPage({ ws, label, tab, state }: { ws: string; label?: str
                 <StageCard key={c.id} chip={c} busy={busy} ws={ws} onRun={(stage) => setRun(stage)} />
               ))}
           </Grid>
+          <QualityDecisionCard ws={ws} row={row} />
           <Card size="2">
             <Flex direction="column" gap="1">
               <Heading as="h2" size={type.sectionTitle}>

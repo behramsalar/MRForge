@@ -8,6 +8,7 @@ stale-job check find it again through the recorded PID and start time.
 
 from __future__ import annotations
 
+import os
 import signal
 import sys
 from pathlib import Path
@@ -28,6 +29,7 @@ from mrforge.provenance import (
     remove_provenance,
     write_provenance,
 )
+from mrforge.resources import load_policy, thread_env
 from mrforge.runner.jobs import build_context, get_job, kill_orphans, now, update_job
 from mrforge.steps import builtin  # noqa: F401  (registers built-in steps)
 from mrforge.steps.base import StepResult, execute_step, input_relpaths
@@ -74,6 +76,7 @@ def run_job(ws: Workspace, job_id: int) -> JobStatus:
     result: StepResult | None = None
     status = JobStatus.COMPLETED
     versions = {"mrforge": __version__}
+    os.environ.update(thread_env(load_policy()))  # how many threads this job may use
     try:
         if step.requires_fsl:
             fsl = find_fsl()

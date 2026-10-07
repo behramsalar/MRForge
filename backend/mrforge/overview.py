@@ -14,8 +14,10 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from mrforge.functional import check_ready
-from mrforge.models import File, Job, JobStatus, Operation, Subject
+from mrforge.models import File, Job, JobStatus, Operation, PipelineRun, Subject
 from mrforge.operations import list_operations
+from mrforge.qc_decisions import current as current_decision
+from mrforge.qc_decisions import motion_flag
 from mrforge.runner.jobs import list_jobs
 from mrforge.workspace import Workspace
 
@@ -45,6 +47,7 @@ class QcSummary(BaseModel):
     """Motion numbers of a subject's first functional run (reported, never used to exclude)."""
 
     fd_mean_mm: float
+    fd_median_mm: float = 0.0
     fd_max_mm: float
     volumes_above: int
     n_volumes: int
@@ -59,6 +62,11 @@ class SubjectOverview(BaseModel):
     stages: list[StageChip] = []
     complete: bool = False  # everything the standard pipeline does is done
     qc: QcSummary | None = None
+    motion_flag: str | None = None  # why the head motion deserves a look (a prompt, not a verdict)
+    qc_decision: str | None = None  # the researcher's: accept, review or exclude
+    qc_reason: str | None = None
+    needs_review: bool = False  # waiting for the researcher: labels to give, or "review" chosen
+    preset: str | None = None  # the preset the latest full processing of this subject used
     last_activity: datetime | None = None
     last_activity_by: str | None = None
 
@@ -96,6 +104,9 @@ class Overview(BaseModel):
     subjects_total: int
     processed: int  # anatomical and every functional run done
     needs_attention: int  # at least one failed or stopped step
+    failed: int = 0
+    needs_review: int = 0  # waiting for the researcher (labels, or a "review" decision)
+    excluded: int = 0  # the researcher excluded them (with a reason)
     running: int
     stages: list[StageSummary]
     subjects: list[SubjectOverview]
@@ -219,6 +230,7 @@ def _qc_summary(ws: Workspace, subject: str) -> QcSummary | None:
             m = json.loads(path.read_text())
             return QcSummary(
                 fd_mean_mm=round(float(m["fd_mean_mm"]), 3),
+                fd_median_mm=round(float(m.get("fd_median_mm", 0.0)), 3),
                 fd_max_mm=round(float(m["fd_max_mm"]), 3),
                 volumes_above=int(m["fd_above_threshold"]),
                 n_volumes=int(m["n_volumes"]),
@@ -278,6 +290,11 @@ def build_overview(ws: Workspace) -> Overview:
 
     rows: list[SubjectOverview] = []
     review: list[ReviewItem] = []
+    with ws.session() as s:
+        presets_by_name: dict[str, str | None] = {}
+        for run in s.scalars(select(PipelineRun).order_by(PipelineRun.id.desc())):
+            chosen = run.spec.get("preset") if isinstance(run.spec, dict) else None
+            presets_by_name.setdefault(run.name, chosen if isinstance(chosen, str) else None)
     anat_total = anat_done = func_total = func_done = 0
     processed = attention = 0
     for sub in subjects:
@@ -338,6 +355,14 @@ def build_overview(ws: Workspace) -> Overview:
                 state=std if has_func else "unavailable",
             ),
         ]
+        qc = _qc_summary(ws, sub.label)
+        flag = (
+            motion_flag(qc.fd_mean_mm, qc.volumes_above, qc.n_volumes, qc.threshold_mm)
+            if qc
+            else None
+        )
+        decision = current_decision(ws, sub.label)
+        waiting_labels = any(c.state == "review" for c in chips)
         complete = anat.state == "done" and (not has_func or (pre == "done" and std == "done"))
         last = max(mine, key=lambda j: j.id) if mine else None
         rows.append(
@@ -348,7 +373,13 @@ def build_overview(ws: Workspace) -> Overview:
                 functional=func,
                 stages=chips,
                 complete=complete,
-                qc=_qc_summary(ws, sub.label),
+                qc=qc,
+                motion_flag=flag,
+                qc_decision=decision.decision if decision else None,
+                qc_reason=decision.reason if decision else None,
+                preset=presets_by_name.get(f"full-{sub.label}"),
+                needs_review=waiting_labels
+                or (decision is not None and decision.decision == "review"),
                 last_activity=(last.finished or last.started or last.created) if last else None,
                 last_activity_by=last.started_by if last else None,
             )
@@ -381,6 +412,9 @@ def build_overview(ws: Workspace) -> Overview:
         subjects_total=len(subjects),
         processed=processed,
         needs_attention=attention,
+        failed=sum(1 for r in rows if any(c.state in ("failed", "stopped") for c in r.stages)),
+        needs_review=sum(1 for r in rows if r.needs_review),
+        excluded=sum(1 for r in rows if r.qc_decision == "exclude"),
         running=len(running_ops),
         stages=_stage_summaries(rows),
         subjects=rows,

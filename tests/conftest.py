@@ -77,3 +77,28 @@ def fake(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Fake:
     monkeypatch.setenv("FAKE_DCM2NIIX_SPEC", str(f.spec_path))
     monkeypatch.setenv("FAKE_DCM2NIIX_LOG", str(f.log_path))
     return f
+
+
+@pytest.fixture(autouse=True)
+def roomy_resources(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Tests never depend on the computer's own settings or on what else is running: unless a
+    test sets its own, processing may use a lot of cores and needs little free memory."""
+    if "MRFORGE_CONFIG" in os.environ and os.environ["MRFORGE_CONFIG"].endswith("test-config.json"):
+        return
+    path = tmp_path_factory.mktemp("config") / "test-config.json"
+    path.write_text(
+        json.dumps(
+            {
+                "resources": {
+                    "preset": "custom",
+                    "max_subjects": 8,
+                    "threads_per_job": 1,
+                    "cpu_cap": 64,
+                    "memory_reserve_gb": 0.0,
+                }
+            }
+        )
+    )
+    monkeypatch.setenv("MRFORGE_CONFIG", str(path))

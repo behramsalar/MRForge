@@ -56,6 +56,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/resources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Resources
+         * @description How much of the computer MRForge may use, the presets, and what the machine has.
+         */
+        get: operations["get_resources_api_resources_get"];
+        /** Set Resources */
+        put: operations["set_resources_api_resources_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces": {
         parameters: {
             query?: never;
@@ -576,6 +597,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/process/plan-batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process Plan Batch
+         * @description What processing several subjects would do: the stages, and one line per subject.
+         */
+        post: operations["process_plan_batch_api_workspaces__ws_id__process_plan_batch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/process-batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process Batch
+         * @description Process several subjects with the same choices, a few at a time, as one batch.
+         */
+        post: operations["process_batch_api_workspaces__ws_id__process_batch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/subjects/{label}/qc": {
         parameters: {
             query?: never;
@@ -609,6 +670,86 @@ export interface paths {
          */
         get: operations["viewer_images_api_workspaces__ws_id__subjects__label__images_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/subjects/{label}/qc-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Qc History
+         * @description Every quality decision about the subject, oldest first (the last one is current).
+         */
+        get: operations["qc_history_api_workspaces__ws_id__subjects__label__qc_decision_get"];
+        /**
+         * Qc Decide
+         * @description Record the researcher's decision (accept, review or exclude) with a reason.
+         */
+        put: operations["qc_decide_api_workspaces__ws_id__subjects__label__qc_decision_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Presets */
+        get: operations["get_presets_api_presets_get"];
+        put?: never;
+        /**
+         * Add Preset
+         * @description Save the dialog's settings under a name (saving again with the same name replaces it).
+         */
+        post: operations["add_preset_api_presets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/presets/{preset_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Preset */
+        delete: operations["remove_preset_api_presets__preset_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/qc-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Qc Settings */
+        get: operations["get_qc_settings_api_qc_settings_get"];
+        /** Set Qc Settings */
+        put: operations["set_qc_settings_api_qc_settings_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -811,6 +952,72 @@ export interface components {
              */
             mode: "manual" | "aroma_review" | "aroma_auto";
         };
+        /**
+         * BatchOptions
+         * @description The same choices as for one subject, applied to several.
+         */
+        BatchOptions: {
+            /** Subjects */
+            subjects: string[];
+            /**
+             * Stages
+             * @default {}
+             */
+            stages: {
+                [key: string]: boolean;
+            };
+            /**
+             * @default {
+             *       "strong_bias": false,
+             *       "subcortical_segmentation": false
+             *     }
+             */
+            anatomical: components["schemas"]["AnatomicalOptions"];
+            /**
+             * @default {
+             *       "delete_volumes": 5,
+             *       "smoothing_fwhm_mm": 5,
+             *       "highpass_cutoff_s": 150,
+             *       "use_fieldmap": true,
+             *       "slice_timing": false
+             *     }
+             */
+            functional: components["schemas"]["mrforge__processing__FunctionalOptions"];
+            /**
+             * @default {
+             *       "uncertain_as": "signal",
+             *       "aggressive": false,
+             *       "mode": "manual"
+             *     }
+             */
+            artifact: components["schemas"]["ArtifactOptions"];
+            /** Preset */
+            preset?: string | null;
+        };
+        /**
+         * BatchPlan
+         * @description What a batch would do: the shared stage descriptions (from the first runnable subject)
+         *     and one line per subject.
+         */
+        BatchPlan: {
+            /** Stages */
+            stages: components["schemas"]["StagePlan"][];
+            /** Subjects */
+            subjects: components["schemas"]["BatchSubjectPlan"][];
+            /** Runnable */
+            runnable: number;
+        };
+        /** BatchSubjectPlan */
+        BatchSubjectPlan: {
+            /** Subject */
+            subject: string;
+            /** Can Start */
+            can_start: boolean;
+            /** Steps */
+            steps: number;
+            /** Reason */
+            reason?: string | null;
+        };
         /** DataFile */
         DataFile: {
             /** Relpath */
@@ -899,6 +1106,8 @@ export interface components {
         FullOptions: {
             /** Subject */
             subject: string;
+            /** Preset */
+            preset?: string | null;
             /**
              * Stages
              * @default {}
@@ -942,6 +1151,34 @@ export interface components {
             steps: number;
             /** Can Start */
             can_start: boolean;
+        };
+        /** FunctionalOptions */
+        "FunctionalOptions-Output": {
+            /**
+             * Delete Volumes
+             * @default 5
+             */
+            delete_volumes: number;
+            /**
+             * Smoothing Fwhm Mm
+             * @default 5
+             */
+            smoothing_fwhm_mm: number;
+            /**
+             * Highpass Cutoff S
+             * @default 150
+             */
+            highpass_cutoff_s: number | null;
+            /**
+             * Use Fieldmap
+             * @default true
+             */
+            use_fieldmap: boolean;
+            /**
+             * Slice Timing
+             * @default false
+             */
+            slice_timing: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1179,6 +1416,30 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** Machine */
+        Machine: {
+            /** Cores */
+            cores: number;
+            /** Ram Gb */
+            ram_gb: number;
+            /** Free Ram Gb */
+            free_ram_gb: number;
+            /** Jobs Running */
+            jobs_running: number;
+        };
+        /** MotionThresholds */
+        MotionThresholds: {
+            /**
+             * Mean Fd Mm
+             * @default 0.3
+             */
+            mean_fd_mm: number;
+            /**
+             * Fraction Above
+             * @default 0.2
+             */
+            fraction_above: number;
+        };
         /** OperationInfo */
         OperationInfo: {
             /** Id */
@@ -1233,6 +1494,11 @@ export interface components {
              * @default []
              */
             log_tail: string[];
+            /**
+             * Subjects
+             * @default []
+             */
+            subjects: components["schemas"]["SubjectProgress"][];
         };
         /** OperationStarted */
         OperationStarted: {
@@ -1247,6 +1513,21 @@ export interface components {
             processed: number;
             /** Needs Attention */
             needs_attention: number;
+            /**
+             * Failed
+             * @default 0
+             */
+            failed: number;
+            /**
+             * Needs Review
+             * @default 0
+             */
+            needs_review: number;
+            /**
+             * Excluded
+             * @default 0
+             */
+            excluded: number;
             /** Running */
             running: number;
             /** Stages */
@@ -1286,6 +1567,102 @@ export interface components {
             /** Value */
             value: string;
         };
+        /** Preset */
+        Preset: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /**
+             * Builtin
+             * @default false
+             */
+            builtin: boolean;
+            options: components["schemas"]["PresetOptions-Output"];
+        };
+        /** PresetOptions */
+        "PresetOptions-Input": {
+            /**
+             * Stages
+             * @default {}
+             */
+            stages: {
+                [key: string]: boolean;
+            };
+            /**
+             * @default {
+             *       "strong_bias": false,
+             *       "subcortical_segmentation": false
+             *     }
+             */
+            anatomical: components["schemas"]["AnatomicalOptions"];
+            /**
+             * @default {
+             *       "delete_volumes": 5,
+             *       "smoothing_fwhm_mm": 5,
+             *       "highpass_cutoff_s": 150,
+             *       "use_fieldmap": true,
+             *       "slice_timing": false
+             *     }
+             */
+            functional: components["schemas"]["mrforge__processing__FunctionalOptions"];
+            /**
+             * @default {
+             *       "uncertain_as": "signal",
+             *       "aggressive": false,
+             *       "mode": "manual"
+             *     }
+             */
+            artifact: components["schemas"]["ArtifactOptions"];
+        };
+        /** PresetOptions */
+        "PresetOptions-Output": {
+            /**
+             * Stages
+             * @default {}
+             */
+            stages: {
+                [key: string]: boolean;
+            };
+            /**
+             * @default {
+             *       "strong_bias": false,
+             *       "subcortical_segmentation": false
+             *     }
+             */
+            anatomical: components["schemas"]["AnatomicalOptions"];
+            /**
+             * @default {
+             *       "delete_volumes": 5,
+             *       "smoothing_fwhm_mm": 5,
+             *       "highpass_cutoff_s": 150,
+             *       "use_fieldmap": true,
+             *       "slice_timing": false
+             *     }
+             */
+            functional: components["schemas"]["FunctionalOptions-Output"];
+            /**
+             * @default {
+             *       "uncertain_as": "signal",
+             *       "aggressive": false,
+             *       "mode": "manual"
+             *     }
+             */
+            artifact: components["schemas"]["ArtifactOptions"];
+        };
+        /** PresetRequest */
+        PresetRequest: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            options: components["schemas"]["PresetOptions-Input"];
+        };
         /** ProgressStep */
         ProgressStep: {
             /** Id */
@@ -1315,6 +1692,34 @@ export interface components {
              * @default []
              */
             live: string[];
+        };
+        /** QcDecisionEntry */
+        QcDecisionEntry: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accept" | "review" | "exclude";
+            /** Reason */
+            reason: string;
+            /** Who */
+            who?: string | null;
+            /** When */
+            when: string;
+            /** Motion */
+            motion?: {
+                [key: string]: number;
+            } | null;
+        };
+        /** QcDecisionRequest */
+        QcDecisionRequest: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accept" | "review" | "exclude";
+            /** Reason */
+            reason: string;
         };
         /** QcEntry */
         QcEntry: {
@@ -1354,6 +1759,11 @@ export interface components {
         QcSummary: {
             /** Fd Mean Mm */
             fd_mean_mm: number;
+            /**
+             * Fd Median Mm
+             * @default 0
+             */
+            fd_median_mm: number;
             /** Fd Max Mm */
             fd_max_mm: number;
             /** Volumes Above */
@@ -1405,6 +1815,15 @@ export interface components {
             decided_by: string | null;
             /** Finished */
             finished: string | null;
+            /**
+             * Excluded
+             * @default false
+             */
+            excluded: boolean;
+            /** Qc Decision */
+            qc_decision?: string | null;
+            /** Qc Reason */
+            qc_reason?: string | null;
         };
         /** RemovalPlanInfo */
         RemovalPlanInfo: {
@@ -1430,6 +1849,44 @@ export interface components {
             name: string;
             /** Last Seen */
             last_seen?: string | null;
+        };
+        /** ResourcePolicy */
+        ResourcePolicy: {
+            /**
+             * Preset
+             * @default balanced
+             * @enum {string}
+             */
+            preset: "balanced" | "max" | "low" | "custom";
+            /**
+             * Max Subjects
+             * @default 2
+             */
+            max_subjects: number;
+            /**
+             * Threads Per Job
+             * @default 2
+             */
+            threads_per_job: number;
+            /**
+             * Cpu Cap
+             * @default 4
+             */
+            cpu_cap: number;
+            /**
+             * Memory Reserve Gb
+             * @default 4
+             */
+            memory_reserve_gb: number;
+        };
+        /** ResourcesInfo */
+        ResourcesInfo: {
+            policy: components["schemas"]["ResourcePolicy"];
+            machine: components["schemas"]["Machine"];
+            /** Presets */
+            presets: {
+                [key: string]: components["schemas"]["ResourcePolicy"];
+            };
         };
         /**
          * ReviewItem
@@ -1679,10 +2136,44 @@ export interface components {
              */
             complete: boolean;
             qc?: components["schemas"]["QcSummary"] | null;
+            /** Motion Flag */
+            motion_flag?: string | null;
+            /** Qc Decision */
+            qc_decision?: string | null;
+            /** Qc Reason */
+            qc_reason?: string | null;
+            /**
+             * Needs Review
+             * @default false
+             */
+            needs_review: boolean;
+            /** Preset */
+            preset?: string | null;
             /** Last Activity */
             last_activity?: string | null;
             /** Last Activity By */
             last_activity_by?: string | null;
+        };
+        /**
+         * SubjectProgress
+         * @description One subject of a batch: where it is, and its steps.
+         */
+        SubjectProgress: {
+            /** Subject */
+            subject: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "queued" | "running" | "waiting" | "review" | "done" | "failed";
+            /** Steps */
+            steps: components["schemas"]["ProgressStep"][];
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
+            /** Now */
+            now?: string | null;
         };
         /**
          * UndoPlanInfo
@@ -1947,6 +2438,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    get_resources_api_resources_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResourcesInfo"];
+                };
+            };
+        };
+    };
+    set_resources_api_resources_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourcePolicy"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResourcesInfo"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2914,6 +3458,76 @@ export interface operations {
             };
         };
     };
+    process_plan_batch_api_workspaces__ws_id__process_plan_batch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchOptions"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchPlan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    process_batch_api_workspaces__ws_id__process_batch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchOptions"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     subject_qc_api_workspaces__ws_id__subjects__label__qc_get: {
         parameters: {
             query?: never;
@@ -2965,6 +3579,213 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ViewerImage"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    qc_history_api_workspaces__ws_id__subjects__label__qc_decision_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                label: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QcDecisionEntry"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    qc_decide_api_workspaces__ws_id__subjects__label__qc_decision_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                label: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QcDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QcDecisionEntry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_presets_api_presets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Preset"][];
+                };
+            };
+        };
+    };
+    add_preset_api_presets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresetRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Preset"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_preset_api_presets__preset_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                preset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_qc_settings_api_qc_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MotionThresholds"];
+                };
+            };
+        };
+    };
+    set_qc_settings_api_qc_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MotionThresholds"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MotionThresholds"];
                 };
             };
             /** @description Validation Error */

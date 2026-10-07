@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -72,6 +72,17 @@ class ProgressStep(BaseModel):
     live: list[str] = []  # the latest tool output lines, for the running step
 
 
+class SubjectProgress(BaseModel):
+    """One subject of a batch: where it is, and its steps."""
+
+    subject: str
+    state: Literal["queued", "running", "waiting", "review", "done", "failed"]
+    steps: list[ProgressStep]
+    done: int
+    total: int
+    now: str | None = None  # the running step in plain words, with what the tool does
+
+
 class OperationProgress(BaseModel):
     id: int
     title: str
@@ -84,6 +95,7 @@ class OperationProgress(BaseModel):
     done: int  # steps finished or skipped as already done
     total: int
     log_tail: list[str] = []  # what the operation itself wrote (imports and similar)
+    subjects: list[SubjectProgress] = []  # batch: one entry per subject
 
 
 def _tail(path: Path, lines: int = 12) -> list[str]:
@@ -176,8 +188,10 @@ def _run_name(job: Job) -> str:
     return folder.removeprefix(job.label or job.step_name).lstrip("_").replace("_", " ")
 
 
-def _pipeline_steps(ws: Workspace, op: Operation) -> list[ProgressStep]:
-    spec: PipelineSpec = parse_pipeline(op.args["spec"])
+def _pipeline_steps(
+    ws: Workspace, op: Operation, spec: PipelineSpec | None = None
+) -> list[ProgressStep]:
+    spec = spec or parse_pipeline(op.args["spec"])
     started = op.started or op.created
     with ws.session() as s:
         run = s.scalars(
@@ -231,10 +245,46 @@ def _pipeline_steps(ws: Workspace, op: Operation) -> list[ProgressStep]:
     return steps
 
 
+def _subject_state(steps: list[ProgressStep]) -> str:
+    states = {s.state for s in steps}
+    if "running" in states:
+        return "running"
+    if states & {"failed", "stopped"}:
+        return "failed"
+    if "review" in states:
+        return "review"
+    if states <= {"done", "reused"}:
+        return "done"
+    return "queued" if "done" not in states and "reused" not in states else "waiting"
+
+
+def _batch_subjects(ws: Workspace, op: Operation) -> list[SubjectProgress]:
+    out: list[SubjectProgress] = []
+    specs: list[Any] = list(op.args.get("specs", []))  # type: ignore[call-overload]
+    for raw in specs:
+        spec = parse_pipeline(raw)
+        steps = _pipeline_steps(ws, op, spec)
+        running = next((s for s in steps if s.state == "running"), None)
+        out.append(
+            SubjectProgress(
+                subject=spec.subject or spec.name,
+                state=_subject_state(steps),  # type: ignore[arg-type]
+                steps=steps,
+                done=sum(1 for s in steps if s.state in ("done", "reused")),
+                total=len(steps),
+                now=(f"{running.step}: {running.now}" if running and running.now else None),
+            )
+        )
+    return out
+
+
 def operation_progress(ws: Workspace, op: Operation) -> OperationProgress:
     steps: list[ProgressStep] = []
+    subjects: list[SubjectProgress] = []
     if op.kind == "pipeline" and isinstance(op.args.get("spec"), dict):
         steps = _pipeline_steps(ws, op)
+    elif op.kind == "batch" and isinstance(op.args.get("specs"), list):
+        subjects = _batch_subjects(ws, op)
     current = next((i for i, s in enumerate(steps) if s.state == "running"), None)
     if current is None:
         current = next((i for i, s in enumerate(steps) if s.state == "review"), None)
@@ -250,7 +300,12 @@ def operation_progress(ws: Workspace, op: Operation) -> OperationProgress:
         started_by=op.started_by,
         steps=steps,
         current=current,
-        done=sum(1 for s in steps if s.state in ("done", "reused")),
-        total=len(steps),
+        done=(
+            sum(1 for s in subjects if s.state == "done")
+            if subjects
+            else sum(1 for s in steps if s.state in ("done", "reused"))
+        ),
+        total=len(subjects) if subjects else len(steps),
         log_tail=log_tail,
+        subjects=subjects,
     )
