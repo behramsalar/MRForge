@@ -37,8 +37,9 @@ export const WORKSPACE_NAV: NavItem[] = [
     children: [
       { id: "pipelines", label: "Pipelines" },
       { id: "anat", label: "Anatomical", section: "Single steps" },
-      { id: "func", label: "Functional" },
+      { id: "func", label: "Preprocessing", section: "Functional" },
       { id: "ica", label: "Artifact rejection" },
+      { id: "mni", label: "Standard space" },
     ],
   },
   { id: "viewer", label: "Viewer", icon: EyeOpenIcon },

@@ -32,6 +32,7 @@ from mrforge.functional import (
 from mrforge.icalabels import SUMMARY_SUFFIX, decision_path
 from mrforge.niftiutil import image_info
 from mrforge.pipeline import PipelineSpec, PipelineStep
+from mrforge.results import existing_cleaned, existing_functional
 from mrforge.resume import check_reusable
 from mrforge.runner.jobs import build_context
 from mrforge.steps.melodic import MIN_VOLUMES
@@ -280,6 +281,8 @@ class FunctionalStage(Stage):
             return stage
         opts = ctx.opts.functional
         made_fieldmaps: set[str] = set()
+        found: dict[str, dict[str, str]] = {}
+        all_existing = True
         for f in files:
             slug = recording_slug(f.relpath)
             fmap = fieldmap_status(ctx.ws, f.relpath)
@@ -328,7 +331,15 @@ class FunctionalStage(Stage):
                     ],
                 )
             )
-            if not enabled or not stage.can_run:
+            if not enabled:
+                # Not run now: later stages can use the results of an earlier run.
+                earlier = existing_functional(ctx.ws, ctx.subject, f.relpath)
+                if earlier is None:
+                    all_existing = False
+                else:
+                    found[slug] = earlier
+                continue
+            if not stage.can_run:
                 continue
             assert ctx.anat is not None
             ctx.runs[slug] = f.relpath
@@ -388,6 +399,15 @@ class FunctionalStage(Stage):
             ctx.affine[slug] = f"${{{feat_id}.to_t1_affine}}"
             ctx.motion[slug] = f"${{{feat_id}.motion}}"
         if enabled:
+            ctx.ready.add(self.id)
+        elif all_existing and found:
+            raw = {recording_slug(f.relpath): f.relpath for f in files}
+            for slug, earlier in found.items():
+                ctx.runs[slug] = raw[slug]
+                ctx.bold[slug] = earlier["bold"]
+                ctx.brain_mask[slug] = earlier["brain_mask"]
+                ctx.affine[slug] = earlier["affine"]
+                ctx.motion[slug] = earlier["motion"]
             ctx.ready.add(self.id)
         return stage
 
@@ -454,7 +474,15 @@ class ArtifactStage(Stage):
             )
         if not stage.items:
             stage.items = [PlanItem(title="Every functional run of the subject", settings=[])]
-        if not enabled or not stage.can_run:
+        if not enabled:
+            # Standard space on its own should use the cleaned data when there are any. Not when
+            # the functional stage runs again in this pipeline: the old cleaned image is stale.
+            for slug in slugs:
+                cleaned = existing_cleaned(ctx.ws, ctx.subject, ctx.runs[slug])
+                if cleaned and not ctx.bold.get(slug, "${").startswith("${"):
+                    ctx.bold[slug] = cleaned
+            return stage
+        if not stage.can_run:
             return stage
         assert ctx.anat is not None
         for slug in slugs:
@@ -540,6 +568,15 @@ class ArtifactStage(Stage):
         return ctx.ws.relpath(context.output_dir / name)
 
 
+def _which_data(bold_ref: str) -> str:
+    """Plain words for the data a later stage works on."""
+    return (
+        "cleaned data (noise components removed)"
+        if "regfilt" in bold_ref or "cleaned" in bold_ref
+        else "preprocessed data"
+    )
+
+
 class StandardSpaceStage(Stage):
     id = "standard_space"
     label = "Standard space"
@@ -557,7 +594,10 @@ class StandardSpaceStage(Stage):
         stage.items = [
             PlanItem(
                 title=f"Run {slug.replace('_', ' ')}",
-                settings=[PlanSetting(name="Resolution", value="2 mm")],
+                settings=[
+                    PlanSetting(name="Resolution", value="2 mm"),
+                    PlanSetting(name="Data", value=_which_data(ctx.bold.get(slug, ""))),
+                ],
             )
             for slug in ctx.runs
         ] or [

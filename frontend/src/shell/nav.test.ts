@@ -25,12 +25,12 @@ import { crumbs, defaultChild } from "./nav";
 describe("sidebar tree", () => {
   it("shows every kind of processing under Process in the sidebar", () => {
     const process = WORKSPACE_NAV.find((n) => n.id === "process");
-    expect(process?.children?.map((c) => c.id)).toEqual(["pipelines", "anat", "func", "ica"]);
+    expect(process?.children?.map((c) => c.id)).toEqual(["pipelines", "anat", "func", "ica", "mni"]);
     expect(defaultChild("process")).toBe("pipelines");
     expect(defaultChild("viewer")).toBeUndefined();
   });
   it("names the trail in the top bar", () => {
-    expect(crumbs("process", "func")).toEqual(["Process", "Functional"]);
+    expect(crumbs("process", "func")).toEqual(["Process", "Preprocessing"]);
     expect(crumbs("process")).toEqual(["Process", "Pipelines"]);
     expect(crumbs("viewer")).toEqual(["Viewer"]);
   });

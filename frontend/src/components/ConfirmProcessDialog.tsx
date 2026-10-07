@@ -7,6 +7,8 @@ import type { FullOptions, StagePlan } from "../api/types";
 import { space, type } from "../theme/tokens";
 import { ErrorCallout } from "./ErrorCallout";
 
+const STAGE_IDS = ["anatomical", "functional", "artifact_rejection", "standard_space"];
+
 const DEFAULTS: FullOptions = {
   subject: "",
   stages: {},
@@ -76,15 +78,21 @@ export function ConfirmProcessDialog({
   open,
   onOpenChange,
   onStarted,
+  onlyStage,
 }: {
   ws: string;
   subject: string;
+  onlyStage?: string; // run just this stage (the others are unticked; earlier results are used)
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStarted?: () => void;
 }) {
   const client = useQueryClient();
-  const [opts, setOpts] = useState<FullOptions>({ ...DEFAULTS, subject });
+  const [opts, setOpts] = useState<FullOptions>({
+    ...DEFAULTS,
+    subject,
+    stages: onlyStage ? Object.fromEntries(STAGE_IDS.map((id) => [id, id === onlyStage])) : {},
+  });
   const [showMore, setShowMore] = useState(false);
   const request: FullOptions = { ...opts, subject };
   const plan = useQuery({
@@ -112,7 +120,7 @@ export function ConfirmProcessDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Content maxWidth="640px">
-        <Dialog.Title>Process {subject}</Dialog.Title>
+        <Dialog.Title>{onlyStage ? `Run one stage for ${subject}` : `Process ${subject}`}</Dialog.Title>
         <Dialog.Description size={type.help} color="gray">
           MRForge will run these stages one after another. Work that is already finished and unchanged is not
           repeated. You can close the page while it runs.
