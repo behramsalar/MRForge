@@ -7,6 +7,7 @@ import { ApiError, call } from "../../api/call";
 import { useImport } from "../../api/hooks";
 import type { ImportSummary, OperationInfo, WorkspaceState } from "../../api/types";
 import { ErrorCallout } from "../../components/ErrorCallout";
+import { ImportGroupCard } from "../../components/ImportGroupCard";
 import { SeriesDetail } from "../../components/SeriesDetail";
 import { SeriesTable } from "../../components/SeriesTable";
 import { UndoImportDialog } from "../../components/UndoImportDialog";
@@ -127,6 +128,14 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
   const [showMore, setShowMore] = useState(false);
   const [scanOp, setScanOp] = useState<number | null>(null);
   const [uid, setUid] = useState<string | undefined>();
+  const groups = Object.values(
+    imports
+      .filter((i) => (i.group_size ?? 1) > 1 && i.group_source)
+      .reduce<Record<string, ImportSummary[]>>((acc, i) => {
+        (acc[i.group_source!] ??= []).push(i);
+        return acc;
+      }, {}),
+  ).filter((g) => g.some((i) => i.organized === 0));
   const busy = !!state?.operations.some((o) => o.status === "Queued" || o.status === "Running");
 
   const run = useMutation({
@@ -146,7 +155,8 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
     const op = state?.operations.find((o) => o.id === scanOp);
     if (op?.status === "Completed" && typeof op.result?.import_id === "string") {
       setScanOp(null);
-      location.hash = href(ws, "data", op.result.import_id);
+      const ids = Array.isArray(op.result.import_ids) ? (op.result.import_ids as string[]) : [];
+      location.hash = href(ws, "data", ids[0] ?? op.result.import_id);
     } else if (op && op.status !== "Queued" && op.status !== "Running") setScanOp(null);
   }, [state, scanOp, ws]);
 
@@ -159,7 +169,7 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
     return (
       <EmptyState
         title="Start your first import"
-        text="Choose the folder or archive (ZIP, TAR) with your scanner files. MRForge reads them, shows what it found and asks only about what it cannot decide itself."
+        text="Choose the folder or archive (ZIP, TAR, TAR.GZ, TAR.BZ2, TAR.XZ) with your scanner files. MRForge reads them, shows what it found and asks only about what it cannot decide itself."
       >
         <NewImportDialog ws={ws} disabled={busy} onStarted={setScanOp} />
       </EmptyState>
@@ -174,6 +184,9 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
         </Heading>
         <NewImportDialog ws={ws} disabled={busy} onStarted={setScanOp} />
       </Flex>
+      {groups.map((g) => (
+        <ImportGroupCard key={g[0].group_source} ws={ws} group={g} busy={busy} />
+      ))}
       <ImportsList ws={ws} imports={imports} selected={selected} />
       <Grid columns={{ initial: "1", lg: "minmax(0, 1fr) 340px" }} gap={space.group} align="start">
       <Flex direction="column" gap={space.group} style={{ minWidth: 0 }}>
