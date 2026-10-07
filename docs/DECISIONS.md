@@ -160,3 +160,9 @@ The user could not change an import once written (skipping a series or renaming 
 - QC decisions are provenance files (`sub-X_desc-qc_decision.json`, append-only history with reason, who, when and the motion numbers seen). Excluded subjects leave the analysis-ready folder (listed in the manifest as excluded with the reason), are not ticked by 'select all' in batches, and are ignored in the settings-difference check. Head-motion flag: mean FD > 0.3 mm or > 20% of volumes above 0.5 mm (editable in Settings; REVIEW). A flag never changes any state.
 - Presets (config.json): built-ins 'Standard preprocessing' and 'With ICA-AROMA (automatic)', user presets saved from the dialog. The preset name is stored on the pipeline spec and shown on the subject page.
 - Fixed: the analysis-ready folder is now really refreshed when a pipeline or batch ends (the hook added in Stage 6.5 had been lost).
+
+## 2026-10-08 Import: several scans in one source (agreed with the user)
+- One DICOM study (StudyInstanceUID) = one scan session = one import. A folder or archive with several studies becomes one import per study, in folder order, with next free `sub-NNN` labels (editable in the review table; the same subject with different sessions is allowed). Reason: a multi-subject folder was imported as one subject.
+- Privacy: only a short hash of the study UID is stored; no patient tags are read. Rescanning the same source finds the existing imports (no duplicates).
+- Series decisions are keyed by unique series id, not number (Philips exports have several number-0 objects).
+- Tar archives (tar, gz, bz2, xz) are accepted with safe extraction. Flow: review table + "Import all that are ready"; one scan failing does not stop the others.

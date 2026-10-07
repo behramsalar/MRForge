@@ -8,6 +8,8 @@ Last test status: `pytest -m "not fsl"` all passed (see the stage-end report for
 
 Bugs found by tests/real runs and fixed in this stage: a race that let two subjects start a job at the same moment despite the cap; jobs left Queued by a cancelled or killed batch made later runs look incomplete; the analysis-ready folder was not refreshed after pipelines (hook had been lost in 6.5); with a memory reserve above the free memory nothing would ever start (now one job always may start, the rest wait with the reason shown).
 
+Import fix (branch `fix-import-multi-subject`, after Stage 7): several scans per folder/archive, series decisions by id, tar family archives, group review table: built and checked on full-deneme (5 scans; one has a truncated BOLD run that dcm2niix cannot convert, reported plainly).
+
 Next action: user checks the Stage 7 manual checklist (CLAUDE.md), accepts the stage; then Stage 8 (reports).
 
 ## Stage 5 (Functional preprocessing, on FEAT)

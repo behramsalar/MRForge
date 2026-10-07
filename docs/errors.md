@@ -374,3 +374,19 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 - **What happened:** The archive could not be read to the end.
 - **Probable cause:** The file is damaged or was not copied completely.
 - **Suggested action:** Copy or export the archive again.
+
+### IMPORT_LABELS_FOR_SEVERAL
+- **What happened:** A subject or session label was given for a folder or archive that holds several scans.
+- **Suggested action:** Scan without a label; each scan gets the next free sub-NNN. Change labels in the review table before importing.
+
+### IMPORT_LABELS_CLASH / IMPORT_LABELS_LOCKED
+- **What happened:** Another import already uses that subject and session, or the scan is already imported so its labels are fixed.
+- **Suggested action:** Choose a different label or session (same subject, different session is allowed); to relabel an imported scan, undo the import first.
+
+### IMPORT_NOT_ENOUGH_SPACE
+- **What happened:** The workspace disk does not have room for the copy of the scanner files.
+- **Suggested action:** Free disk space or create the workspace on a larger disk.
+
+### IMPORTS_FAILED
+- **What happened:** In "Import all that are ready", some scans did not import (the others did).
+- **Suggested action:** Open the failed scan from the list; its own message says why. Imported scans are not affected.
