@@ -251,13 +251,6 @@ export function FunctionalPage({ ws, state }: { ws: string; state: WorkspaceStat
         ws={ws}
         jobs={funcJobs}
         busy={busy}
-        action={(j) =>
-          j.step === "func_qc" && j.subject ? (
-            <Button asChild size="1" variant="soft">
-              <a href={href(ws, "viewer", j.subject)}>Open in viewer</a>
-            </Button>
-          ) : null
-        }
       />
       {subject && <QcPanel ws={ws} subject={subject} />}
     </Flex>

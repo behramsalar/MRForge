@@ -35,3 +35,5 @@ export type ProgressStep = S["ProgressStep"];
 export type IcaRecording = S["IcaRecording"];
 export type IcaComponent = S["IcaComponent"];
 export type ReviewItem = S["ReviewItem"];
+export type StageChip = S["StageChip"];
+export type QcSummary = S["QcSummary"];

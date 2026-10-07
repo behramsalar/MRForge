@@ -5,11 +5,12 @@ import {
   LightningBoltIcon,
   PersonIcon,
 } from "@radix-ui/react-icons";
-import { Badge, Button, Callout, Card, Flex, Grid, Heading, Table, Text } from "@radix-ui/themes";
+import { Badge, Button, Callout, Card, Flex, Grid, Heading, Text } from "@radix-ui/themes";
 import type { WorkspaceState } from "../api/types";
 import { useOverview } from "../api/hooks";
 import { PipelineStepper } from "../components/PipelineStepper";
-import { StageBadge, StatusBadge } from "../components/ui/Badges";
+import { StatusBadge } from "../components/ui/Badges";
+import { SubjectsTable } from "../components/SubjectsTable";
 import { EmptyState, PageHeader, StatCard } from "../components/ui/Layout";
 import { elapsed, when } from "../lib/labels";
 import { href } from "../lib/router";
@@ -99,53 +100,7 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
           <Card size="3">
             <Flex direction="column" gap={space.group}>
               <Heading as="h2" size={type.sectionTitle}>Subjects</Heading>
-              <Table.Root>
-                <Table.Header>
-                  <Table.Row>
-                    <Table.ColumnHeaderCell>Subject</Table.ColumnHeaderCell>
-                    <Table.ColumnHeaderCell>Files</Table.ColumnHeaderCell>
-                    <Table.ColumnHeaderCell>Anatomical</Table.ColumnHeaderCell>
-                    <Table.ColumnHeaderCell>Functional</Table.ColumnHeaderCell>
-                    <Table.ColumnHeaderCell>Last activity</Table.ColumnHeaderCell>
-                    <Table.ColumnHeaderCell />
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {(o?.subjects ?? []).map((s) => (
-                    <Table.Row key={s.label}>
-                      <Table.RowHeaderCell>{s.label}</Table.RowHeaderCell>
-                      <Table.Cell>{s.n_files}</Table.Cell>
-                      <Table.Cell>
-                        <StageBadge state={s.anatomical.state} detail={s.anatomical.detail} />
-                      </Table.Cell>
-                      <Table.Cell>
-                        <StageBadge state={s.functional.state} detail={s.functional.detail} />
-                      </Table.Cell>
-                      <Table.Cell>
-                        {s.last_activity ? (
-                          <Flex direction="column">
-                            <Text size={type.help}>{when(s.last_activity)}</Text>
-                            {s.last_activity_by && (
-                              <Text size={type.caption} color="gray">
-                                {s.last_activity_by}
-                              </Text>
-                            )}
-                          </Flex>
-                        ) : (
-                          <Text size={type.help} color="gray">
-                            -
-                          </Text>
-                        )}
-                      </Table.Cell>
-                      <Table.Cell>
-                        <Button asChild size="1" variant="soft" color="gray">
-                          <a href={href(ws, "viewer", s.label)}>View</a>
-                        </Button>
-                      </Table.Cell>
-                    </Table.Row>
-                  ))}
-                </Table.Body>
-              </Table.Root>
+              <SubjectsTable subjects={o?.subjects ?? []} onOpen={(l) => (location.hash = href(ws, "subject", l))} />
             </Flex>
           </Card>
         </Flex>

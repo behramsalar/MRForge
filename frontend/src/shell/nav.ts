@@ -51,8 +51,11 @@ export const SETTINGS_NAV: NavItem = { id: "settings", label: "Settings", icon: 
 
 const ALL = [...WORKSPACE_NAV, ...GLOBAL_NAV, SETTINGS_NAV];
 
+/** Pages that are reached by clicking something, not from the sidebar. */
+const HIDDEN_PAGES: Record<string, string> = { subject: "Subject" };
+
 export function pageLabel(page: string): string {
-  return ALL.find((n) => n.id === page)?.label ?? page;
+  return ALL.find((n) => n.id === page)?.label ?? HIDDEN_PAGES[page] ?? page;
 }
 
 /** The function shown when a group is opened without naming one. */

@@ -6,6 +6,7 @@ always consistent with the rest of the app; nothing extra is stored.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from typing import Literal
 
@@ -18,10 +19,12 @@ from mrforge.operations import list_operations
 from mrforge.runner.jobs import list_jobs
 from mrforge.workspace import Workspace
 
-State = Literal["none", "unavailable", "waiting", "running", "partial", "done", "failed", "stopped"]
+State = Literal[
+    "none", "unavailable", "waiting", "running", "review", "partial", "done", "failed", "stopped"
+]
 FUNC_STEPS = ("fieldmap_prep", "feat_preproc", "func_qc", "func_to_mni")
 BUSY = (JobStatus.RUNNING.value, JobStatus.QUEUED.value)
-ATTENTION_ORDER: tuple[State, ...] = ("running", "waiting", "failed", "stopped")
+ATTENTION_ORDER: tuple[State, ...] = ("running", "review", "waiting", "failed", "stopped")
 
 
 class StageStatus(BaseModel):
@@ -29,11 +32,33 @@ class StageStatus(BaseModel):
     detail: str | None = None  # e.g. "2 of 3 runs"
 
 
+class StageChip(BaseModel):
+    """One stage of one subject, for the status chips (the same list everywhere)."""
+
+    id: str  # import, anatomical, preprocessing, artifact_rejection, standard_space
+    label: str
+    state: State
+    detail: str | None = None
+
+
+class QcSummary(BaseModel):
+    """Motion numbers of a subject's first functional run (reported, never used to exclude)."""
+
+    fd_mean_mm: float
+    fd_max_mm: float
+    volumes_above: int
+    n_volumes: int
+    threshold_mm: float
+
+
 class SubjectOverview(BaseModel):
     label: str
     n_files: int
     anatomical: StageStatus
     functional: StageStatus
+    stages: list[StageChip] = []
+    complete: bool = False  # everything the standard pipeline does is done
+    qc: QcSummary | None = None
     last_activity: datetime | None = None
     last_activity_by: str | None = None
 
@@ -112,7 +137,7 @@ def _job_state(status: str) -> State:
         JobStatus.COMPLETED.value: "done",
         JobStatus.FAILED.value: "failed",
         JobStatus.INTERRUPTED.value: "stopped",
-        JobStatus.WAITING.value: "waiting",
+        JobStatus.WAITING.value: "review",
         JobStatus.CANCELLED.value: "stopped",
     }
     return states.get(status, "none")
@@ -147,6 +172,87 @@ def _functional_run_state(jobs: list[Job]) -> State:
     qc_done = states.get("func_qc") == "done"
     mni_ok = states.get("func_to_mni", "done") == "done"
     return "done" if qc_done and mni_ok else "partial"
+
+
+def _stage_state(jobs: list[Job], need: tuple[str, ...], also: tuple[str, ...] = ()) -> State:
+    """State of a stage made of steps, over every recording: ``need`` steps must all be done."""
+    mine = [j for j in jobs if j.step_name in need + also]
+    if not mine:
+        return "none"
+    runs = sorted({_run_name(j) for j in mine if j.step_name in need} or {""})
+    per_run: list[State] = []
+    for run in runs:
+        latest: dict[str, Job] = {}
+        for j in mine:
+            if j.step_name in also or _run_name(j) == run:
+                latest[j.step_name] = j
+        states = {step: _job_state(j.status) for step, j in latest.items()}
+        picked = next((w for w in ATTENTION_ORDER if w in states.values()), None)
+        if picked:
+            per_run.append(picked)
+        elif all(states.get(step) == "done" for step in need):
+            per_run.append("done")
+        else:
+            per_run.append("partial")
+    return _aggregate(per_run)
+
+
+def _decided_by(ws: Workspace, subject: str) -> str | None:
+    """Who or what labelled the components (from the record the labelling step wrote)."""
+    for path in sorted((ws.derivatives_dir / subject).rglob("*_labels.json")):
+        if "_runs" in path.parts:
+            continue
+        try:
+            who = json.loads(path.read_text()).get("decided_by")
+        except (OSError, ValueError):
+            continue
+        if who:
+            return str(who)
+    return None
+
+
+def _qc_summary(ws: Workspace, subject: str) -> QcSummary | None:
+    for path in sorted((ws.derivatives_dir / subject).rglob("*_desc-metrics_qc.json")):
+        if "_runs" in path.parts:
+            continue
+        try:
+            m = json.loads(path.read_text())
+            return QcSummary(
+                fd_mean_mm=round(float(m["fd_mean_mm"]), 3),
+                fd_max_mm=round(float(m["fd_max_mm"]), 3),
+                volumes_above=int(m["fd_above_threshold"]),
+                n_volumes=int(m["n_volumes"]),
+                threshold_mm=float(m["fd_threshold_mm"]),
+            )
+        except (OSError, ValueError, KeyError):
+            continue
+    return None
+
+
+def _stage_summaries(rows: list[SubjectOverview]) -> list[StageSummary]:
+    """How many subjects have finished each stage (the dashboard's pipeline overview).
+    Subjects for which a stage is not possible (no T1, no functional run) are not counted."""
+    out: list[StageSummary] = []
+    for stage_id in (
+        "import",
+        "anatomical",
+        "preprocessing",
+        "artifact_rejection",
+        "standard_space",
+    ):
+        chips = [c for r in rows for c in r.stages if c.id == stage_id and c.state != "unavailable"]
+        label = chips[0].label if chips else stage_id
+        if stage_id == "artifact_rejection":
+            label += " (optional)"
+        out.append(
+            StageSummary(
+                id=stage_id,
+                label=label,
+                done=sum(1 for c in chips if c.state == "done"),
+                total=len(chips) if stage_id != "import" else len(rows),
+            )
+        )
+    return out
 
 
 def _aggregate(states: list[State]) -> State:
@@ -207,6 +313,32 @@ def build_overview(ws: Workspace) -> Overview:
             func = StageStatus(state=agg, detail=detail)
 
         review.extend(_waiting_for_you(sub.label, mine))
+        pre = _stage_state(mine, ("feat_preproc", "func_qc"), also=("fieldmap_prep",))
+        art = _stage_state(mine, ("melodic", "ica_labels", "regfilt"), also=("aroma_classify",))
+        std = _stage_state(mine, ("func_to_mni",))
+        has_func = bool(ready.runs)
+        chips = [
+            StageChip(id="import", label="Import", state="done" if raw else "none"),
+            StageChip(id="anatomical", label="Anatomical", state=anat.state, detail=anat.detail),
+            StageChip(
+                id="preprocessing",
+                label="Preprocessing",
+                state=pre if has_func else "unavailable",
+                detail=None if has_func else "No functional run",
+            ),
+            StageChip(
+                id="artifact_rejection",
+                label="Artifact rejection",
+                state=art if has_func else "unavailable",
+                detail=_decided_by(ws, sub.label) if art == "done" else None,
+            ),
+            StageChip(
+                id="standard_space",
+                label="Standard space",
+                state=std if has_func else "unavailable",
+            ),
+        ]
+        complete = anat.state == "done" and (not has_func or (pre == "done" and std == "done"))
         last = max(mine, key=lambda j: j.id) if mine else None
         rows.append(
             SubjectOverview(
@@ -214,6 +346,9 @@ def build_overview(ws: Workspace) -> Overview:
                 n_files=len(raw),
                 anatomical=anat,
                 functional=func,
+                stages=chips,
+                complete=complete,
+                qc=_qc_summary(ws, sub.label),
                 last_activity=(last.finished or last.started or last.created) if last else None,
                 last_activity_by=last.started_by if last else None,
             )
@@ -247,11 +382,7 @@ def build_overview(ws: Workspace) -> Overview:
         processed=processed,
         needs_attention=attention,
         running=len(running_ops),
-        stages=[
-            StageSummary(id="import", label="Import", done=len(subjects), total=len(subjects)),
-            StageSummary(id="anatomical", label="Anatomical", done=anat_done, total=anat_total),
-            StageSummary(id="functional", label="Functional", done=func_done, total=func_total),
-        ],
+        stages=_stage_summaries(rows),
         subjects=rows,
         running_now=[
             RunningItem(title=o.title, started=o.started or o.created, started_by=o.started_by)

@@ -1317,6 +1317,22 @@ export interface components {
             /** Items */
             items: components["schemas"]["QcEntry"][];
         };
+        /**
+         * QcSummary
+         * @description Motion numbers of a subject's first functional run (reported, never used to exclude).
+         */
+        QcSummary: {
+            /** Fd Mean Mm */
+            fd_mean_mm: number;
+            /** Fd Max Mm */
+            fd_max_mm: number;
+            /** Volumes Above */
+            volumes_above: number;
+            /** N Volumes */
+            n_volumes: number;
+            /** Threshold Mm */
+            threshold_mm: number;
+        };
         /** Readiness */
         Readiness: {
             /** Subject */
@@ -1489,6 +1505,23 @@ export interface components {
             /** Reason */
             reason?: string | null;
         };
+        /**
+         * StageChip
+         * @description One stage of one subject, for the status chips (the same list everywhere).
+         */
+        StageChip: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "none" | "unavailable" | "waiting" | "running" | "review" | "partial" | "done" | "failed" | "stopped";
+            /** Detail */
+            detail?: string | null;
+        };
         /** StagePlan */
         StagePlan: {
             /** Id */
@@ -1522,7 +1555,7 @@ export interface components {
              * State
              * @enum {string}
              */
-            state: "none" | "unavailable" | "waiting" | "running" | "partial" | "done" | "failed" | "stopped";
+            state: "none" | "unavailable" | "waiting" | "running" | "review" | "partial" | "done" | "failed" | "stopped";
             /** Detail */
             detail?: string | null;
         };
@@ -1573,6 +1606,17 @@ export interface components {
             n_files: number;
             anatomical: components["schemas"]["StageStatus"];
             functional: components["schemas"]["StageStatus"];
+            /**
+             * Stages
+             * @default []
+             */
+            stages: components["schemas"]["StageChip"][];
+            /**
+             * Complete
+             * @default false
+             */
+            complete: boolean;
+            qc?: components["schemas"]["QcSummary"] | null;
             /** Last Activity */
             last_activity?: string | null;
             /** Last Activity By */

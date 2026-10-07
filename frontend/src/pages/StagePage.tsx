@@ -1,8 +1,10 @@
-import { Button, Card, Flex, Select, Text } from "@radix-ui/themes";
+import { Button, Card, Flex, Text } from "@radix-ui/themes";
 import { useState } from "react";
-import { useSubjects } from "../api/hooks";
+import { useOverview } from "../api/hooks";
 import type { WorkspaceState } from "../api/types";
 import { ConfirmProcessDialog } from "../components/ConfirmProcessDialog";
+import { StageChips } from "../components/StageChips";
+import { SubjectsTable } from "../components/SubjectsTable";
 import { EmptyState, PageHeader } from "../components/ui/Layout";
 import { href } from "../lib/router";
 import { space, type } from "../theme/tokens";
@@ -22,54 +24,40 @@ export function StagePage({
   title: string;
   description: string;
 }) {
-  const subjects = useSubjects(ws);
+  const overview = useOverview(ws);
   const [chosen, setChosen] = useState<string | undefined>();
   const [confirm, setConfirm] = useState(false);
-  const labels = (subjects.data ?? []).filter((s) => s.files.length > 0).map((s) => s.label);
-  const subject = chosen && labels.includes(chosen) ? chosen : labels[0];
+  const rows = (overview.data?.subjects ?? []).filter((s) => s.n_files > 0);
+  const row = rows.find((s) => s.label === chosen);
   const busy = !!state?.operations.some((o) => o.status === "Queued" || o.status === "Running");
   return (
     <Flex direction="column" gap={space.section}>
       <PageHeader title={title} description={description} />
-      {subjects.data && labels.length === 0 && (
-        <EmptyState
-          title="There is no data to process yet"
-          text="Import your scans first."
-          action="Import scans"
-          href={href(ws, "data")}
-        />
+      {overview.data && rows.length === 0 && (
+        <EmptyState title="There is no data to process yet" text="Import your scans first." action="Import scans" href={href(ws, "data")} />
       )}
-      {subject && (
+      {rows.length > 0 && (
+        <>
+          <Text size={type.help} color="gray">
+            Choose a subject. The earlier stages must be done already; their results are used as they are.
+          </Text>
+          <SubjectsTable subjects={rows} selected={chosen ? [chosen] : []} onSelect={(l) => setChosen(l[0])} />
+        </>
+      )}
+      {row && (
         <Card size="3">
-          <Flex direction="column" gap={space.group}>
-            <Flex gap={space.group} align="end" wrap="wrap">
-              <Flex direction="column" gap="1">
-                <Text size={type.help} weight="medium">
-                  Subject
-                </Text>
-                <Select.Root value={subject} onValueChange={setChosen}>
-                  <Select.Trigger />
-                  <Select.Content>
-                    {labels.map((l) => (
-                      <Select.Item key={l} value={l}>
-                        {l}
-                      </Select.Item>
-                    ))}
-                  </Select.Content>
-                </Select.Root>
-              </Flex>
-              <Button size="3" disabled={busy} onClick={() => setConfirm(true)}>
-                Run {title.toLowerCase()} for {subject}
-              </Button>
+          <Flex gap={space.group} align="center" wrap="wrap" justify="between">
+            <Flex direction="column" gap="1">
+              <Text weight="bold">{row.label}</Text>
+              <StageChips stages={row.stages} />
             </Flex>
-            <Text size={type.help} color="gray">
-              The earlier stages must be done already; their results are used as they are. You will see exactly what
-              runs before anything starts.
-            </Text>
+            <Button size="3" disabled={busy} onClick={() => setConfirm(true)}>
+              Run {title.toLowerCase()} for {row.label}…
+            </Button>
           </Flex>
         </Card>
       )}
-      {subject && <ConfirmProcessDialog ws={ws} subject={subject} open={confirm} onOpenChange={setConfirm} onlyStage={stage} />}
+      {row && <ConfirmProcessDialog ws={ws} subject={row.label} open={confirm} onOpenChange={setConfirm} onlyStage={stage} />}
     </Flex>
   );
 }

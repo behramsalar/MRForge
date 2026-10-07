@@ -756,6 +756,9 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         titles = {
             "func_qc": "Head motion and registration",
             "func_to_mni": "Alignment to standard space",
+            "melodic": "Independent components (MELODIC)",
+            "aroma_classify": "Components proposed as noise (ICA-AROMA)",
+            "regfilt": "Noise removal",
         }
         latest: dict[str, Job] = {}
         with ws.session() as s:
