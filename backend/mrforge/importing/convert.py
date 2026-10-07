@@ -293,11 +293,15 @@ def convert_import(
     numbers = [s.number for s in wanted]
     for s in wanted:
         if s.number is None or numbers.count(s.number) > 1:
+            same = [w.description or "(no name)" for w in wanted if w.number == s.number]
             raise StepError(
                 code="AMBIGUOUS_SERIES",
                 message=f"Series number {s.number} is used by more than one series to import.",
-                probable_cause="The scanner session contains repeated series numbers.",
-                suggested_action="Split the session into folders and import them one by one.",
+                probable_cause="The scanner session contains repeated series numbers: "
+                + ", ".join(same)
+                + ".",
+                suggested_action="Skip the series you do not need (in the web page, or with "
+                "--uid on the command line), or import the session as separate folders.",
             )
     summary = ConvertSummary()
     todo: list[DicomSeries] = []

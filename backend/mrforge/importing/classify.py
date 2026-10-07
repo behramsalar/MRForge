@@ -402,7 +402,21 @@ def effective_all(manifest: ImportManifest, rules: RuleSet) -> dict[str, Classif
     return {s.uid: effective(manifest, s.uid, rules) for s in manifest.series}
 
 
-def find_series(manifest: ImportManifest, number: int) -> DicomSeries:
+def find_series(
+    manifest: ImportManifest, number: int | None, uid: str | None = None
+) -> DicomSeries:
+    """The series a decision is about. Series are told apart by their unique id; the number
+    is only a convenience (the command line) and must then be unique: scanners repeat numbers
+    (Philips gives several non-image objects number 0)."""
+    if uid is not None:
+        found = next((s for s in manifest.series if s.uid == uid), None)
+        if found is None:
+            raise StepError(
+                code="UNKNOWN_SERIES",
+                message=f"There is no such series in {manifest.id}.",
+                suggested_action="Reload the page to see the current list.",
+            )
+        return found
     matches = [s for s in manifest.series if s.number == number]
     if not matches:
         raise StepError(
@@ -414,8 +428,13 @@ def find_series(manifest: ImportManifest, number: int) -> DicomSeries:
         raise StepError(
             code="AMBIGUOUS_SERIES",
             message=f"Series number {number} is used by more than one series in {manifest.id}.",
-            probable_cause="The scanner session contains repeated series numbers.",
-            suggested_action="Split the session into separate folders and import them one by one.",
+            probable_cause="The scanner repeats series numbers: "
+            + "; ".join(
+                f"{s.description or '(no name)'} ({s.modality}, {s.n_files} files)" for s in matches
+            )
+            + ".",
+            suggested_action="Choose the series from the list in the web page, or on the command "
+            "line add --uid with the series' unique id (see 'mrforge import show --why').",
         )
     return matches[0]
 
@@ -423,14 +442,15 @@ def find_series(manifest: ImportManifest, number: int) -> DicomSeries:
 def set_override(
     manifest: ImportManifest,
     rules: RuleSet,
-    number: int,
+    number: int | None,
     kind: str | None = None,
     skip: bool = False,
     entities: dict[str, str] | None = None,
     fieldmap: str | None = None,
+    uid: str | None = None,
 ) -> Classification:
     """Record a user decision for one series and return the classification now in force."""
-    series = find_series(manifest, number)
+    series = find_series(manifest, number, uid)
     entities = entities or {}
     kinds = rules.import_kinds()
     if skip and (kind or entities):

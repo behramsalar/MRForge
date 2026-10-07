@@ -69,6 +69,8 @@ def format_series_table(
 
 def _needs_hint(s: DicomSeries, c: Classification) -> str:
     number = "?" if s.number is None else s.number
+    if s.number is None or s.number == 0:  # numbers are not unique here: use the id
+        number = f"0 --uid {s.uid}" if s.number == 0 else f"? --uid {s.uid}"
     if "task" in c.needs:
         return f"mrforge import set {number} --task <name>      (what task was done?)"
     return f"mrforge import set {number} --type <type> | --skip   (what is this series?)"
@@ -113,7 +115,7 @@ def format_manifest(
         if why:
             lines += ["", "Why:"]
             for s in manifest.series:
-                lines.append(f"  series {s.number} ({s.label}):")
+                lines.append(f"  series {s.number} ({s.label}), id {s.uid}:")
                 lines += [f"    - {r}" for r in classes[s.uid].reasons]
     notes = [f"series {s.number}: {w}" for s in manifest.series for w in s.warnings]
     if manifest.dicom_removed is not None:

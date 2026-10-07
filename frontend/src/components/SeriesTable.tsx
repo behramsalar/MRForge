@@ -36,8 +36,8 @@ export function DecisionDialog({ ws, detail, row }: { ws: string; detail: Import
   const save = useMutation({
     mutationFn: () =>
       call(
-        api.PATCH("/api/workspaces/{ws_id}/imports/{import_id}/series/{number}", {
-          params: { path: { ws_id: ws, import_id: detail.id, number: row.number ?? 0 } },
+        api.PATCH("/api/workspaces/{ws_id}/imports/{import_id}/series-by-id/{uid}", {
+          params: { path: { ws_id: ws, import_id: detail.id, uid: row.uid } },
           body: skip
             ? { skip: true }
             : {

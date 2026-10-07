@@ -619,3 +619,63 @@ def test_flair_dwi_localizer_and_philips_names(rules: RuleSet) -> None:
     assert classify_series(philips_t1, [philips_t1], rules).kind == "T1w"
     adc = make(902, "dADC DWI_og", volumes=1, slices=24, image_type=["ADC_UNSPECIFIED", "ADC"])
     assert classify_series(adc, [adc], rules).confidence == "High"
+
+
+def number_zero_manifest() -> ImportManifest:
+    """Two scanner objects that both carry series number 0 (Philips ExamCard, presentation
+    state) next to a real T1."""
+
+    def make(
+        uid: str, number: int, description: str, modality: str, rows: int | None
+    ) -> DicomSeries:
+        return DicomSeries(uid=uid, number=number, description=description, modality=modality, n_files=1,
+                           rows=rows, columns=rows, slices=1 if rows else None, image_type=["ORIGINAL"] if rows else [])  # fmt: skip
+
+    series = [
+        make("uid-a", 0, "ExamCard", "MR", None),
+        make("uid-b", 0, "T2W_DRIVE", "PR", None),
+        make("uid-c", 501, "sT1W_3D_TFE", "MR", 64),
+    ]
+    manifest = ImportManifest(
+        id="import-001", source=SourceInfo(name="x", kind="folder", n_files=3, fingerprint="f"),
+        subject="sub-001", series=series,
+    )  # fmt: skip
+    return manifest
+
+
+def test_series_that_share_a_number_are_decided_one_by_one_through_their_id() -> None:
+    rules = load_rules(None)  # type: ignore[arg-type]
+    manifest = number_zero_manifest()
+    apply_rules(manifest, rules)
+    both_skipped = {s.uid: effective(manifest, s.uid, rules).action for s in manifest.series}
+    assert both_skipped["uid-a"] == "skip" and both_skipped["uid-b"] == "skip"
+    # By number it is ambiguous, and the message tells them apart.
+    with pytest.raises(StepError) as err:
+        set_override(manifest, rules, 0, skip=True)
+    assert (
+        err.value.code == "AMBIGUOUS_SERIES"
+        and "ExamCard" in err.value.probable_cause
+        and "T2W_DRIVE" in err.value.probable_cause
+    )
+    assert "--uid" in err.value.suggested_action
+    # By id it is exact, and only that series changes.
+    now = set_override(manifest, rules, None, kind="T2w", uid="uid-b")
+    assert now.kind == "T2w" and now.action == "import"
+    assert effective(manifest, "uid-a", rules).action == "skip"
+
+
+def test_a_series_that_is_not_there_is_reported_when_asked_by_id() -> None:
+    rules = load_rules(None)  # type: ignore[arg-type]
+    manifest = number_zero_manifest()
+    with pytest.raises(StepError) as err:
+        set_override(manifest, rules, None, skip=True, uid="nope")
+    assert err.value.code == "UNKNOWN_SERIES"
+
+
+def test_the_hint_for_series_zero_uses_the_id(tmp_path: Path) -> None:
+    rules = load_rules(None)  # type: ignore[arg-type]
+    manifest = number_zero_manifest()
+    apply_rules(manifest, rules)
+    manifest.overrides = {}
+    text = format_manifest(manifest, effective_all(manifest, rules))
+    assert "uid-" in text or "needs your input" not in text  # no ambiguous 'set 0' hint is printed

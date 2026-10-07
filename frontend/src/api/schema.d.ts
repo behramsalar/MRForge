@@ -220,6 +220,26 @@ export interface paths {
         patch: operations["decide_series_api_workspaces__ws_id__imports__import_id__series__number__patch"];
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/imports/{import_id}/series-by-id/{uid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Decide Series By Id
+         * @description Like the route by number, but safe when several series share a number.
+         */
+        patch: operations["decide_series_by_id_api_workspaces__ws_id__imports__import_id__series_by_id__uid__patch"];
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/imports/scan": {
         parameters: {
             query?: never;
@@ -2744,6 +2764,43 @@ export interface operations {
                 ws_id: string;
                 import_id: string;
                 number: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeriesDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_series_by_id_api_workspaces__ws_id__imports__import_id__series_by_id__uid__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                import_id: string;
+                uid: string;
             };
             cookie?: never;
         };

@@ -457,6 +457,23 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         save_manifest(ws, m)
         return import_detail(ws, m)
 
+    @app.patch(
+        "/api/workspaces/{ws_id}/imports/{import_id}/series-by-id/{uid}",
+        response_model=S.ImportDetail,
+    )
+    def decide_series_by_id(
+        ws_id: str, import_id: str, uid: str, decision: S.SeriesDecision
+    ) -> S.ImportDetail:
+        """Like the route by number, but safe when several series share a number."""
+        ws = ws_of(ws_id)
+        m = load_manifest(ws, import_id)
+        labels = {k: v for k, v in (("task", decision.task), ("acq", decision.acq)) if v}
+        set_override(
+            m, load_rules(ws), None, decision.kind, decision.skip, labels, decision.fieldmap, uid
+        )
+        save_manifest(ws, m)
+        return import_detail(ws, m)
+
     @app.post("/api/workspaces/{ws_id}/imports/scan", response_model=S.OperationStarted)
     def scan(
         ws_id: str, req: S.ScanRequest, who: accounts.Researcher | None = Researcher

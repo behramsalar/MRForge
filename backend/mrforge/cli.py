@@ -255,13 +255,17 @@ def import_set(
         str | None,
         typer.Option(help="Fieldmap for a BOLD/diffusion run: a series number, or none."),
     ] = None,
+    uid: Annotated[
+        str | None,
+        typer.Option(help="The series' unique id, when several series share the number."),
+    ] = None,
 ) -> None:
     """Tell MRForge what a series is (your decision overrides the rules)."""
     ws = Workspace.open(workspace)
     manifest = load_manifest(ws, import_id)
     rules = load_rules(ws)
     labels = {k: v for k, v in (("task", task), ("acq", acq)) if v is not None}
-    now = set_override(manifest, rules, series, kind, skip, labels, fieldmap)
+    now = set_override(manifest, rules, series, kind, skip, labels, fieldmap, uid)
     save_manifest(ws, manifest)
     typer.echo(f"Series {series}: {describe_plan(now)} ({now.confidence}, {now.source}).")
     if fieldmap is not None:
