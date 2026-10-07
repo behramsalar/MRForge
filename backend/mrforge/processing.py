@@ -571,8 +571,8 @@ class ArtifactStage(Stage):
 def _which_data(bold_ref: str) -> str:
     """Plain words for the data a later stage works on."""
     return (
-        "cleaned data (noise components removed)"
-        if "regfilt" in bold_ref or "cleaned" in bold_ref
+        "denoised data (noise components removed)"
+        if "regfilt" in bold_ref or "denoised" in bold_ref
         else "preprocessed data"
     )
 

@@ -616,6 +616,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/analysis-ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Analysis Ready
+         * @description The final file of every recording for group analysis, and whether they were all made
+         *     with the same settings (the folder and manifest are refreshed first).
+         */
+        get: operations["analysis_ready_api_workspaces__ws_id__analysis_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/subjects/{label}/ica": {
         parameters: {
             query?: never;
@@ -808,6 +829,15 @@ export interface components {
             shape?: number[] | null;
             /** Repetition Time S */
             repetition_time_s?: number | null;
+        };
+        /** Difference */
+        Difference: {
+            /** Setting */
+            setting: string;
+            /** Groups */
+            groups: {
+                [key: string]: string[];
+            };
         };
         /**
          * ErrorBody
@@ -1343,6 +1373,38 @@ export interface components {
             anat_reason?: string | null;
             /** Runs */
             runs: components["schemas"]["RunStatus"][];
+        };
+        /** ReadyReport */
+        ReadyReport: {
+            /** Folder */
+            folder: string;
+            /** Manifest */
+            manifest: string;
+            /** Rows */
+            rows: components["schemas"]["ReadyRow"][];
+            /** Differences */
+            differences: components["schemas"]["Difference"][];
+        };
+        /** ReadyRow */
+        ReadyRow: {
+            /** Subject */
+            subject: string;
+            /** Recording */
+            recording: string;
+            /** File */
+            file: string;
+            /** Mask */
+            mask: string | null;
+            /** Source */
+            source: string;
+            /** Settings */
+            settings: {
+                [key: string]: string;
+            };
+            /** Decided By */
+            decided_by: string | null;
+            /** Finished */
+            finished: string | null;
         };
         /** RemovalPlanInfo */
         RemovalPlanInfo: {
@@ -2903,6 +2965,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ViewerImage"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analysis_ready_api_workspaces__ws_id__analysis_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadyReport"];
                 };
             };
             /** @description Validation Error */

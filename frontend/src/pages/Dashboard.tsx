@@ -10,6 +10,7 @@ import type { WorkspaceState } from "../api/types";
 import { useOverview } from "../api/hooks";
 import { PipelineStepper } from "../components/PipelineStepper";
 import { StatusBadge } from "../components/ui/Badges";
+import { AnalysisReadyCard } from "../components/AnalysisReadyCard";
 import { SubjectsTable } from "../components/SubjectsTable";
 import { EmptyState, PageHeader, StatCard } from "../components/ui/Layout";
 import { elapsed, when } from "../lib/labels";
@@ -97,6 +98,7 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
       <Grid columns={{ initial: "1", lg: "3" }} gap={space.group} align="start">
         <Flex direction="column" gap={space.group} style={{ gridColumn: "span 2" }}>
           {o && <PipelineStepper stages={o.stages} />}
+          {o && <AnalysisReadyCard ws={ws} subjectsWithRuns={o.stages.find((x) => x.id === "preprocessing")?.total ?? 0} />}
           <Card size="3">
             <Flex direction="column" gap={space.group}>
               <Heading as="h2" size={type.sectionTitle}>Subjects</Heading>

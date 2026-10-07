@@ -156,6 +156,26 @@ def workspace_create(
     typer.echo(f"Created workspace '{ws.name}' in {ws.root}")
 
 
+@workspace_app.command("migrate")
+@friendly
+def workspace_migrate(
+    path: Annotated[Path, typer.Argument(help="The workspace folder.")],
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Only list what would change.")
+    ] = False,
+) -> None:
+    """Rename results made before the new naming (nothing is recomputed)."""
+    from mrforge.migrate_names import migrate
+
+    result = migrate(Workspace.open(path), dry_run=dry_run)
+    for old, new in result.renames.items():
+        typer.echo(f"{'would rename' if dry_run else 'renamed'}: {old}\n          to: {new}")
+    typer.echo(
+        f"{len(result.renames)} file(s), {len(result.records)} step record(s) "
+        + ("would change." if dry_run else f"updated. Database copy: {result.backup}")
+    )
+
+
 @config_app.command("fsl")
 @friendly
 def config_fsl(

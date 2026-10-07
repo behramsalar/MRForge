@@ -103,6 +103,11 @@ export function SubjectPage({ ws, label, tab, state }: { ws: string; label?: str
   const overview = useOverview(ws);
   const [run, setRun] = useState<string | null | "all">(null);
   const row = overview.data?.subjects.find((s) => s.label === label);
+  const ready = useQuery({
+    queryKey: ["ws", ws, "analysis-ready"],
+    queryFn: () => call(api.GET("/api/workspaces/{ws_id}/analysis-ready", { params: { path: { ws_id: ws } } })),
+  });
+  const readyRows = (ready.data?.rows ?? []).filter((r) => r.subject === label);
   const busy = !!state?.operations.some((o) => o.status === "Queued" || o.status === "Running");
   const current = tab === "results" ? "results" : "overview";
   const go = (t: string) => {
@@ -173,6 +178,32 @@ export function SubjectPage({ ws, label, tab, state }: { ws: string; label?: str
               <Text size={type.caption} color="gray">
                 Numbers to look at. MRForge never excludes a subject by itself.
               </Text>
+            </Flex>
+          </Card>
+          <Card size="2">
+            <Flex direction="column" gap="1">
+              <Heading as="h2" size={type.sectionTitle}>
+                For group analysis
+              </Heading>
+              {readyRows.length === 0 ? (
+                <Text size={type.help} color="gray">
+                  Not yet: the final file appears here when standard space has finished.
+                </Text>
+              ) : (
+                readyRows.map((r) => (
+                  <Flex key={r.file} direction="column">
+                    <Text size={type.help}>
+                      <Badge color="green" variant="soft">
+                        Analysis-ready
+                      </Badge>{" "}
+                      {r.recording}: {Object.entries(r.settings).filter(([k]) => ["Noise removal", "Smoothing (mm)"].includes(k)).map(([k, v]) => `${k} ${v}`).join(" · ")}
+                    </Text>
+                    <Text size={type.caption} color="gray" style={{ wordBreak: "break-all" }}>
+                      {r.file}
+                    </Text>
+                  </Flex>
+                ))
+              )}
             </Flex>
           </Card>
           <JobsPanel ws={ws} jobs={jobs} busy={busy} />

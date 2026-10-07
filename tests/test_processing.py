@@ -433,9 +433,9 @@ def test_standard_space_alone_uses_the_cleaned_data_when_there_is_any(tmp_path: 
     make_earlier_results(ws, cleaned=True)
     p, spec = plan(ws, stages=only("standard_space"))
     mni = spec.steps[0]  # type: ignore[union-attr]
-    assert mni.step == "func_to_mni" and mni.inputs["bold"].endswith("desc-cleaned_bold.nii.gz")
+    assert mni.step == "func_to_mni" and mni.inputs["bold"].endswith("desc-denoised_bold.nii.gz")
     item = next(s for s in p.stages if s.id == "standard_space").items[0]
-    assert "cleaned" in {x.name: x.value for x in item.settings}["Data"]
+    assert "denoised" in {x.name: x.value for x in item.settings}["Data"]
 
 
 def test_standard_space_alone_without_cleaning_uses_the_preprocessed_data(tmp_path: Path) -> None:
