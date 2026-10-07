@@ -23,6 +23,8 @@ from typing import Any
 import psutil
 from sqlalchemy import select
 
+from mrforge.analysis_ready import refresh as refresh_analysis_ready
+from mrforge.batch import run_batch
 from mrforge.engine import Action, run_pipeline
 from mrforge.errors import StepError
 from mrforge.importing.bids_validate import format_report, validate_dataset
@@ -122,6 +124,7 @@ def _pipeline(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
             probable_cause="See the step's own explanation.",
             suggested_action="Fix the cause, then resume: finished steps are not repeated.",
         )
+    refresh_analysis_ready(ws)  # the folder for group analysis follows what is finished
     return {
         "steps": [
             {"id": o.step_id, "action": o.action.value, "job_id": o.job_id} for o in outcomes
@@ -131,12 +134,33 @@ def _pipeline(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
     }
 
 
+def _batch(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
+    specs = [parse_pipeline(d) for d in args["specs"]]
+    log(f"Processing {len(specs)} subjects, {args.get('max_subjects', 2)} at a time...")
+    results = run_batch(ws, specs, int(args.get("max_subjects", 2)), args.get("started_by"), log)
+    refresh_analysis_ready(ws)
+    failed = [r for r in results if r.status == "failed"]
+    if failed:
+        raise StepError(
+            code="BATCH_SUBJECTS_FAILED",
+            message=f"{len(failed)} of {len(results)} subjects did not finish "
+            f"({', '.join(r.subject for r in failed[:5])}{'...' if len(failed) > 5 else ''}).",
+            probable_cause="See each subject's own explanation; the others are not affected.",
+            suggested_action="Fix the cause, then resume: finished work is not repeated.",
+        )
+    return {
+        "subjects": [r.as_dict() for r in results],
+        "waiting": [r.subject for r in results if r.status == "waiting"],
+    }
+
+
 HANDLERS: dict[str, Handler] = {
     "scan": _scan,
     "import_run": _import_run,
     "remove_dicom": _remove_dicom,
     "undo_import": _undo_import,
     "pipeline": _pipeline,
+    "batch": _batch,
 }
 
 
