@@ -325,6 +325,23 @@ Moved ahead of batch work (user decision, 2026-10-05). It runs between Functiona
 4. Stop and restart `mrforge serve` while paused: it still waits and continues after you save.
 5. Compare with manual runs: `melodic` (same options and seed), `fsl_regfilt` with the same component list, and `ICA_AROMA.py` (same classification).
 
+### Stage 6.5 — Structure pass (subjects, status, results, names)
+
+Added after Stage 6 from the user's interface review (2026-10-07), so that Stage 7 (batch, decisions) and Stage 8 (reports) build on the right pages.
+
+**Build**
+- S1. Sidebar: Process > Single steps > Anatomical, and Functional with Preprocessing / Artifact rejection / Standard space (one page per stage of the stage registry).
+- S2. A subjects table (search, status filters, paging) used wherever a subject is chosen (Pipelines, Data), replacing dropdowns and cards; single selection now, multi-select in Stage 7a.
+- S3. A **subject page**: stage-by-stage status of one subject, QC summary, and buttons (Results, Open in viewer, Process again). A subject that is finished is not offered full processing as the first choice. Until reports exist (Stage 8), Results is a page built from recorded provenance (pictures, metrics, files per stage).
+- S4. "Open in viewer" only where there is an image the viewer can show; QC pictures open enlarged.
+- S5. Descriptive result names (the name says the latest processing done) with a migration of existing workspaces, and an **analysis-ready** marking for the final file of each recording (design in `docs/DECISIONS.md`, agreed with the user before building).
+
+**Manual test checklist**
+1. A dashboard row opens that subject's page, not the viewer; status chips are correct for processed, partly processed and failed subjects.
+2. A finished subject is not offered full processing first; Results shows its pictures, metrics and files.
+3. With 20+ subjects (make a workspace with fake subjects) the subjects table stays usable: search, filter, page.
+4. The sidebar shows the three functional headings and each opens the right page.
+
 ### Stage 7 — Batch, presets, resources, QC decisions
 
 **Build**
