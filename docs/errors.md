@@ -363,3 +363,14 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 ### PRESET_NAME_REQUIRED / PRESET_NAME_TAKEN / PRESET_BUILTIN
 - **What happened:** A preset needs a name; a built-in preset already has that name; or a built-in preset cannot be deleted.
 - **Suggested action:** Choose another name; delete only presets you saved yourself.
+
+## Import: archives and several subjects (after Stage 7)
+
+### IMPORT_TAR_UNSAFE
+- **What happened:** A TAR archive contains an entry that could write outside its folder (an absolute path, a '..' path, a link to somewhere else, or a device file). Nothing was copied.
+- **Suggested action:** Do not import this file; export the scan again.
+
+### IMPORT_ARCHIVE_UNREADABLE
+- **What happened:** The archive could not be read to the end.
+- **Probable cause:** The file is damaged or was not copied completely.
+- **Suggested action:** Copy or export the archive again.

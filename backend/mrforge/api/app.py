@@ -37,6 +37,7 @@ from mrforge.importing.bids_validate import find_validator
 from mrforge.importing.classify import effective_all, load_rules, set_override
 from mrforge.importing.manifest import list_manifests, load_manifest, save_manifest
 from mrforge.importing.models import ImportManifest
+from mrforge.importing.scan import TAR_ENDINGS
 from mrforge.importing.sourcedata import removal_plan
 from mrforge.importing.undo import undo_plan
 from mrforge.models import Job, JobStatus, Subject
@@ -609,8 +610,8 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
                 continue
             if child.is_dir():
                 entries.append(S.FsEntry(name=child.name, path=str(child), kind="dir"))
-            elif child.suffix.lower() == ".zip":
-                entries.append(S.FsEntry(name=child.name, path=str(child), kind="zip"))
+            elif child.suffix.lower() == ".zip" or child.name.lower().endswith(TAR_ENDINGS):
+                entries.append(S.FsEntry(name=child.name, path=str(child), kind="archive"))
         parent = str(here.parent) if here != home else None
         return S.FsListing(path=str(here), parent=parent, home=str(home), entries=entries)
 

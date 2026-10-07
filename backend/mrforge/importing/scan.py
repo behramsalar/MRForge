@@ -11,6 +11,7 @@ import json
 import re
 import shutil
 import subprocess
+import tarfile
 import tempfile
 import zipfile
 from collections import defaultdict
@@ -238,12 +239,48 @@ def is_junk(path: str) -> bool:
 JUNK_NAMES = {".DS_Store", "Thumbs.db", "desktop.ini"}
 
 
+TAR_ENDINGS = (".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".tbz", ".tar.xz", ".txz")
+
+
+def archive_kind(src: Path) -> str | None:
+    """ "zip" or "tar" (also gzip, bzip2 and xz compressed tar files), else None."""
+    if not src.is_file():
+        return None
+    if zipfile.is_zipfile(src):
+        return "zip"
+    if src.name.lower().endswith(TAR_ENDINGS) or tarfile.is_tarfile(src):
+        try:
+            return "tar" if tarfile.is_tarfile(src) else None
+        except OSError:
+            return None
+    return None
+
+
+def _archive_fingerprint(src: Path) -> str:
+    """A cheap, stable identity of a big archive without reading all of it: its size and the
+    hash of its first and last megabyte (the same file copied elsewhere gives the same value)."""
+    size = src.stat().st_size
+    digest = hashlib.sha256(str(size).encode())
+    with src.open("rb") as handle:
+        digest.update(handle.read(1_000_000))
+        if size > 2_000_000:
+            handle.seek(size - 1_000_000)
+            digest.update(handle.read(1_000_000))
+    return digest.hexdigest()[:16]
+
+
 def describe_source(src: Path) -> SourceInfo:
     if src.is_dir():
         every = [(str(p.relative_to(src)), p.stat().st_size) for p in src.rglob("*") if p.is_file()]
     elif src.is_file() and zipfile.is_zipfile(src):
         with zipfile.ZipFile(src) as zf:
             every = [(i.filename, i.file_size) for i in zf.infolist() if not i.is_dir()]
+    elif archive_kind(src) == "tar":
+        # Listing a compressed tar means reading all of it, so the count is filled in when the
+        # files are unpacked (copy_source) and the identity comes from a cheap fingerprint.
+        return SourceInfo(
+            name=src.name, kind="tar", n_files=0, fingerprint=_archive_fingerprint(src)
+        )
     else:
         every = None
     if every is not None:
@@ -258,8 +295,9 @@ def describe_source(src: Path) -> SourceInfo:
     raise StepError(
         code="IMPORT_SOURCE_INVALID",
         message=f"'{src}' is not a folder or a ZIP file.",
-        probable_cause="The path is wrong, or the file is not a ZIP archive.",
-        suggested_action="Give the folder that contains the DICOM files, or a .zip of it.",
+        probable_cause="The path is wrong, or the file is not a ZIP or TAR archive.",
+        suggested_action="Give the folder that contains the DICOM files, or an archive of it "
+        "(.zip, .tar, .tar.gz, .tar.bz2 or .tar.xz).",
     )
 
 
@@ -274,6 +312,9 @@ def copy_source(src: Path, dest: Path, info: SourceInfo) -> None:
             src, partial, dirs_exist_ok=True,
             ignore=lambda d, names: [n for n in names if is_junk(n)],
         )  # fmt: skip
+    elif info.kind == "tar":
+        _extract_tar(src, partial)
+        info.n_files = sum(1 for p in partial.rglob("*") if p.is_file())
     else:
         with zipfile.ZipFile(src) as zf:
             for member in zf.infolist():
@@ -292,6 +333,36 @@ def copy_source(src: Path, dest: Path, info: SourceInfo) -> None:
     if dest.exists():
         shutil.rmtree(dest)
     partial.rename(dest)
+
+
+def _extract_tar(src: Path, partial: Path) -> None:
+    """Unpack a tar file (plain, gzip, bzip2 or xz) into ``partial``. Only regular files and
+    folders are written, and nothing outside ``partial`` (Python's "data" filter refuses
+    absolute paths, ``..``, links that leave the folder and device files)."""
+    try:
+        with tarfile.open(src, "r:*") as tf:
+            for member in tf:
+                if is_junk(member.name):
+                    continue
+                tf.extract(member, partial, filter="data")
+    except tarfile.FilterError as exc:
+        shutil.rmtree(partial, ignore_errors=True)
+        raise StepError(
+            code="IMPORT_TAR_UNSAFE",
+            message="The archive contains something that could write outside its folder.",
+            probable_cause=f"One of its entries is not allowed ({type(exc).__name__}): "
+            "an absolute path, a '..' path, a link to somewhere else or a device file.",
+            suggested_action="Do not import this file; export the scan again.",
+        ) from exc
+    except (tarfile.TarError, EOFError, OSError) as exc:
+        shutil.rmtree(partial, ignore_errors=True)
+        raise StepError(
+            code="IMPORT_ARCHIVE_UNREADABLE",
+            message="The archive could not be read to the end.",
+            probable_cause="The file is damaged or was not copied completely.",
+            suggested_action="Copy or export the archive again.",
+            log_path=None,
+        ) from exc
 
 
 # -- dcm2niix sidecar pass -------------------------------------------------------------------

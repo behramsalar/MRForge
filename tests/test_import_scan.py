@@ -427,3 +427,76 @@ def is_junk_name(rel: str) -> bool:
     from mrforge.importing.scan import is_junk
 
     return is_junk(rel)
+
+
+@pytest.mark.parametrize(
+    ("name", "mode"),
+    [
+        ("s.tar", "w"),
+        ("s.tar.gz", "w:gz"),
+        ("s.tgz", "w:gz"),
+        ("s.tar.bz2", "w:bz2"),
+        ("s.tbz2", "w:bz2"),
+        ("s.tar.xz", "w:xz"),
+    ],
+)
+def test_tar_archives_of_every_kind_are_unpacked_like_the_folder(
+    session: Path, ws: Workspace, tmp_path: Path, name: str, mode: str
+) -> None:
+    import tarfile
+
+    archive = tmp_path / name
+    with tarfile.open(archive, mode) as tf:  # type: ignore[call-overload]
+        tf.add(session, arcname="Some Patient Folder")
+        (tmp_path / ".DS_Store").write_text("junk")
+        tf.add(tmp_path / ".DS_Store", arcname="Some Patient Folder/.DS_Store")
+    manifest, _ = scan_source(ws, archive)
+    assert manifest.source.kind == "tar" and manifest.source.n_files > 0
+    assert [s.number for s in manifest.series] == [2, 6, 19]
+    assert "Some Patient" not in format_manifest(manifest)
+    again, is_new = scan_source(ws, archive)  # the same archive is recognised
+    assert again.id == manifest.id and not is_new
+
+
+def test_a_tar_with_a_path_that_escapes_is_refused(ws: Workspace, tmp_path: Path) -> None:
+    import io
+    import tarfile
+
+    archive = tmp_path / "evil.tar.bz2"
+    with tarfile.open(archive, "w:bz2") as tf:
+        info = tarfile.TarInfo("../escape.txt")
+        info.size = 2
+        tf.addfile(info, io.BytesIO(b"no"))
+    with pytest.raises(StepError) as err:
+        scan_source(ws, archive)
+    assert err.value.code == "IMPORT_TAR_UNSAFE"
+    assert not (ws.root.parent / "escape.txt").exists()
+    assert not list((ws.root / "sourcedata" / "dicom").iterdir())
+
+
+def test_a_tar_with_a_link_to_somewhere_else_is_refused(ws: Workspace, tmp_path: Path) -> None:
+    import tarfile
+
+    archive = tmp_path / "link.tar"
+    with tarfile.open(archive, "w") as tf:
+        link = tarfile.TarInfo("looks-harmless")
+        link.type = tarfile.SYMTYPE
+        link.linkname = "/etc/passwd"
+        tf.addfile(link)
+    with pytest.raises(StepError) as err:
+        scan_source(ws, archive)
+    assert err.value.code == "IMPORT_TAR_UNSAFE"
+
+
+def test_a_damaged_archive_is_explained(ws: Workspace, tmp_path: Path) -> None:
+    import tarfile
+
+    good = tmp_path / "g.tar.bz2"
+    with tarfile.open(good, "w:bz2") as tf:
+        (tmp_path / "x.txt").write_text("x" * 100000)
+        tf.add(tmp_path / "x.txt", arcname="x.txt")
+    broken = tmp_path / "broken.tar.bz2"
+    broken.write_bytes(good.read_bytes()[:-40])  # cut off the end
+    with pytest.raises(StepError) as err:
+        scan_source(ws, broken)
+    assert err.value.code in ("IMPORT_ARCHIVE_UNREADABLE", "IMPORT_SOURCE_INVALID")

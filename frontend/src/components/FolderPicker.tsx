@@ -7,7 +7,7 @@ import { space, type } from "../theme/tokens";
 import { ErrorCallout } from "./ErrorCallout";
 import { ApiError } from "../api/call";
 
-/** Pick a folder or ZIP on the computer running MRForge (inside the home folder). */
+/** Pick a folder or archive on the computer running MRForge (inside the home folder). */
 export function FolderPicker({
   open,
   onOpenChange,
@@ -29,7 +29,7 @@ export function FolderPicker({
       <Dialog.Content maxWidth="640px">
         <Dialog.Title>Choose the scanner files</Dialog.Title>
         <Dialog.Description size={type.help} color="gray">
-          Pick the folder that holds the DICOM files (subfolders are included), or a ZIP file.
+          Pick the folder that holds the DICOM files (subfolders are included), or an archive of it (ZIP, TAR, TAR.GZ, TAR.BZ2 or TAR.XZ).
         </Dialog.Description>
         <Flex direction="column" gap={space.group} mt="3">
           <Flex align="center" gap={space.inline}>
@@ -49,7 +49,7 @@ export function FolderPicker({
           <Flex direction="column" style={{ maxHeight: 320, overflowY: "auto" }}>
             {listing.data?.entries.length === 0 && (
               <Text size={type.help} color="gray">
-                No folders or ZIP files here.
+                No folders or archives here.
               </Text>
             )}
             {listing.data?.entries.map((e) => (
@@ -60,7 +60,7 @@ export function FolderPicker({
                 style={{ justifyContent: "flex-start" }}
                 onClick={() => (e.kind === "dir" ? setPath(e.path) : (onPick(e.path, e.name), onOpenChange(false)))}
               >
-                {e.name}{e.kind === "zip" ? " (ZIP file)" : ""}
+                {e.name}{e.kind === "archive" ? " (archive)" : ""}
               </Button>
             ))}
           </Flex>

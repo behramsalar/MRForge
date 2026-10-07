@@ -88,7 +88,7 @@ class SeriesRow(BaseModel):
 
 class ImportSummary(BaseModel):
     id: str
-    kind: Literal["folder", "zip", "nifti", "bids"]
+    kind: Literal["folder", "zip", "tar", "nifti", "bids"]
     source_name: str
     subject: str
     session: str | None
@@ -148,7 +148,7 @@ class RemovalPlanInfo(BaseModel):
 class FsEntry(BaseModel):
     name: str
     path: str
-    kind: Literal["dir", "zip"]
+    kind: Literal["dir", "archive"]
 
 
 class FsListing(BaseModel):

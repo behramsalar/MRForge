@@ -159,7 +159,7 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
     return (
       <EmptyState
         title="Start your first import"
-        text="Choose the folder or ZIP with your scanner files. MRForge reads them, shows what it found and asks only about what it cannot decide itself."
+        text="Choose the folder or archive (ZIP, TAR) with your scanner files. MRForge reads them, shows what it found and asks only about what it cannot decide itself."
       >
         <NewImportDialog ws={ws} disabled={busy} onStarted={setScanOp} />
       </EmptyState>

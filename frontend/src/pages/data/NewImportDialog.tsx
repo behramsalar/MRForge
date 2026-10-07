@@ -52,7 +52,7 @@ export function NewImportDialog({
         <Flex direction="column" gap={space.group} mt="4">
           <Flex gap={space.group} align="center" wrap="wrap">
             <Button variant="soft" onClick={() => setPicker(true)}>
-              {source ? "Choose another folder" : "Choose folder or ZIP"}
+              {source ? "Choose another folder" : "Choose folder or archive"}
             </Button>
             {source && <Code>{source.name}</Code>}
           </Flex>

@@ -35,7 +35,7 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
         <EmptyState
           icon={<ArchiveIcon width={32} height={32} />}
           title="Start your first import"
-          text="Choose the folder or ZIP with your scanner files. MRForge reads them, shows what it found and asks only about what it cannot decide itself."
+          text="Choose the folder or archive (ZIP, TAR) with your scanner files. MRForge reads them, shows what it found and asks only about what it cannot decide itself."
           action="Import scans"
           href={href(ws, "data")}
         />

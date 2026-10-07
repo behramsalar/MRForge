@@ -129,7 +129,7 @@ class SkippedFile(BaseModel):
 
 class SourceInfo(BaseModel):
     name: str  # the folder or ZIP name as given by the user
-    kind: Literal["folder", "zip", "nifti", "bids"]
+    kind: Literal["folder", "zip", "tar", "nifti", "bids"]
     n_files: int
     ignored: int = 0  # macOS metadata files (__MACOSX, ._*, .DS_Store) that were not copied
     fingerprint: str  # hash of the file names and sizes; recognises the same source again

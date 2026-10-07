@@ -1109,7 +1109,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "dir" | "zip";
+            kind: "dir" | "archive";
         };
         /** FsListing */
         FsListing: {
@@ -1308,7 +1308,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "folder" | "zip" | "nifti" | "bids";
+            kind: "folder" | "zip" | "tar" | "nifti" | "bids";
             /** Source Name */
             source_name: string;
             /** Subject */
@@ -1368,7 +1368,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "folder" | "zip" | "nifti" | "bids";
+            kind: "folder" | "zip" | "tar" | "nifti" | "bids";
             /** Source Name */
             source_name: string;
             /** Subject */
