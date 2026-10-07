@@ -15,7 +15,8 @@ function Activity({ ws }: { ws: string }) {
   const jobs = latestJobs(state?.jobs ?? []);
   const running = (state?.operations ?? []).filter((o) => o.status === "Queued" || o.status === "Running");
   const attention = jobs.filter((j) => j.status === "Failed" || j.status === "Interrupted");
-  const count = running.length + attention.length;
+  const waiting = jobs.filter((j) => j.status === "Waiting");
+  const count = running.length + attention.length + waiting.length;
   return (
     <Popover.Root>
       <Popover.Trigger>
@@ -56,6 +57,16 @@ function Activity({ ws }: { ws: string }) {
                 {o.started_by ? ` · ${o.started_by}` : ""}
               </Text>
               <StatusBadge status="Running" />
+            </Flex>
+          ))}
+          {waiting.map((j) => (
+            <Flex key={j.id} justify="between" gap={space.group} align="center">
+              <a href={href(ws, "process", "ica")}>
+                <Text size={type.help}>
+                  Label the components{j.run ? ` of ${j.run}` : ""} ({j.subject})
+                </Text>
+              </a>
+              <StatusBadge status="Waiting" />
             </Flex>
           ))}
           {attention.map((j) => (

@@ -1,25 +1,14 @@
 # Progress
 
-**Current stage:** Stage 4 UI overhaul, all sub-steps built (branch `stage-4-ui-overhaul`); waiting for the user's manual check, then the lab user test. Stages 0-3 and 5 accepted (tags up to `stage5-accepted`).
+**Current stage:** Stage 6 (artifact rejection) built, waiting for the user's acceptance. Branch `stage-6-artifact-rejection`. Stages 0-5 accepted (Stage 4 tag `stage4-accepted`).
 
-Built: O1 app shell and Forge theme (light/dark), O2 light researcher profiles, O3 Dashboard, O4 Data section (with undo of a whole import), O5 global Viewer, full processing (stage registry, confirmation dialog, live progress window), O6 Jobs history and Settings (disk space, cores), O7 polish (empty states, h1/h2 structure, keyboard check, `docs/design-system.md`).
+Stage 6 sub-steps: 6a `melodic` | 6b "Waiting for you" state, `ica_labels` gate, label saving | 6c `regfilt` | 6d labelling on the review screen | 6e artifact stage in the full-processing dialog | 6f ICA-AROMA (reference implementation in `tools/ICA-AROMA`, `scripts/install_aroma.sh`): all done.
 
-Plan change (2026-10-05): Stage 6 is now artifact rejection (MELODIC, component review, `fsl_regfilt`, optional ICA-AROMA); batch, presets (7e) and QC decisions are Stage 7; reports (with flexible QC pictures) Stage 8. See `docs/DECISIONS.md`.
+Last test status: `pytest -m "not fsl"` 483 passed, 20 deselected; `pytest -m "fsl and not slow"` 15 passed; the slow real-data AROMA comparison passed on its own (138 s); the slow `fsl_anat`/FEAT tests (`-m "fsl and slow"`, about 40 min) were not re-run in this stage; frontend 26 passed, `tsc`, ruff and mypy clean.
 
-Last test status: `pytest -m "not fsl"` 445 passed; frontend `npm test` 22 passed, `tsc` clean; ruff and mypy clean. The `-m fsl` suite was not re-run since Stage 5. Not tested: full processing on a subject with several functional runs through the UI; fieldmap-less subject through the new progress window (a subject with a fieldmap was).
+End-to-end runs on a copy of the demo data (`mri-test-data/full-art`, 355 volumes, 57 components): manual labelling (pause, labels, resume) and ICA-AROMA automatic (no pause; AROMA proposed 38 of 57 as motion; partial removal took out 57% of the variance). Not tested: two functional runs through the whole flow with real data; the dashboard stage table does not show the artifact stage.
 
-Next action: user checks the Stage 4 manual checklist below; then a lab member runs the flow unaided (`docs/ux-findings.md`).
-
-### Stage 4 manual checklist
-1. `cd frontend && npm run build`, then `mrforge serve`; open http://127.0.0.1:8000.
-2. Create a workspace: it opens on the Dashboard with "Start your first import".
-3. Import scans (Data), check the series table, import; undo the import and redo it.
-4. Process: pick a subject, press Process, read the dialog, confirm. Press Details in the top bar: steps, current activity and elapsed time update.
-5. Type 200 in "Volumes discarded": the dialog explains the problem in words (no "unreachable" message).
-6. Kill `mrforge serve` mid-run and restart: the job shows "Stopped early"; Resume continues.
-7. Viewer: open the T1 and an overlay from Process results; switch light/dark and reload (the choice stays).
-8. Jobs: filters, "Show earlier attempts", View log on a row. Settings: tools, disk space.
-9. Pick another researcher name: new work is tagged with it.
+Known issues / open: standard-space output keeps the name `desc-preproc`; CLAUDE.md's Stage 6 lettering (6a-6f) differs from what was built (proposal below).
 
 ## Stage 5 (Functional preprocessing, on FEAT)
 | Sub-step | Status |

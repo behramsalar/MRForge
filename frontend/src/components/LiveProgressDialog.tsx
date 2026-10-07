@@ -1,4 +1,4 @@
-import { CheckIcon, ClockIcon, Cross2Icon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { CheckIcon, ClockIcon, Cross2Icon, ExclamationTriangleIcon, PersonIcon } from "@radix-ui/react-icons";
 import { Badge, Button, Dialog, Flex, Progress, Spinner, Text } from "@radix-ui/themes";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
@@ -7,6 +7,7 @@ import { ApiError, call } from "../api/call";
 import { useTick } from "../api/hooks";
 import type { ProgressStep } from "../api/types";
 import { elapsed } from "../lib/labels";
+import { href } from "../lib/router";
 import { space, type } from "../theme/tokens";
 import { ErrorCallout } from "./ErrorCallout";
 import { stepName } from "./JobsPanel";
@@ -20,6 +21,8 @@ function icon(state: ProgressStep["state"]): ReactNode {
       return <CheckIcon color="var(--gray-9)" />;
     case "running":
       return <Spinner />;
+    case "review":
+      return <PersonIcon color="var(--amber-9)" />;
     case "failed":
       return <Cross2Icon color="var(--red-9)" />;
     case "stopped":
@@ -32,6 +35,7 @@ function icon(state: ProgressStep["state"]): ReactNode {
 const label: Record<ProgressStep["state"], string> = {
   waiting: "Waiting",
   running: "Running",
+  review: "Waiting for you",
   done: "Done",
   reused: "Already done, not repeated",
   failed: "Failed",
@@ -98,6 +102,13 @@ export function LiveProgressDialog({ ws, operationId, trigger }: { ws: string; o
                   {s.started && (s.state === "running" || s.state === "done") ? ` · ${elapsed(s.started, s.finished)}` : ""}
                 </Text>
               </Flex>
+              {s.state === "review" && (
+                <Flex style={{ paddingLeft: 28 }}>
+                  <Text size={type.help} color="amber">
+                    Waiting for you: <a href={href(ws, "process", "ica")}>open the review</a> to label the components.
+                  </Text>
+                </Flex>
+              )}
               {s.state === "running" && (
                 <Flex direction="column" gap="1" style={{ paddingLeft: 28 }}>
                   {s.now && (

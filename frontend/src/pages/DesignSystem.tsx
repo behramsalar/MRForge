@@ -24,7 +24,7 @@ export function DesignSystem() {
 
       <Heading as="h2" size={type.sectionTitle}>Status and confidence</Heading>
       <Flex gap={space.inline} wrap="wrap">
-        {["Queued", "Running", "Completed", "Failed", "Interrupted", "Cancelled"].map((s) => (
+        {["Queued", "Running", "Completed", "Failed", "Interrupted", "Waiting", "Cancelled"].map((s) => (
           <StatusBadge key={s} status={s} />
         ))}
         <ConfidenceBadge level="High" />

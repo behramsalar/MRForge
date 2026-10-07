@@ -58,6 +58,15 @@ class ActivityItem(BaseModel):
     started_by: str | None
 
 
+class ReviewItem(BaseModel):
+    """Something that waits for the researcher (for example component labelling)."""
+
+    subject: str
+    what: str  # plain language: "Label the components of task-rest"
+    since: datetime
+    page: str  # where to go, as a page name in the app ("process/ica")
+
+
 class Overview(BaseModel):
     subjects_total: int
     processed: int  # anatomical and every functional run done
@@ -67,6 +76,7 @@ class Overview(BaseModel):
     subjects: list[SubjectOverview]
     running_now: list[RunningItem]
     recent: list[ActivityItem]
+    review: list[ReviewItem] = []
 
 
 def _repeated_since(op: Operation, ops: list[Operation]) -> bool:
@@ -78,6 +88,23 @@ def _repeated_since(op: Operation, ops: list[Operation]) -> bool:
     )
 
 
+def _waiting_for_you(subject: str, jobs: list[Job]) -> list[ReviewItem]:
+    """The newest job of every run folder, if that job is waiting for the researcher."""
+    newest: dict[str, Job] = {}
+    for j in jobs:
+        newest[j.run_dir or str(j.id)] = j
+    return [
+        ReviewItem(
+            subject=subject,
+            what=("Label the components" + (f" of {_run_name(j)}" if _run_name(j) else "")),
+            since=j.created,
+            page="process/ica",
+        )
+        for j in newest.values()
+        if j.status == JobStatus.WAITING.value and j.step_name == "ica_labels"
+    ]
+
+
 def _job_state(status: str) -> State:
     states: dict[str, State] = {
         JobStatus.QUEUED.value: "waiting",
@@ -85,6 +112,7 @@ def _job_state(status: str) -> State:
         JobStatus.COMPLETED.value: "done",
         JobStatus.FAILED.value: "failed",
         JobStatus.INTERRUPTED.value: "stopped",
+        JobStatus.WAITING.value: "waiting",
         JobStatus.CANCELLED.value: "stopped",
     }
     return states.get(status, "none")
@@ -143,6 +171,7 @@ def build_overview(ws: Workspace) -> Overview:
             by_subject.setdefault(job.subject_id, []).append(job)
 
     rows: list[SubjectOverview] = []
+    review: list[ReviewItem] = []
     anat_total = anat_done = func_total = func_done = 0
     processed = attention = 0
     for sub in subjects:
@@ -177,6 +206,7 @@ def build_overview(ws: Workspace) -> Overview:
             detail = f"{done_runs} of {len(run_states)} runs" if len(run_states) > 1 else None
             func = StageStatus(state=agg, detail=detail)
 
+        review.extend(_waiting_for_you(sub.label, mine))
         last = max(mine, key=lambda j: j.id) if mine else None
         rows.append(
             SubjectOverview(
@@ -228,4 +258,5 @@ def build_overview(ws: Workspace) -> Overview:
             for o in running_ops
         ],
         recent=recent,
+        review=review,
     )

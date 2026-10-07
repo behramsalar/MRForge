@@ -11,6 +11,7 @@ const toolName: Record<string, string> = {
   fsl: "FSL",
   dcm2niix: "dcm2niix (DICOM conversion)",
   "bids-validator": "BIDS validator",
+  "ica-aroma": "ICA-AROMA (optional: automatic component labelling)",
 };
 
 export function Settings() {
@@ -46,8 +47,8 @@ export function Settings() {
                             Found{version !== "installed" ? `, version ${version}` : ""}
                           </Badge>
                         ) : (
-                          <Badge color="red" variant="soft">
-                            Not found
+                          <Badge color={key === "ica-aroma" ? "gray" : "red"} variant="soft">
+                            {key === "ica-aroma" ? "Not installed (optional)" : "Not found"}
                           </Badge>
                         )}
                       </Table.Cell>

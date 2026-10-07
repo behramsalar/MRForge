@@ -307,20 +307,23 @@ Core preprocessing is done by FSL's own FEAT (pre-stats only), driven from a `de
 
 ### Stage 6 — Artifact rejection (denoising)
 
-Moved ahead of batch work (user decision, 2026-10-05). It runs between Functional and Standard space in the full-processing stage registry; standard space then uses the cleaned data (see 5e).
+Moved ahead of batch work (user decision, 2026-10-05). It runs between Functional and Standard space in the full-processing stage registry; standard space then uses the cleaned data (see 5e). Off by default in the dialog, because labelling needs the researcher.
 
-**Build** (each a separate `Step`, with its own QC, tests and a comparison against a manual FSL run)
-- 6a. MELODIC (single-subject ICA) on the FEAT result.
-- 6b. Component review screen: signal / noise / uncertain per component (spatial map, time course, power spectrum), decisions stored as provenance (who, when); components are only flagged, never classified without the researcher.
-- 6c. `fsl_regfilt` removes the chosen noise components.
-- 6d. ICA-AROMA as an optional automatic proposal that the researcher still confirms (if installed).
-- 6e. Before/after QC and the stage in the full-processing dialog (skippable).
-- 6f. WM/CSF/motion regression is NOT part of this stage (later, MVP 2).
+**Build** (each a separate `Step`, with its own QC, tests and a comparison against a manual run of the tool)
+- 6a. `melodic`: single-run ICA on the FEAT result (fixed random seed, so repeated runs are identical), with per-component maps (also placed on the T1), pictures and plots.
+- 6b. The **"Waiting for you"** state: a step can ask for the researcher; the pipeline stops there without using the computer and continues when they save. `ica_labels` (the gate and the decision record: who, when, which MELODIC run), label saving, notices on the Dashboard, bell, banner and progress window.
+- 6c. `regfilt` (`fsl_regfilt`): removes the components labelled noise (partial removal by default), with a before/after variability picture.
+- 6d. Component review screen: interactive viewer, slice summary, time course and frequencies; signal / noise / uncertain per component; drafts saved automatically; decisions are provenance.
+- 6e. The artifact stage in the full-processing dialog (melodic, labelling, regfilt; standard space uses the cleaned data).
+- 6f. ICA-AROMA (reference implementation, installed by `scripts/install_aroma.sh` into `tools/ICA-AROMA`): `aroma_classify` proposes labels; modes "you label", "AROMA proposes, you confirm", "AROMA decides" (offered only when installed).
+- Not in this stage: WM/CSF/motion regression (later, MVP 2).
 
 **Manual test checklist**
-1. Run MELODIC in the app and by hand on the same data; the components match.
-2. Classify components, remove them, and compare with a manual `fsl_regfilt` using the same list.
-3. Interrupt mid-run and resume. The standard-space step uses the cleaned data.
+1. Settings shows ICA-AROMA (or "not installed (optional)").
+2. Process a subject with Artifact rejection ticked and you labelling: MELODIC runs, the pipeline pauses ("Waiting for you"), the review opens from the banner, you label and press Save and continue, the rest finishes and standard space uses the cleaned data.
+3. Repeat with "ICA-AROMA proposes, you confirm" (labels arrive pre-filled) and with "ICA-AROMA decides" (no pause).
+4. Stop and restart `mrforge serve` while paused: it still waits and continues after you save.
+5. Compare with manual runs: `melodic` (same options and seed), `fsl_regfilt` with the same component list, and `ICA_AROMA.py` (same classification).
 
 ### Stage 7 — Batch, presets, resources, QC decisions
 

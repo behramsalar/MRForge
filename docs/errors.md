@@ -311,3 +311,40 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 - **Probable cause:** MRForge never edits raw files; they were changed outside it.
 - **Suggested action:** Restore the original files, or ask whoever looks after MRForge for help.
 
+
+## Artifact rejection (Stage 6)
+
+### BOLD_TOO_SHORT_FOR_ICA
+- **What happened:** The functional run has too few volumes (fewer than 30) for a component analysis.
+- **Probable cause:** A very short run, or the image is not a time series.
+- **Suggested action:** Skip artifact rejection for this run, or check the scan.
+
+### MELODIC_FAILED
+- **What happened:** MELODIC did not produce any components.
+- **Probable cause:** The data could not be decomposed, or MELODIC was given an option it did not accept (MELODIC reports some mistakes in its text but still exits normally).
+- **Suggested action:** Open the raw log for MELODIC's message, fix the input, retry.
+
+### ICA_RESULT_INCOMPLETE
+- **What happened:** MELODIC finished but the result is incomplete (no components, or component pictures missing).
+- **Suggested action:** Open the raw log, then run the step again.
+
+### ICA_LABELS_NEEDED (not a failure: the pipeline waits)
+- **What happened:** The pipeline reached the point where you label the ICA components and stopped. Nothing runs while it waits.
+- **Suggested action:** Open Process, then Artifact rejection, label the components and save. The pipeline then continues from there.
+
+### ICA_RESULT_OUTDATED
+- **What happened:** The components were made by an older version of MRForge and cannot be labelled safely.
+- **Suggested action:** Run the component analysis (MELODIC) again for this recording.
+
+### INVALID_LABELS / LABELS_INCOMPLETE
+- **What happened:** A label is not signal, noise or uncertain, or some components have no label when saving the final decision.
+- **Suggested action:** Reload the page and label the remaining components (uncertain is allowed).
+
+### MIXING_MISMATCH / LABELS_MISMATCH / CLEANED_SHAPE_MISMATCH
+- **What happened:** The component time courses do not fit the functional image (different number of volumes), the labels name components that do not exist, or the cleaned image has an unexpected shape.
+- **Probable cause:** The components or labels belong to another run of the component analysis.
+- **Suggested action:** Run the component analysis (MELODIC) again for this image and label the components again.
+
+### AROMA_NOT_INSTALLED / AROMA_FAILED / AROMA_RESULT_MISMATCH
+- **What happened:** ICA-AROMA is not installed, did not produce a classification, or classified a different set of components than the current MELODIC result.
+- **Suggested action:** Run `scripts/install_aroma.sh`, or label the components yourself. After a MELODIC re-run, run ICA-AROMA again.

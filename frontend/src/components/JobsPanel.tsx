@@ -17,6 +17,10 @@ export const stepName: Record<string, string> = {
   bet: "Brain extraction (bet)",
   fieldmap_prep: "Prepare the fieldmap",
   feat_preproc: "Motion correction, distortion correction, smoothing and registration (FEAT)",
+  melodic: "Find independent components (MELODIC)",
+  aroma_classify: "Propose which components are noise (ICA-AROMA)",
+  ica_labels: "Your decision on the components (signal or noise)",
+  regfilt: "Remove the noise components",
   func_qc: "Quality checks (motion and registration pictures)",
   func_to_mni: "Move the result to standard (MNI) space",
 };
