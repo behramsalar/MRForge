@@ -32,7 +32,7 @@ from mrforge.importing.manifest import list_manifests, load_manifest, save_manif
 from mrforge.importing.models import ImportManifest
 from mrforge.importing.organize import OrganizeSummary, build_plan, organize
 from mrforge.importing.report import describe_plan, format_manifest
-from mrforge.importing.scan import scan_group
+from mrforge.importing.scan import scan_group, set_labels
 from mrforge.importing.sourcedata import removal_plan, remove_dicom
 from mrforge.importing.undo import undo_import, undo_plan
 from mrforge.models import JobStatus
@@ -280,6 +280,21 @@ def import_set(
     typer.echo(f"Series {series}: {describe_plan(now)} ({now.confidence}, {now.source}).")
     if fieldmap is not None:
         typer.echo(f"Series {series} will use fieldmap: {fieldmap}.")
+
+
+@import_app.command("set-labels")
+@friendly
+def import_set_labels(
+    import_id: Annotated[str, typer.Argument(help="e.g. import-002.")],
+    subject: Annotated[str, typer.Option("--subject", "-s", help="e.g. sub-007.")],
+    session: Annotated[str | None, typer.Option(help="e.g. ses-01.")] = None,
+    workspace: WorkspaceOption = Path("."),
+) -> None:
+    """Change the subject (and session) of a scan that has not been imported yet."""
+    ws = Workspace.open(workspace)
+    manifest = load_manifest(ws, import_id)
+    set_labels(ws, manifest, subject, session)
+    typer.echo(f"{manifest.id} is now {subject}{'/' + session if session else ''}.")
 
 
 @import_app.command("convert")

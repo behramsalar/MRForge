@@ -101,6 +101,9 @@ class ImportSummary(BaseModel):
     created: datetime
     created_by: str | None = None
     undone: datetime | None = None  # when the import was last undone
+    group_index: int | None = None  # which of the scans found in one source this is
+    group_size: int | None = None  # how many scans the source held (None: just this one)
+    group_source: str | None = None  # identifies the source, to list the scans together
 
 
 class ImportKind(BaseModel):
@@ -292,3 +295,18 @@ class PresetRequest(BaseModel):
     name: str
     description: str = ""
     options: PresetOptions
+
+
+class ImportLabels(BaseModel):
+    subject: str
+    session: str | None = None
+
+
+class ImportsRunReady(BaseModel):
+    import_ids: list[str]
+    remove_dicom: bool = False
+
+
+class ImportsTask(BaseModel):
+    import_ids: list[str]
+    task: str  # applied to every BOLD series that still waits for a task name

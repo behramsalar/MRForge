@@ -23,7 +23,7 @@ def make_study(root: Path, study_uid: str, t1_number: int = 501, with_bold: bool
     if with_bold:
         for vol in range(4):
             for z in range(3):
-                make_dicom(root / f"bold_{vol}_{z}.dcm", bold, 401, "resting",
+                make_dicom(root / f"bold_{vol}_{z}.dcm", bold, 401, "ep2d_bold_moco_p2",
                            image_type=("ORIGINAL", "PRIMARY", "FMRI", "NONE"), position_z=float(z), study_uid=study_uid)  # fmt: skip
 
 
@@ -153,3 +153,124 @@ def test_scan_source_keeps_its_old_meaning_for_a_single_scan(tmp_path: Path, ws:
     make_study(root, new_uid())
     manifest, is_new = scan_source(ws, root)
     assert is_new and manifest.subject == "sub-001"
+
+
+def test_the_labels_of_a_scan_can_be_changed_until_it_is_imported(
+    several: Path, ws: Workspace
+) -> None:
+    from mrforge.importing.manifest import load_manifest
+    from mrforge.importing.scan import set_labels
+
+    manifests, _ = scan_group(ws, several)
+    set_labels(ws, manifests[0], "sub-ali", None)
+    assert load_manifest(ws, "import-001").subject == "sub-ali"
+    # Two scans of one subject need different sessions.
+    with pytest.raises(StepError) as clash:
+        set_labels(ws, manifests[1], "sub-ali", None)
+    assert clash.value.code == "IMPORT_LABELS_CLASH" and "import-001" in clash.value.message
+    set_labels(ws, manifests[0], "sub-ali", "ses-01")
+    set_labels(ws, manifests[1], "sub-ali", "ses-02")
+    assert [load_manifest(ws, i).session for i in ("import-001", "import-002")] == [
+        "ses-01",
+        "ses-02",
+    ]
+    with pytest.raises(StepError) as bad:
+        set_labels(ws, manifests[2], "subject three", None)
+    assert bad.value.code == "BAD_SUBJECT_LABEL"
+
+
+def test_labels_of_an_imported_scan_are_locked(several: Path, ws: Workspace) -> None:
+    from mrforge.importing.models import OrganizedSeries
+    from mrforge.importing.scan import set_labels
+
+    manifests, _ = scan_group(ws, several)
+    m = manifests[0]
+    m.organized = {m.series[0].uid: OrganizedSeries(files={"rawbids/x.nii.gz": "a" * 64})}
+    with pytest.raises(StepError) as err:
+        set_labels(ws, m, "sub-009", None)
+    assert err.value.code == "IMPORT_LABELS_LOCKED"
+
+
+def test_import_all_that_are_ready_leaves_the_others_and_survives_a_failure(
+    several: Path, ws: Workspace, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from mrforge import operations
+    from mrforge.importing.classify import load_rules, set_override
+
+    manifests, _ = scan_group(ws, several)
+    rules = load_rules(ws)
+    # Scan 1 and 3 have a BOLD run that waits for a task name; scan 2 (T1 only) is ready.
+    waiting = [
+        m.id
+        for m in manifests
+        if any(c.action == "ask" for c in operations.effective_all(m, rules).values())
+    ]
+    assert waiting == ["import-001", "import-003"]
+    ran: list[str] = []
+
+    def fake_run(ws_: Workspace, args: dict, log) -> dict:  # type: ignore[no-untyped-def]
+        ran.append(args["import_id"])
+        return {}
+
+    monkeypatch.setattr(operations, "_import_run", fake_run)
+    result = operations._import_run_all(
+        ws, {"import_ids": [m.id for m in manifests]}, lambda line: None
+    )
+    assert ran == ["import-002"]
+    assert {r["import_id"]: r["status"] for r in result["imports"]} == {
+        "import-001": "needs-you",
+        "import-002": "done",
+        "import-003": "needs-you",
+    }
+    # Give both waiting scans their task: now all three are ready, and one failure does not stop the rest.
+    for m in manifests:
+        for s in m.series:
+            if "task" in operations.effective_all(m, rules)[s.uid].needs:
+                set_override(m, rules, None, entities={"task": "rest"}, uid=s.uid)
+        operations.save_manifest(ws, m)
+
+    def flaky(ws_: Workspace, args: dict, log) -> dict:  # type: ignore[no-untyped-def]
+        if args["import_id"] == "import-001":
+            raise StepError("CONVERSION_FAILED", "A series could not be converted.")
+        ran.append(args["import_id"])
+        return {}
+
+    monkeypatch.setattr(operations, "_import_run", flaky)
+    ran.clear()
+    with pytest.raises(StepError) as err:
+        operations._import_run_all(ws, {"import_ids": [m.id for m in manifests]}, lambda line: None)
+    assert ran == ["import-002", "import-003"]  # the others were imported
+    assert err.value.code == "IMPORTS_FAILED" and "import-001" in err.value.message
+    statuses = {r["import_id"]: r["status"] for r in err.value.result["imports"]}  # type: ignore[attr-defined]
+    assert statuses == {"import-001": "failed", "import-002": "done", "import-003": "done"}
+
+
+def test_the_routes_for_scans_found_together(
+    several: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from fastapi.testclient import TestClient
+
+    from mrforge.api.app import create_app
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    client = TestClient(create_app(tmp_path / "workspaces"))
+    ws_id = client.post("/api/workspaces", json={"name": "w"}).json()["id"]
+    ws = Workspace.open(tmp_path / "workspaces" / ws_id)
+    scan_group(ws, several)
+    base = f"/api/workspaces/{ws_id}/imports"
+    detail = client.get(f"{base}/import-002").json()
+    assert (detail["group_index"], detail["group_size"]) == (2, 3) and detail["group_source"]
+    changed = client.patch(
+        f"{base}/import-002/labels", json={"subject": "sub-ali", "session": "ses-01"}
+    )
+    assert changed.status_code == 200 and changed.json()["subject"] == "sub-ali"
+    clash = client.patch(
+        f"{base}/import-003/labels", json={"subject": "sub-ali", "session": "ses-01"}
+    )
+    assert clash.status_code >= 400 and clash.json()["code"] == "IMPORT_LABELS_CLASH"
+    task = client.post(
+        f"{base}/set-task", json={"import_ids": ["import-001", "import-003"], "task": "rest"}
+    ).json()
+    assert [d["needs_input"] for d in task] == [0, 0]  # the waiting BOLD runs now have their task
+    started = client.post(f"{base}/run-ready", json={"import_ids": ["import-001"]})
+    assert started.status_code == 200 and "operation_id" in started.json()

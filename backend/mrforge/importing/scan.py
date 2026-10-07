@@ -482,6 +482,32 @@ def check_labels(subject: str, session: str | None) -> None:
         )
 
 
+def set_labels(ws: Workspace, manifest: ImportManifest, subject: str, session: str | None) -> None:
+    """Change the subject and session of an import that has not been imported yet. The same
+    subject may have several imports, but then they need different sessions."""
+    check_labels(subject, session or None)
+    session = session or None
+    if manifest.organized:
+        raise StepError(
+            code="IMPORT_LABELS_LOCKED",
+            message=f"{manifest.id} is already imported as "
+            f"{_label(manifest.subject, manifest.session)}.",
+            probable_cause="Its files were written under that subject's name.",
+            suggested_action="Undo the import first, then change the label and import again.",
+        )
+    for other in list_manifests(ws):
+        if other.id != manifest.id and other.subject == subject and other.session == session:
+            raise StepError(
+                code="IMPORT_LABELS_CLASH",
+                message=f"{_label(subject, session)} is already used by {other.id}.",
+                probable_cause="Two scans cannot be the same subject and session.",
+                suggested_action="Choose another subject, or give one of them a session "
+                "(for example ses-01 and ses-02).",
+            )
+    manifest.subject, manifest.session = subject, session
+    save_manifest(ws, manifest)
+
+
 def _label(subject: str, session: str | None) -> str:
     return f"{subject}/{session}" if session else subject
 

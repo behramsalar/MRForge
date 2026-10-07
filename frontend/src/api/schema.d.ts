@@ -240,6 +240,67 @@ export interface paths {
         patch: operations["decide_series_by_id_api_workspaces__ws_id__imports__import_id__series_by_id__uid__patch"];
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/imports/{import_id}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Set Import Labels
+         * @description Change which subject (and session) an import that has not been imported yet is for.
+         */
+        patch: operations["set_import_labels_api_workspaces__ws_id__imports__import_id__labels_patch"];
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/imports/set-task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Task For All
+         * @description Give the same task name to every BOLD series that is waiting for one, in several
+         *     imports at once (a study with the same task in every subject).
+         */
+        post: operations["set_task_for_all_api_workspaces__ws_id__imports_set_task_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/imports/run-ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Ready Imports
+         * @description Import every scan in the list that needs no decision from you; the others stay.
+         */
+        post: operations["run_ready_imports_api_workspaces__ws_id__imports_run_ready_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/imports/scan": {
         parameters: {
             query?: never;
@@ -1336,6 +1397,12 @@ export interface components {
             created_by?: string | null;
             /** Undone */
             undone?: string | null;
+            /** Group Index */
+            group_index?: number | null;
+            /** Group Size */
+            group_size?: number | null;
+            /** Group Source */
+            group_source?: string | null;
             /** Series */
             series: components["schemas"]["SeriesRow"][];
             /** Kinds */
@@ -1351,6 +1418,13 @@ export interface components {
             datatype: string | null;
             /** Needs */
             needs: string[];
+        };
+        /** ImportLabels */
+        ImportLabels: {
+            /** Subject */
+            subject: string;
+            /** Session */
+            session?: string | null;
         };
         /** ImportRunRequest */
         ImportRunRequest: {
@@ -1396,6 +1470,29 @@ export interface components {
             created_by?: string | null;
             /** Undone */
             undone?: string | null;
+            /** Group Index */
+            group_index?: number | null;
+            /** Group Size */
+            group_size?: number | null;
+            /** Group Source */
+            group_source?: string | null;
+        };
+        /** ImportsRunReady */
+        ImportsRunReady: {
+            /** Import Ids */
+            import_ids: string[];
+            /**
+             * Remove Dicom
+             * @default false
+             */
+            remove_dicom: boolean;
+        };
+        /** ImportsTask */
+        ImportsTask: {
+            /** Import Ids */
+            import_ids: string[];
+            /** Task */
+            task: string;
         };
         /** JobInfo */
         JobInfo: {
@@ -2817,6 +2914,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_import_labels_api_workspaces__ws_id__imports__import_id__labels_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportLabels"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_task_for_all_api_workspaces__ws_id__imports_set_task_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportsTask"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportDetail"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_ready_imports_api_workspaces__ws_id__imports_run_ready_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportsRunReady"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationStarted"];
                 };
             };
             /** @description Validation Error */

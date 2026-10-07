@@ -37,7 +37,7 @@ from mrforge.importing.bids_validate import find_validator
 from mrforge.importing.classify import effective_all, load_rules, set_override
 from mrforge.importing.manifest import list_manifests, load_manifest, save_manifest
 from mrforge.importing.models import ImportManifest
-from mrforge.importing.scan import TAR_ENDINGS
+from mrforge.importing.scan import TAR_ENDINGS, set_labels
 from mrforge.importing.sourcedata import removal_plan
 from mrforge.importing.undo import undo_plan
 from mrforge.models import Job, JobStatus, Subject
@@ -179,6 +179,9 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             created=m.created,
             created_by=m.created_by,
             undone=m.undone,
+            group_index=m.group.index if m.group else None,
+            group_size=m.group.of if m.group else None,
+            group_source=m.group.source if m.group else None,
         )
 
     def job_info(job: Job, subject: str | None) -> S.JobInfo:
@@ -474,6 +477,48 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         )
         save_manifest(ws, m)
         return import_detail(ws, m)
+
+    @app.patch("/api/workspaces/{ws_id}/imports/{import_id}/labels", response_model=S.ImportDetail)
+    def set_import_labels(ws_id: str, import_id: str, req: S.ImportLabels) -> S.ImportDetail:
+        """Change which subject (and session) an import that has not been imported yet is for."""
+        ws = ws_of(ws_id)
+        m = load_manifest(ws, import_id)
+        set_labels(ws, m, req.subject, req.session)
+        return import_detail(ws, m)
+
+    @app.post("/api/workspaces/{ws_id}/imports/set-task", response_model=list[S.ImportDetail])
+    def set_task_for_all(ws_id: str, req: S.ImportsTask) -> list[S.ImportDetail]:
+        """Give the same task name to every BOLD series that is waiting for one, in several
+        imports at once (a study with the same task in every subject)."""
+        ws = ws_of(ws_id)
+        rules = load_rules(ws)
+        out: list[S.ImportDetail] = []
+        for import_id in req.import_ids:
+            m = load_manifest(ws, import_id)
+            plan = effective_all(m, rules)
+            for series in m.series:
+                if "task" in plan[series.uid].needs and plan[series.uid].kind == "bold":
+                    set_override(m, rules, None, entities={"task": req.task}, uid=series.uid)
+            save_manifest(ws, m)
+            out.append(import_detail(ws, m))
+        return out
+
+    @app.post("/api/workspaces/{ws_id}/imports/run-ready", response_model=S.OperationStarted)
+    def run_ready_imports(
+        ws_id: str, req: S.ImportsRunReady, who: accounts.Researcher | None = Researcher
+    ) -> S.OperationStarted:
+        """Import every scan in the list that needs no decision from you; the others stay."""
+        ws = ws_of(ws_id)
+        for import_id in req.import_ids:
+            load_manifest(ws, import_id)  # must exist
+        op = start_operation(
+            ws,
+            "import_run_all",
+            f"Importing {len(req.import_ids)} scans",
+            {"import_ids": req.import_ids, "remove_dicom": req.remove_dicom},
+            started_by=who.name if who else None,
+        )
+        return S.OperationStarted(operation_id=op)
 
     @app.post("/api/workspaces/{ws_id}/imports/scan", response_model=S.OperationStarted)
     def scan(

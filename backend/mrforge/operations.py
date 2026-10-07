@@ -28,7 +28,7 @@ from mrforge.batch import run_batch
 from mrforge.engine import Action, run_pipeline
 from mrforge.errors import StepError
 from mrforge.importing.bids_validate import format_report, validate_dataset
-from mrforge.importing.classify import load_rules
+from mrforge.importing.classify import effective_all, load_rules
 from mrforge.importing.convert import convert_import
 from mrforge.importing.manifest import load_manifest, save_manifest
 from mrforge.importing.organize import organize
@@ -65,6 +65,45 @@ def _scan(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
         "group_size": len(manifests),
         "is_new": is_new,
     }
+
+
+def _import_run_all(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
+    """Import several scans one after another: those that need nothing from the researcher.
+    A scan that fails does not stop the others."""
+    rules = load_rules(ws)
+    results: list[dict[str, Any]] = []
+    for import_id in args["import_ids"]:
+        manifest = load_manifest(ws, import_id)
+        waiting = sum(1 for c in effective_all(manifest, rules).values() if c.action == "ask")
+        if waiting:
+            log(
+                f"{manifest.subject} ({import_id}): left for you ({waiting} series need a decision)"
+            )
+            results.append({"import_id": import_id, "status": "needs-you", "error": None})
+            continue
+        if manifest.organized and not manifest.undone:
+            log(f"{manifest.subject} ({import_id}): already imported")
+            results.append({"import_id": import_id, "status": "already", "error": None})
+            continue
+        log(f"{manifest.subject} ({import_id}): importing...")
+        try:
+            _import_run(ws, {"import_id": import_id, "remove_dicom": args.get("remove_dicom")}, log)
+            results.append({"import_id": import_id, "status": "done", "error": None})
+        except StepError as problem:
+            log(f"{manifest.subject} ({import_id}): failed: {problem.message}")
+            results.append({"import_id": import_id, "status": "failed", "error": problem.message})
+    failed = [r for r in results if r["status"] == "failed"]
+    if failed:
+        summary = StepError(
+            code="IMPORTS_FAILED",
+            message=f"{len(failed)} of {len(results)} scans could not be imported "
+            f"({', '.join(r['import_id'] for r in failed)}).",
+            probable_cause="See each import's own explanation; the others are not affected.",
+            suggested_action="Open the failed import, fix the cause, and import it again.",
+        )
+        summary.result = {"imports": results}  # type: ignore[attr-defined]
+        raise summary
+    return {"imports": results}
 
 
 def _import_run(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
@@ -165,6 +204,7 @@ def _batch(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
 HANDLERS: dict[str, Handler] = {
     "scan": _scan,
     "import_run": _import_run,
+    "import_run_all": _import_run_all,
     "remove_dicom": _remove_dicom,
     "undo_import": _undo_import,
     "pipeline": _pipeline,
