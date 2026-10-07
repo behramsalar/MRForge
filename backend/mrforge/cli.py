@@ -32,7 +32,7 @@ from mrforge.importing.manifest import list_manifests, load_manifest, save_manif
 from mrforge.importing.models import ImportManifest
 from mrforge.importing.organize import OrganizeSummary, build_plan, organize
 from mrforge.importing.report import describe_plan, format_manifest
-from mrforge.importing.scan import scan_source
+from mrforge.importing.scan import scan_group
 from mrforge.importing.sourcedata import removal_plan, remove_dicom
 from mrforge.importing.undo import undo_import, undo_plan
 from mrforge.models import JobStatus
@@ -203,7 +203,12 @@ def config_fsl(
 @import_app.command("scan")
 @friendly
 def import_scan(
-    source: Annotated[Path, typer.Argument(help="Folder or .zip file with the DICOM files.")],
+    source: Annotated[
+        Path,
+        typer.Argument(
+            help="Folder or archive (.zip, .tar, .tar.gz, .tar.bz2, .tar.xz) with the DICOM files."
+        ),
+    ],
     workspace: WorkspaceOption = Path("."),
     subject: Annotated[
         str | None, typer.Option("--subject", "-s", help="Subject label (default: next free).")
@@ -213,15 +218,20 @@ def import_scan(
     """Copy a DICOM session into the workspace and list the series found in it."""
     ws = Workspace.open(workspace)
     removed_before = {m.id for m in list_manifests(ws) if m.dicom_removed is not None}
-    manifest, is_new = scan_source(ws, source, subject, session)
-    typer.echo(format_manifest(manifest, effective_all(manifest, load_rules(ws))))
-    if manifest.id in removed_before and manifest.dicom_removed is None:
-        typer.echo(
-            f"\nThis source was already scanned ({manifest.id}). Its removed DICOM copy was "
-            "restored from the original."
-        )
-    elif not is_new:
-        typer.echo(f"\nThis source was already scanned ({manifest.id}); nothing was copied again.")
+    manifests, is_new = scan_group(ws, source, subject, session, progress=typer.echo)
+    rules = load_rules(ws)
+    if len(manifests) > 1:
+        typer.echo(f"\nThis source holds {len(manifests)} scans (one per subject):\n")
+    for manifest in manifests:
+        typer.echo(format_manifest(manifest, effective_all(manifest, rules)))
+        typer.echo("")
+        if manifest.id in removed_before and manifest.dicom_removed is None:
+            typer.echo(
+                f"{manifest.id} was already scanned. Its removed DICOM copy was restored from "
+                "the original."
+            )
+        elif not is_new:
+            typer.echo(f"{manifest.id} was already scanned; nothing was copied again.")
 
 
 @import_app.command("show")

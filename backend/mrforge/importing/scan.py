@@ -15,7 +15,7 @@ import tarfile
 import tempfile
 import zipfile
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
@@ -34,6 +34,7 @@ from mrforge.importing.manifest import (
 from mrforge.importing.models import (
     CommandRecord,
     DicomSeries,
+    ImportGroup,
     ImportManifest,
     SeriesOutput,
     SkippedFile,
@@ -45,6 +46,7 @@ TAGS = [
     "SOPClassUID", "SeriesInstanceUID", "SeriesNumber", "SeriesDescription", "ProtocolName",
     "SequenceName", "ImageType", "Modality", "Rows", "Columns", "NumberOfFrames",
     "RepetitionTime", "EchoTime", "FlipAngle", "SliceThickness", "ImagePositionPatient",
+    "StudyInstanceUID",
 ]  # fmt: skip
 DICOMDIR_SOP_CLASS = "1.2.840.10008.1.3.10"  # Media Storage Directory
 PARALLEL_THRESHOLD = 48  # below this many files a process pool costs more than it saves
@@ -87,6 +89,7 @@ def read_header(path: str) -> dict[str, Any]:
         "sequence_name": str(ds["SequenceName"].value) if "SequenceName" in ds else None,
         "image_type": [str(x) for x in ds.get("ImageType", [])],
         "modality": str(ds.get("Modality", "")),
+        "study": str(ds.get("StudyInstanceUID", "")),  # only ever stored as a short hash
         "rows": int(ds["Rows"].value) if "Rows" in ds else None,
         "columns": int(ds["Columns"].value) if "Columns" in ds else None,
         "frames": int(ds["NumberOfFrames"].value) if "NumberOfFrames" in ds else 1,
@@ -493,6 +496,189 @@ def _find_existing(ws: Workspace, info: SourceInfo) -> ImportManifest | None:
         if same and ((ws.root / manifest.dicom_dir).is_dir() or manifest.dicom_removed):
             return manifest
     return None
+
+
+def study_key(study_uid: str) -> str:
+    """A short hash of a study's unique id: enough to tell scans apart, nothing to read back."""
+    return hashlib.sha256(study_uid.encode()).hexdigest()[:12]
+
+
+def group_by_study(files: list[Path], workers: int | None = None) -> list[tuple[str, list[Path]]]:
+    """DICOM files grouped by study, in folder order (the order of each group's first file).
+    Files that are not DICOM images are left out here (the per-scan pass reports them)."""
+    ordered: dict[str, list[Path]] = {}
+    for path, header in zip(files, _read_all(files, workers), strict=True):
+        if "skip" in header:
+            continue
+        ordered.setdefault(study_key(header.get("study", "")), []).append(path)
+    return list(ordered.items())
+
+
+def _check_space(ws: Workspace, src: Path, info: SourceInfo, archive: bool) -> None:
+    """Refuse early, in plain words, when the workspace disk cannot hold the copy."""
+    if info.kind == "folder":
+        needed = sum(p.stat().st_size for p in src.rglob("*") if p.is_file())
+    elif info.kind == "zip":
+        with zipfile.ZipFile(src) as zf:
+            needed = sum(i.file_size for i in zf.infolist())
+    else:
+        needed = src.stat().st_size * 3  # compressed: a rough guess of the unpacked size
+    needed = needed * (2 if archive else 1) + 500_000_000  # staging plus the copies, and room
+    free = shutil.disk_usage(ws.root).free
+    if free < needed:
+        raise StepError(
+            code="IMPORT_NOT_ENOUGH_SPACE",
+            message=f"There is not enough free disk space for this import "
+            f"(about {needed / 1e9:.1f} GB needed, {free / 1e9:.1f} GB free).",
+            probable_cause="The scans are copied into the workspace before they are read.",
+            suggested_action="Free some disk space, or put the workspace on a bigger disk.",
+        )
+
+
+def _find_group(ws: Workspace, fingerprint: str) -> list[ImportManifest]:
+    found = [m for m in list_manifests(ws) if m.group and m.group.source == fingerprint]
+    return sorted(found, key=lambda m: m.group.index if m.group else 0)
+
+
+def _copy_study(files: list[Path], root: Path, dest: Path) -> None:
+    """Copy one study's files (keeping their folder structure) into ``dest``, partial first."""
+    partial = dest.with_name(dest.name + ".partial")
+    shutil.rmtree(partial, ignore_errors=True)
+    partial.mkdir(parents=True)
+    for path in files:
+        target = partial / path.relative_to(root)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, target)
+    if dest.exists():
+        shutil.rmtree(dest)
+    partial.rename(dest)
+
+
+def _import_study(
+    ws: Workspace,
+    info: SourceInfo,
+    dest_files: list[Path],
+    root: Path,
+    group: ImportGroup,
+    workers: int | None,
+) -> ImportManifest:
+    manifest_id = next_manifest_id(ws)
+    dest = ws.root / "sourcedata" / "dicom" / manifest_id
+    _copy_study(dest_files, root, dest)
+    series, skipped = scan_directory(dest, workers)
+    command, dcm2niix_version, notes = sidecar_pass(dest, series)
+    manifest = ImportManifest(
+        id=manifest_id,
+        source=info.model_copy(update={"n_files": len(dest_files)}),
+        dicom_dir=ws.relpath(dest),
+        subject=next_subject_label(ws),
+        series=series,
+        skipped_files=skipped,
+        tool_versions={"pydicom": pydicom.__version__, "dcm2niix": dcm2niix_version},
+        commands=[command] if command else [],
+        warnings=notes,
+        group=group,
+    )
+    apply_rules(manifest, load_rules(ws))
+    save_manifest(ws, manifest)
+    return manifest
+
+
+def _restore_group(
+    ws: Workspace,
+    src: Path,
+    info: SourceInfo,
+    manifests: list[ImportManifest],
+    workers: int | None,
+    say: Callable[[str], None],
+) -> None:
+    """Bring back removed DICOM copies of a group from the original source."""
+    archive = info.kind in ("zip", "tar")
+    staging = ws.root / "sourcedata" / "dicom" / ".staging"
+    try:
+        if archive:
+            say("Unpacking the archive...")
+            copy_source(src, staging, info)
+        root = staging if archive else src
+        files = sorted(
+            p for p in root.rglob("*") if p.is_file() and not is_junk(str(p.relative_to(root)))
+        )
+        by_key = dict(group_by_study(files, workers))
+        for manifest in manifests:
+            if manifest.dicom_removed is None or manifest.group is None:
+                continue
+            _copy_study(by_key.get(manifest.group.study, []), root, ws.root / manifest.dicom_dir)
+            manifest.dicom_removed = None
+            save_manifest(ws, manifest)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+
+
+def scan_group(
+    ws: Workspace,
+    src: Path,
+    subject: str | None = None,
+    session: str | None = None,
+    workers: int | None = None,
+    progress: Callable[[str], None] | None = None,
+) -> tuple[list[ImportManifest], bool]:
+    """Scan a source that may hold several scans (one study each). A source with one study
+    gives one import exactly as before; with several, every study becomes its own import with
+    the next free subject label (editable later), in folder order. Scanning the same source
+    again returns the same imports. Returns (manifests, is_new)."""
+    say = progress or (lambda _msg: None)
+    src = src.expanduser().resolve()
+    info = describe_source(src)
+    known = _find_group(ws, info.fingerprint)
+    if known:
+        if any(m.dicom_removed is not None for m in known):
+            _restore_group(ws, src, info, known, workers, say)
+        return known, False
+    existing = _find_existing(ws, info)
+    if existing is not None:
+        manifest, is_new = scan_source(ws, src, subject, session, workers)
+        return [manifest], is_new
+    # Look at the studies before copying anything.
+    archive = info.kind in ("zip", "tar")
+    _check_space(ws, src, info, archive)
+    staging: Path | None = None
+    try:
+        if archive:
+            staging = ws.root / "sourcedata" / "dicom" / ".staging"
+            say("Unpacking the archive...")
+            copy_source(src, staging, info)
+            root = staging
+        else:
+            root = src
+        files = sorted(
+            p for p in root.rglob("*") if p.is_file() and not is_junk(str(p.relative_to(root)))
+        )
+        say(f"Reading {len(files)} files to see how many scans they hold...")
+        groups = group_by_study(files, workers)
+        if len(groups) <= 1:
+            if staging is not None:
+                shutil.rmtree(staging, ignore_errors=True)
+                staging = None
+            manifest, is_new = scan_source(ws, src, subject, session, workers)
+            return [manifest], is_new
+        if subject is not None or session is not None:
+            raise StepError(
+                code="IMPORT_LABELS_FOR_SEVERAL",
+                message=f"This source holds {len(groups)} scans, so one label cannot fit them all.",
+                probable_cause="A subject or session label was given together with a source that "
+                "contains several subjects' scans.",
+                suggested_action="Scan without a label; then set the label of each scan in the "
+                "table of scans that is shown.",
+            )
+        manifests: list[ImportManifest] = []
+        for i, (key, group_files) in enumerate(groups, start=1):
+            say(f"Scan {i} of {len(groups)}: copying and reading the series...")
+            group = ImportGroup(source=info.fingerprint, index=i, of=len(groups), study=key)
+            manifests.append(_import_study(ws, info, group_files, root, group, workers))
+        return manifests, True
+    finally:
+        if staging is not None:
+            shutil.rmtree(staging, ignore_errors=True)
 
 
 def scan_source(

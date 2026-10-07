@@ -140,6 +140,15 @@ class CommandRecord(BaseModel):
     return_code: int
 
 
+class ImportGroup(BaseModel):
+    """Several scans (studies) were found in one source: they belong together in the UI."""
+
+    source: str  # fingerprint of the whole source
+    index: int  # 1-based position among the scans found, in folder order
+    of: int
+    study: str  # a short hash of the study's unique id (never the id itself)
+
+
 class ImportManifest(BaseModel):
     """What was scanned, what the user decided, and how it was converted."""
 
@@ -162,4 +171,5 @@ class ImportManifest(BaseModel):
     commands: list[CommandRecord] = []
     warnings: list[str] = []
     created_by: str | None = None  # researcher profile that started this import
+    group: ImportGroup | None = None  # set when the source held several scans
     undone: datetime | None = None  # when this import was last undone (data removed again)

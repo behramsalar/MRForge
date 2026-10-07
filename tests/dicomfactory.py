@@ -34,6 +34,7 @@ def make_dicom(
     tr_ms: float = 2000.0,
     te_ms: float = 30.0,
     sop_class: str = MR_IMAGE_STORAGE,
+    study_uid: str | None = None,
 ) -> Path:
     meta = FileMetaDataset()
     meta.MediaStorageSOPClassUID = sop_class
@@ -44,6 +45,8 @@ def make_dicom(
     ds.SOPInstanceUID = meta.MediaStorageSOPInstanceUID
     ds.SeriesInstanceUID = series_uid
     ds.SeriesNumber = series_number
+    if study_uid:
+        ds.StudyInstanceUID = study_uid
     ds.SeriesDescription = description
     ds.ProtocolName = protocol or description
     if image_type:

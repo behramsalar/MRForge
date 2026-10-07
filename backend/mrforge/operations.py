@@ -32,7 +32,7 @@ from mrforge.importing.classify import load_rules
 from mrforge.importing.convert import convert_import
 from mrforge.importing.manifest import load_manifest, save_manifest
 from mrforge.importing.organize import organize
-from mrforge.importing.scan import scan_source
+from mrforge.importing.scan import scan_group
 from mrforge.importing.sourcedata import remove_dicom
 from mrforge.importing.undo import undo_import
 from mrforge.models import Job, JobStatus, Operation
@@ -52,13 +52,19 @@ ACTIVE = (JobStatus.QUEUED.value, JobStatus.RUNNING.value)
 
 def _scan(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
     log("Reading the scanner files...")
-    manifest, is_new = scan_source(
-        ws, Path(args["source"]), args.get("subject"), args.get("session")
+    manifests, is_new = scan_group(
+        ws, Path(args["source"]), args.get("subject"), args.get("session"), progress=log
     )
     if is_new and args.get("started_by"):
-        manifest.created_by = args["started_by"]
-        save_manifest(ws, manifest)
-    return {"import_id": manifest.id, "is_new": is_new}
+        for manifest in manifests:
+            manifest.created_by = args["started_by"]
+            save_manifest(ws, manifest)
+    return {
+        "import_id": manifests[0].id,  # the first (the only one for a single scan)
+        "import_ids": [m.id for m in manifests],
+        "group_size": len(manifests),
+        "is_new": is_new,
+    }
 
 
 def _import_run(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
