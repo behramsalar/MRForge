@@ -1,14 +1,14 @@
 # Progress
 
-**Current stage:** Stage 6.5 (structure pass) built, waiting for the user's check. Branch `stage-6b-structure-pass`. Stage 6 accepted and merged (`stage6-accepted`).
+**Current stage:** Stage 7 (batch, resources, QC decisions, presets) built, waiting for the user's check. Branch `stage-7-batch`. Stages 0-6.5 accepted (tags up to `stage6.5-accepted`).
 
-Stage 6.5 sub-steps: S1 sidebar headings and single-stage runs | S2 subjects table (search, filters, paging) used everywhere | S3 subject page (stage cards, motion numbers, interim Results tab, analysis-ready note) | S4 viewer buttons only for images | S5 naming (`desc-denoised`, standard space named for its input), `mrforge workspace migrate`, the analysis-ready folder and manifest with a settings-difference warning on the Dashboard: all done.
+Stage 7 sub-steps: 7a batch runs (one operation, a few subjects at once, failures and waits isolated, per-subject progress, batch dialog, multi-select on Pipelines) | 7b resource limits (cap, memory reserve, thread variables, Settings card, waiting reason shown) | 7c QC decisions with required reasons, head-motion flag, exclusion rules | 7d dashboard counts (processed / needs your review / failed / excluded) and filters | 7e presets (two built-in, user presets, recorded with the run): all done.
 
-Last test status: `pytest -m "not fsl"` 506 passed, 20 deselected; frontend 26 passed, `tsc`, ruff and mypy clean. The migration was run on a copy and on the user's `fulldeneme` workspace (all steps reusable afterwards). Real-FSL tests were not re-run for this step (no FSL code changed except step names).
+Last test status: `pytest -m "not fsl"` all passed (see the stage-end report for the number); frontend 26 passed, `tsc`, ruff, mypy clean. Real runs on the scratch copy `mri-test-data/full-art`: a two-subject batch with real FEAT (about 17 minutes, both subjects in parallel, load average up to 16 on 8 cores); one broken subject (junk T1) failed alone with a plain-language error while the other finished; resume re-ran only the unfinished subject. Not tested: a batch of 5-10 real subjects; the effect of the thread variables on FSL tools (FEAT starts processes of its own); real-FSL tests were not re-run in this stage.
 
-Known issues / open: the Results tab is interim (reports in Stage 8); the Philips fieldmap pipeline is being prepared by the user; other workspaces still use the old names until `mrforge workspace migrate` is run on them (they will be purged).
+Bugs found by tests/real runs and fixed in this stage: a race that let two subjects start a job at the same moment despite the cap; jobs left Queued by a cancelled or killed batch made later runs look incomplete; the analysis-ready folder was not refreshed after pipelines (hook had been lost in 6.5); with a memory reserve above the free memory nothing would ever start (now one job always may start, the rest wait with the reason shown).
 
-Stage 6.5 manual checklist: see CLAUDE.md. Next: Stage 7 (batch, presets, resources, QC decisions).
+Next action: user checks the Stage 7 manual checklist (CLAUDE.md), accepts the stage; then Stage 8 (reports).
 
 ## Stage 5 (Functional preprocessing, on FEAT)
 | Sub-step | Status |

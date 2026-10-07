@@ -116,8 +116,14 @@ class LocalJobQueue(JobQueue):
                 for pid in [p for p in _STARTED if p not in mine]:
                     del _STARTED[pid]
                 running = len(mine | worker_pids())
-                if why_not_now(load_policy(), running) is not None:
-                    return  # waits for free capacity; the next tick tries again
+                why = why_not_now(load_policy(), running)
+                if why is not None:
+                    # Say so, where the progress window can show it; try again at the next tick.
+                    note = f"Waiting for free capacity: {why}."
+                    head = get_job(self.ws, self._pending[0])
+                    if head.error_message != note:
+                        update_job(self.ws, self._pending[0], error_message=note)
+                    return
                 self._start(self._pending.popleft())
 
     def _busy(self) -> int:
@@ -129,6 +135,8 @@ class LocalJobQueue(JobQueue):
 
     def _start(self, job_id: int) -> None:
         job = get_job(self.ws, job_id)
+        if job.error_message and job.error_message.startswith("Waiting for free capacity"):
+            update_job(self.ws, job_id, error_message=None)
         assert job.run_dir is not None
         log_dir = self.ws.abspath(job.run_dir) / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)

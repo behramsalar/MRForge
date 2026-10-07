@@ -94,9 +94,11 @@ def test_the_cap_holds_even_when_many_subjects_run_at_once(
     assert overlap(ws) == 1
 
 
-def test_without_enough_free_memory_nothing_starts(
+def test_one_job_always_runs_but_more_wait_when_free_memory_is_short(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    import time
+
     use_policy(
         monkeypatch, tmp_path, max_subjects=2, threads_per_job=1, cpu_cap=8, memory_reserve_gb=1e6
     )
@@ -104,13 +106,58 @@ def test_without_enough_free_memory_nothing_starts(
     ws.get_or_create_subject("sub-001")
     from mrforge.runner.jobs import create_job
 
-    job_id = create_job(ws, "fake", "sub-001", {}, {"duration": 0.1})
+    first = create_job(ws, "fake", "sub-001", {}, {"duration": 3.0})
+    second = create_job(
+        ws, "fake", "sub-001", {"sources": []}, {"duration": 0.1, "content": "b"}, label="other"
+    )
     queue = LocalJobQueue(ws)
-    queue.submit(job_id)
-    assert queue.wait(timeout=1.5) is False  # still waiting for memory
+    queue.submit(first)  # nothing runs yet: it starts although memory is "short"
+    queue.submit(second)  # one is running: this one waits for memory
+    time.sleep(1.0)
     with ws.session() as s:
-        assert s.get(Job, job_id).status == "Queued"  # type: ignore[union-attr]
+        assert s.get(Job, first).status == "Running"  # type: ignore[union-attr]
+        waiting = s.get(Job, second)
+        assert waiting is not None and waiting.status == "Queued"
+        assert waiting.error_message and "free memory" in waiting.error_message
     queue.cancel_all()
+
+
+def test_a_waiting_step_says_why_in_the_progress(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from datetime import UTC, datetime
+
+    from test_batch import fake_spec
+
+    from mrforge.models import Operation, PipelineRun
+    from mrforge.progress import operation_progress
+
+    ws = Workspace.create(tmp_path / "ws")
+    spec = fake_spec("sub-001")
+    sid = ws.get_or_create_subject("sub-001")
+    with ws.session() as s:
+        op = Operation(
+            kind="pipeline",
+            title="t",
+            args={"spec": spec.model_dump(mode="json")},
+            status="Running",
+            started=datetime.now(UTC),
+        )
+        run = PipelineRun(
+            name=spec.name, spec=spec.model_dump(mode="json"), created=datetime.now(UTC)
+        )
+        s.add_all([op, run])
+        s.flush()
+        s.add(Job(step_name="fake", step_version="1", subject_id=sid, param_hash="x", status="Queued", pipeline_run_id=run.id,
+                  run_dir="derivatives/mrforge/sub-001/anat/_runs/work", label="work",
+                  error_message="Waiting for free capacity: free memory (2.0 GB) is below the reserve (4 GB)."))  # fmt: skip
+        s.flush()
+        op_id = op.id
+    with ws.session() as s:
+        stored = s.get(Operation, op_id)
+        assert stored is not None
+        step = operation_progress(ws, stored).steps[0]
+    assert step.state == "waiting" and "free capacity" in (step.now or "")
 
 
 def test_a_running_job_really_gets_the_thread_limit_in_its_environment(

@@ -135,8 +135,11 @@ def why_not_now(policy: ResourcePolicy, running: int | None = None) -> str | Non
     """None if one more job may start; else the reason, in plain words. ``running`` is the
     number of jobs known to be running (including ones started a moment ago that the process
     list may not show yet); by default it is read from the process list."""
-    if (worker_count() if running is None else running) >= max_jobs(policy):
+    count = worker_count() if running is None else running
+    if count >= max_jobs(policy):
         return "the limit for parallel work on this computer is reached"
+    if count == 0:
+        return None  # never wait for memory with nothing running: that would never end
     free = psutil.virtual_memory().available / 1e9
     if free < policy.memory_reserve_gb:
         return f"free memory ({free:.1f} GB) is below the reserve ({policy.memory_reserve_gb:g} GB)"

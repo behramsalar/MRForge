@@ -35,7 +35,7 @@ from mrforge.importing.organize import organize
 from mrforge.importing.scan import scan_source
 from mrforge.importing.sourcedata import remove_dicom
 from mrforge.importing.undo import undo_import
-from mrforge.models import JobStatus, Operation
+from mrforge.models import Job, JobStatus, Operation
 from mrforge.pipeline import parse_pipeline
 from mrforge.runner.jobs import get_job, kill_orphans, list_jobs, now, process_alive
 from mrforge.runner.local import LocalJobQueue
@@ -141,13 +141,15 @@ def _batch(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
     refresh_analysis_ready(ws)
     failed = [r for r in results if r.status == "failed"]
     if failed:
-        raise StepError(
+        err = StepError(
             code="BATCH_SUBJECTS_FAILED",
             message=f"{len(failed)} of {len(results)} subjects did not finish "
             f"({', '.join(r.subject for r in failed[:5])}{'...' if len(failed) > 5 else ''}).",
             probable_cause="See each subject's own explanation; the others are not affected.",
             suggested_action="Fix the cause, then resume: finished work is not repeated.",
         )
+        err.result = {"subjects": [r.as_dict() for r in results], "waiting": []}  # type: ignore[attr-defined]
+        raise err
     return {
         "subjects": [r.as_dict() for r in results],
         "waiting": [r.subject for r in results if r.status == "waiting"],
@@ -264,6 +266,37 @@ def cancel_operation(ws: Workspace, op_id: int) -> None:
         time.sleep(0.2)
     if process_alive(op.pid, op.pid_start_time):
         os.kill(op.pid, signal.SIGTERM)
+        for _ in range(50):  # the worker needs a moment to finish
+            if not process_alive(op.pid, op.pid_start_time):
+                break
+            time.sleep(0.1)
+    drop_orphan_jobs(ws, JobStatus.CANCELLED, "The step was cancelled before it started.")
+
+
+def drop_orphan_jobs(ws: Workspace, status: JobStatus, message: str) -> list[int]:
+    """Jobs still Queued although no operation is active can never start (their queue is gone,
+    for example the worker was killed or cancelled). They would make a later run look as if it
+    had not completed, so they are closed."""
+    if any(
+        op.status in ACTIVE and process_alive(op.pid, op.pid_start_time)
+        for op in list_operations(ws)
+    ):
+        return []
+    closed: list[int] = []
+    for job in list_jobs(ws):
+        if job.status != JobStatus.QUEUED.value:
+            continue
+        error = StepError(status.name, message, suggested_action="Resume the pipeline.").to_dict()
+        with ws.session() as s:
+            row = s.get(Job, job.id)
+            assert row is not None
+            row.status = status.value
+            row.finished = now()
+            row.error_code = status.name
+            row.error_message = message
+            row.error = error
+        closed.append(job.id)
+    return closed
 
 
 def _age_s(created: datetime) -> float:
@@ -297,6 +330,8 @@ def recover_stale_operations(ws: Workspace) -> list[int]:
             ).to_dict(),
         )
         recovered.append(op.id)
+    if recovered:
+        drop_orphan_jobs(ws, JobStatus.INTERRUPTED, "This step was stopped before it started.")
     return recovered
 
 
@@ -343,6 +378,7 @@ def run_operation(ws: Workspace, op_id: int) -> JobStatus:
     except StepError as err:
         status = JobStatus.INTERRUPTED if err.code == "COMMAND_KILLED" else JobStatus.FAILED
         error = err
+        result = getattr(err, "result", None)  # a batch keeps what each subject did
     except Exception as exc:  # last resort: still give the user something readable
         status = JobStatus.FAILED
         error = StepError(

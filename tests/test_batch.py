@@ -202,3 +202,67 @@ def test_resume_after_a_batch_restarts_the_batch_not_a_single_subject(
     op = get_operation(ws, resumed)
     assert op.kind == "batch" and op.title.startswith("Resuming Processing 2 subjects")
     wait_for(ws, resumed)
+
+
+def test_jobs_left_waiting_by_a_killed_batch_are_closed_so_a_new_run_is_not_confused(
+    tmp_path: Path, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    import json
+
+    from mrforge.resources import ResourcePolicy
+
+    cfg = tmp_path / "test-config.json"
+    cfg.write_text(
+        json.dumps(
+            {
+                "resources": ResourcePolicy(
+                    preset="custom",
+                    max_subjects=3,
+                    threads_per_job=1,
+                    cpu_cap=1,
+                    memory_reserve_gb=0,
+                ).model_dump()
+            }
+        )
+    )
+    monkeypatch.setenv("MRFORGE_CONFIG", str(cfg))  # one job at a time: the others stay Queued
+    ws = Workspace.create(tmp_path / "ws")
+    specs = [fake_spec(f"sub-{i:03d}", duration=3.0) for i in (1, 2, 3)]
+    payload = {"specs": [s.model_dump(mode="json") for s in specs], "max_subjects": 3}
+    op_id = start_operation(ws, "batch", "Batch", payload)
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        with ws.session() as s:
+            statuses = sorted(j.status for j in s.query(Job))
+        if statuses.count("Queued") >= 2 and "Running" in statuses:
+            break
+        time.sleep(0.2)
+    os.kill(get_operation(ws, op_id).pid, signal.SIGKILL)  # type: ignore[arg-type]
+    time.sleep(0.5)
+    recover_stale_operations(ws)
+    with ws.session() as s:
+        left = [j.status for j in s.query(Job) if j.status == "Queued"]
+    assert left == []  # nothing is left Queued for ever
+    with ws.session() as s:
+        assert {j.status for j in s.query(Job)} <= {"Running", "Completed", "Interrupted"}
+    time.sleep(4)  # the job that was running finishes by itself
+    again = start_operation(ws, "batch", "Batch again", payload)
+    assert wait_for(ws, again, 120) == "Completed"
+
+
+def test_a_subject_that_was_already_done_shows_as_done_when_another_one_fails(
+    tmp_path: Path,
+) -> None:
+    from mrforge.progress import operation_progress
+
+    ws = Workspace.create(tmp_path / "ws")
+    specs = [fake_spec("sub-001"), fake_spec("sub-002", fail_at="start")]
+    payload = {"specs": [s.model_dump(mode="json") for s in specs], "max_subjects": 2}
+    first = start_operation(ws, "batch", "B", payload)
+    assert wait_for(ws, first) == "Failed"
+    second = start_operation(ws, "batch", "B again", payload)  # sub-001 is reused as a whole
+    assert wait_for(ws, second) == "Failed"
+    p = operation_progress(ws, get_operation(ws, second))
+    states = {s.subject: s.state for s in p.subjects}
+    assert states == {"sub-001": "done", "sub-002": "failed"}
+    assert [s.state for s in p.subjects[0].steps] == ["reused"]

@@ -175,7 +175,7 @@ def _matches(step: PipelineStep, job: Job) -> bool:
 
 def _state(job: Job) -> State:
     return {
-        JobStatus.QUEUED.value: "running",
+        JobStatus.QUEUED.value: "waiting",
         JobStatus.RUNNING.value: "running",
         JobStatus.COMPLETED.value: "done",
         JobStatus.FAILED.value: "failed",
@@ -189,7 +189,10 @@ def _run_name(job: Job) -> str:
 
 
 def _pipeline_steps(
-    ws: Workspace, op: Operation, spec: PipelineSpec | None = None
+    ws: Workspace,
+    op: Operation,
+    spec: PipelineSpec | None = None,
+    finished_ok: bool | None = None,
 ) -> list[ProgressStep]:
     spec = spec or parse_pipeline(op.args["spec"])
     started = op.started or op.created
@@ -205,7 +208,8 @@ def _pipeline_steps(
     jobs = [j for j in list_jobs(ws) if mine is not None and j.pipeline_run_id == mine.id]
     steps: list[ProgressStep] = []
     cursor = 0
-    finished_ok = op.status == JobStatus.COMPLETED.value
+    if finished_ok is None:
+        finished_ok = op.status == JobStatus.COMPLETED.value
     matched: list[tuple[PipelineStep, Job | None]] = []
     for st in spec.steps:
         job = None
@@ -219,6 +223,8 @@ def _pipeline_steps(
         if job is not None:
             state = _state(job)
             now, live = live_info(ws, job) if state == "running" else (None, [])
+            if job.status == JobStatus.QUEUED.value:
+                now = job.error_message  # why it has not started (free capacity), if so
             steps.append(
                 ProgressStep(
                     id=st.id,
@@ -261,9 +267,14 @@ def _subject_state(steps: list[ProgressStep]) -> str:
 def _batch_subjects(ws: Workspace, op: Operation) -> list[SubjectProgress]:
     out: list[SubjectProgress] = []
     specs: list[Any] = list(op.args.get("specs", []))  # type: ignore[call-overload]
+    results: dict[str, str] = {}
+    for r in (op.result or {}).get("subjects", []):  # type: ignore[attr-defined]
+        results[str(r.get("subject"))] = str(r.get("status"))
     for raw in specs:
         spec = parse_pipeline(raw)
-        steps = _pipeline_steps(ws, op, spec)
+        # Steps that have no job were already done: certain once the subject finished fine,
+        # even if another subject of the batch failed.
+        steps = _pipeline_steps(ws, op, spec, results.get(spec.subject or spec.name) == "done")
         running = next((s for s in steps if s.state == "running"), None)
         out.append(
             SubjectProgress(
