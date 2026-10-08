@@ -2,13 +2,14 @@
 
 import os
 import signal
+import threading
 import time
 from pathlib import Path
 
-from test_ica_labels import SUMMARY, make_workspace
+from test_ica_labels import SUMMARY, all_labelled, make_workspace
 
 from mrforge.batch import run_batch
-from mrforge.icalabels import decision_path
+from mrforge.icalabels import decision_path, write_labels
 from mrforge.models import Job
 from mrforge.operations import get_operation, recover_stale_operations, start_operation
 from mrforge.pipeline import PipelineSpec, parse_pipeline
@@ -90,6 +91,33 @@ def test_a_subject_waiting_for_the_researcher_does_not_hold_up_the_others(tmp_pa
     )
     results = run_batch(ws, [labels, fake_spec("sub-002"), fake_spec("sub-003")], max_subjects=1)
     assert [r.status for r in results] == ["waiting", "done", "done"]
+
+
+def test_a_waiting_subject_carries_on_as_soon_as_its_labels_are_saved(tmp_path: Path) -> None:
+    ws = make_workspace(tmp_path)
+    labels = parse_pipeline(
+        {
+            "name": "full-sub-001",
+            "subject": "sub-001",
+            "steps": [
+                {
+                    "id": "labels",
+                    "step": "ica_labels",
+                    "inputs": {"melodic_summary": SUMMARY, "decision": decision_path(SUMMARY)},
+                }
+            ],
+        }
+    )
+    # sub-002 keeps the batch busy; the labels of sub-001 are saved while it runs.
+    saver = threading.Timer(
+        2.0, lambda: write_labels(ws, SUMMARY, all_labelled(), "Jane", complete=True)
+    )
+    saver.start()
+    results = run_batch(
+        ws, [labels, fake_spec("sub-002", duration=8.0)], max_subjects=2, poll_seconds=0.5
+    )
+    saver.join()
+    assert [r.status for r in results] == ["done", "done"]
 
 
 def wait_for(ws: Workspace, op_id: int, seconds: float = 60) -> str:

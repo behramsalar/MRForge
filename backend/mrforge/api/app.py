@@ -42,6 +42,7 @@ from mrforge.importing.sourcedata import removal_plan
 from mrforge.importing.undo import undo_plan
 from mrforge.models import Job, JobStatus, Subject
 from mrforge.operations import (
+    active_operation,
     cancel_operation,
     get_operation,
     list_operations,
@@ -766,7 +767,7 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             title,
             {
                 "specs": [x.model_dump(mode="json") for x in specs],
-                "max_subjects": 2,  # becomes the resource setting in the next step
+                "max_subjects": resources.load_policy().max_subjects,  # Settings > resources
                 "preset": preset,
             },
             started_by=who.name if who else None,
@@ -812,6 +813,10 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             (o for o in reversed(list_operations(ws)) if o.kind in ("pipeline", "batch")), None
         )
         if newest is not None and newest.kind == "batch":
+            running = active_operation(ws)
+            if running is not None and running.id == newest.id:
+                # The batch is still going: it notices saved labels and carries on by itself.
+                return S.OperationStarted(operation_id=running.id)
             specs = [parse_pipeline(d) for d in newest.args["specs"]]  # type: ignore[attr-defined]
             preset = newest.args.get("preset")
             return _start_batch(
