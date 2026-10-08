@@ -1,7 +1,9 @@
-import { Card, Flex, SegmentedControl, Switch, Table, Text } from "@radix-ui/themes";
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { Button, Card, Flex, SegmentedControl, Switch, Table, Text, TextField } from "@radix-ui/themes";
 import { useMemo, useState } from "react";
 import type { JobInfo, OperationInfo, WorkspaceState } from "../api/types";
 import { JobsPanel, latestJobs, stepName } from "../components/JobsPanel";
+import { JobRecordDialog } from "../components/JobRecordDialog";
 import { LogButton } from "../components/LogButton";
 import { StatusBadge } from "../components/ui/Badges";
 import { EmptyState, PageHeader } from "../components/ui/Layout";
@@ -31,6 +33,7 @@ type Row = {
   at: number;
 };
 
+const PAGE = 20;
 const stamp = (v: string | null | undefined) => (v ? new Date(v.endsWith("Z") || v.includes("+") ? v : v + "Z").getTime() : 0);
 
 function jobRow(j: JobInfo): Row {
@@ -63,6 +66,8 @@ function tasks(ops: OperationInfo[], earlier: boolean): Row[] {
 export function JobsPage({ ws, state }: { ws: string; state: WorkspaceState | null }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [earlier, setEarlier] = useState(false);
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
   const jobs = useMemo(() => state?.jobs ?? [], [state]);
   const busy = !!state?.operations.some((o) => o.status === "Queued" || o.status === "Running");
   const ops = state?.operations;
@@ -70,8 +75,12 @@ export function JobsPage({ ws, state }: { ws: string; state: WorkspaceState | nu
     const steps = (earlier ? jobs : latestJobs(jobs)).map(jobRow);
     return [...steps, ...tasks(ops ?? [], earlier)]
       .filter((r) => matches[filter](r.status))
+      .filter((r) => `${r.what} ${r.run} ${r.subject} ${r.who}`.toLowerCase().includes(query.trim().toLowerCase()))
       .sort((a, b) => b.at - a.at);
-  }, [jobs, ops, earlier, filter]);
+  }, [jobs, ops, earlier, filter, query]);
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE));
+  const at = Math.min(page, pages - 1);
+  const shown = rows.slice(at * PAGE, at * PAGE + PAGE);
   const showRun = rows.some((r) => r.run);
   const showWho = rows.some((r) => r.who);
   return (
@@ -89,6 +98,11 @@ export function JobsPage({ ws, state }: { ws: string; state: WorkspaceState | nu
               <SegmentedControl.Item value="failed">Failed or stopped</SegmentedControl.Item>
               <SegmentedControl.Item value="completed">Finished</SegmentedControl.Item>
             </SegmentedControl.Root>
+            <TextField.Root placeholder="Search steps, subjects, people" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} aria-label="Search the history" style={{ minWidth: 240 }}>
+              <TextField.Slot>
+                <MagnifyingGlassIcon />
+              </TextField.Slot>
+            </TextField.Root>
             <Text as="label" size={type.help}>
               <Flex gap="2" align="center">
                 <Switch checked={earlier} onCheckedChange={setEarlier} />
@@ -114,7 +128,7 @@ export function JobsPage({ ws, state }: { ws: string; state: WorkspaceState | nu
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                  {rows.map((r) => (
+                  {shown.map((r) => (
                     <Table.Row key={r.key}>
                       <Table.RowHeaderCell>{r.what}</Table.RowHeaderCell>
                       {showRun && <Table.Cell>{r.run}</Table.Cell>}
@@ -126,12 +140,30 @@ export function JobsPage({ ws, state }: { ws: string; state: WorkspaceState | nu
                       <Table.Cell>{when(r.started)}</Table.Cell>
                       <Table.Cell>{elapsed(r.started, r.finished)}</Table.Cell>
                       <Table.Cell>
-                        <LogButton ws={ws} target={r.log} />
+                        <Flex gap="2" justify="end">
+                          {r.log.kind === "job" && <JobRecordDialog ws={ws} jobId={r.log.id} step={r.what} />}
+                          <LogButton ws={ws} target={r.log} />
+                        </Flex>
                       </Table.Cell>
                     </Table.Row>
                   ))}
                 </Table.Body>
               </Table.Root>
+            )}
+            {pages > 1 && (
+              <Flex justify="between" align="center" mt="3">
+                <Text size={type.help} color="gray">
+                  {at * PAGE + 1}-{Math.min(rows.length, at * PAGE + PAGE)} of {rows.length}
+                </Text>
+                <Flex gap="2">
+                  <Button size="1" variant="soft" color="gray" disabled={at === 0} onClick={() => setPage(at - 1)}>
+                    Previous
+                  </Button>
+                  <Button size="1" variant="soft" color="gray" disabled={at >= pages - 1} onClick={() => setPage(at + 1)}>
+                    Next
+                  </Button>
+                </Flex>
+              </Flex>
             )}
           </Card>
         </>

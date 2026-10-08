@@ -320,3 +320,7 @@ class ReportExport(BaseModel):
     created: datetime
     size: int
     url: str  # open it in a browser tab
+
+
+class RerunRequest(BaseModel):
+    force: bool = False  # run it even if a valid completed run exists

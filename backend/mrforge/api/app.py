@@ -33,6 +33,7 @@ from mrforge.engine import latest_pipeline_run
 from mrforge.errors import StepError
 from mrforge.fsl_env import find_fsl
 from mrforge.functional import FunctionalOptions, Readiness, build_pipeline, check_ready
+from mrforge.history import JobRecord, job_record
 from mrforge.icareview import IcaRecording, find_ica_results, save_labels
 from mrforge.importing.bids_validate import find_validator
 from mrforge.importing.classify import effective_all, load_rules, set_override
@@ -715,6 +716,35 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             S.LogText(name=name, text=_read_text(log_dir / name))
             for name in ("stdout.log", "stderr.log", "worker.log")
         ]
+
+    @app.get("/api/workspaces/{ws_id}/jobs/{job_id}/record", response_model=JobRecord)
+    def job_record_route(ws_id: str, job_id: int) -> JobRecord:
+        """Everything recorded about one step run: settings, files, exact commands."""
+        ws = ws_of(ws_id)
+        job = get_job(ws, job_id)
+        with ws.session() as s:
+            label = s.scalar(select(Subject.label).where(Subject.id == job.subject_id))
+        return job_record(ws, job_id, label)
+
+    @app.post("/api/workspaces/{ws_id}/jobs/{job_id}/rerun", response_model=S.OperationStarted)
+    def rerun_job(
+        ws_id: str,
+        job_id: int,
+        req: S.RerunRequest,
+        who: accounts.Researcher | None = Researcher,
+    ) -> S.OperationStarted:
+        """Run an earlier step again with the same inputs and settings. Unless ``force`` is set,
+        a valid completed run is reused ("already done") instead of repeated."""
+        ws = ws_of(ws_id)
+        get_job(ws, job_id)  # must exist
+        op = start_operation(
+            ws,
+            "rerun",
+            f"Running job {job_id} again",
+            {"job_id": job_id, "force": req.force},
+            started_by=who.name if who else None,
+        )
+        return S.OperationStarted(operation_id=op)
 
     @app.post("/api/workspaces/{ws_id}/jobs/{job_id}/cancel", status_code=204)
     def cancel_job(ws_id: str, job_id: int) -> None:

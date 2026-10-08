@@ -50,3 +50,4 @@ export type SubjectReport = S["SubjectReport"];
 export type ReportRun = S["ReportRun"];
 export type ReportQc = S["ReportQc"];
 export type ReportExport = S["ReportExport"];
+export type JobRecord = S["JobRecord"];

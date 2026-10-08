@@ -25,7 +25,7 @@ from sqlalchemy import select
 
 from mrforge.analysis_ready import refresh as refresh_analysis_ready
 from mrforge.batch import run_batch
-from mrforge.engine import Action, run_pipeline
+from mrforge.engine import Action, run_pipeline, run_step
 from mrforge.errors import StepError
 from mrforge.importing.bids_validate import format_report, validate_dataset
 from mrforge.importing.classify import effective_all, load_rules
@@ -35,7 +35,7 @@ from mrforge.importing.organize import organize
 from mrforge.importing.scan import scan_group
 from mrforge.importing.sourcedata import remove_dicom
 from mrforge.importing.undo import undo_import
-from mrforge.models import Job, JobStatus, Operation
+from mrforge.models import Job, JobStatus, Operation, Subject
 from mrforge.pipeline import parse_pipeline
 from mrforge.runner.jobs import get_job, kill_orphans, list_jobs, now, process_alive
 from mrforge.runner.local import LocalJobQueue
@@ -179,6 +179,39 @@ def _pipeline(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
     }
 
 
+def _rerun(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
+    """Run one earlier step again with the same inputs and settings. Not a pipeline, so
+    'Resume' keeps meaning the pipeline you started, not this."""
+    job = get_job(ws, int(args["job_id"]))
+    with ws.session() as s:
+        subject = s.get(Subject, job.subject_id).label if job.subject_id else None  # type: ignore[union-attr]
+    if subject is None:
+        raise StepError("RERUN_IMPOSSIBLE", "This run has no subject, so it cannot be repeated.")
+    log(f"Running {job.step_name} again for {subject}...")
+    outcome = run_step(
+        ws,
+        LocalJobQueue(ws),
+        job.step_name,
+        subject,
+        job.inputs,
+        job.params,
+        job.session,
+        force=bool(args.get("force")),
+        force_reason="you asked to run it again",
+        label=job.label,
+        started_by=args.get("started_by"),
+    )
+    log(f"{outcome.action.value}: {outcome.reason}")
+    if outcome.action == Action.FAILED:
+        raise StepError(
+            "PIPELINE_STEP_FAILED",
+            f"The step '{job.step_name}' did not finish.",
+            probable_cause="See the step's own explanation.",
+            suggested_action="Open its log from the Jobs page.",
+        )
+    return {"action": outcome.action.value, "reason": outcome.reason, "job_id": outcome.job_id}
+
+
 def _batch(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
     specs = [parse_pipeline(d) for d in args["specs"]]
     log(f"Processing {len(specs)} subjects, {args.get('max_subjects', 2)} at a time...")
@@ -209,6 +242,7 @@ HANDLERS: dict[str, Handler] = {
     "undo_import": _undo_import,
     "pipeline": _pipeline,
     "batch": _batch,
+    "rerun": _rerun,
 }
 
 

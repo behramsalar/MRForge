@@ -547,6 +547,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/jobs/{job_id}/record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Job Record Route
+         * @description Everything recorded about one step run: settings, files, exact commands.
+         */
+        get: operations["job_record_route_api_workspaces__ws_id__jobs__job_id__record_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/jobs/{job_id}/rerun": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rerun Job
+         * @description Run an earlier step again with the same inputs and settings. Unless ``force`` is set,
+         *     a valid completed run is reused ("already done") instead of repeated.
+         */
+        post: operations["rerun_job_api_workspaces__ws_id__jobs__job_id__rerun_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/jobs/{job_id}/cancel": {
         parameters: {
             query?: never;
@@ -1343,6 +1384,24 @@ export interface components {
             /** Cpu Cores */
             cpu_cores?: number | null;
         };
+        /** HistoryCommand */
+        HistoryCommand: {
+            /** Command */
+            command: string;
+            /** Return Code */
+            return_code: number;
+            /** Stdout Log */
+            stdout_log: string;
+            /** Stderr Log */
+            stderr_log: string;
+        };
+        /** HistoryFile */
+        HistoryFile: {
+            /** Path */
+            path: string;
+            /** Sha256 */
+            sha256: string;
+        };
         /** IcaComponent */
         IcaComponent: {
             /** Number */
@@ -1585,6 +1644,49 @@ export interface components {
             error: components["schemas"]["ErrorBody"] | null;
             /** Started By */
             started_by?: string | null;
+        };
+        /** JobRecord */
+        JobRecord: {
+            /** Id */
+            id: number;
+            /** Step */
+            step: string;
+            /** Step Version */
+            step_version: string;
+            /** Label */
+            label: string;
+            /** Subject */
+            subject: string | null;
+            /** Session */
+            session: string | null;
+            /** Status */
+            status: string;
+            /** Started */
+            started: string | null;
+            /** Finished */
+            finished: string | null;
+            /** Started By */
+            started_by: string | null;
+            /** Parameters */
+            parameters: {
+                [key: string]: unknown;
+            };
+            /** Inputs */
+            inputs: components["schemas"]["HistoryFile"][];
+            /** Outputs */
+            outputs: components["schemas"]["HistoryFile"][];
+            /** Commands */
+            commands: components["schemas"]["HistoryCommand"][];
+            /** Tool Versions */
+            tool_versions: {
+                [key: string]: string;
+            };
+            /** Error Message */
+            error_message: string | null;
+            /** Run Dir */
+            run_dir: string;
+            /** Has Provenance */
+            has_provenance: boolean;
         };
         /** LogText */
         LogText: {
@@ -2177,6 +2279,14 @@ export interface components {
             layer: string;
             /** Image */
             image: string;
+        };
+        /** RerunRequest */
+        RerunRequest: {
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
         };
         /** ResearcherCreate */
         ResearcherCreate: {
@@ -3716,6 +3826,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LogText"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    job_record_route_api_workspaces__ws_id__jobs__job_id__record_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rerun_job_api_workspaces__ws_id__jobs__job_id__rerun_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RerunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationStarted"];
                 };
             };
             /** @description Validation Error */
