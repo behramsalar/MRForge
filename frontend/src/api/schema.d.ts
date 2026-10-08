@@ -738,6 +738,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/subjects/{label}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Subject Report
+         * @description What was done to this subject, built from what was recorded.
+         */
+        get: operations["subject_report_api_workspaces__ws_id__subjects__label__report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/subjects/{label}/report/layout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Subject Report Layout
+         * @description The picture arrangement used by the latest saved report (to start from it again).
+         */
+        get: operations["subject_report_layout_api_workspaces__ws_id__subjects__label__report_layout_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/subjects/{label}/report/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Subject Report
+         * @description Save the report as a self-contained HTML file in reports/<subject>/.
+         */
+        post: operations["export_subject_report_api_workspaces__ws_id__subjects__label__report_export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reports
+         * @description The saved reports, newest first.
+         */
+        get: operations["reports_api_workspaces__ws_id__reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/subjects/{label}/images": {
         parameters: {
             query?: never;
@@ -1526,6 +1606,22 @@ export interface components {
             /** Started By */
             started_by?: string | null;
         };
+        /** LayoutItem */
+        LayoutItem: {
+            /** Image */
+            image: string;
+            /**
+             * Hidden
+             * @default false
+             */
+            hidden: boolean;
+            /**
+             * Size
+             * @default m
+             * @enum {string}
+             */
+            size: "s" | "m" | "l";
+        };
         /** LogText */
         LogText: {
             /** Name */
@@ -1697,45 +1793,10 @@ export interface components {
              * @default false
              */
             builtin: boolean;
-            options: components["schemas"]["PresetOptions-Output"];
+            options: components["schemas"]["PresetOptions"];
         };
         /** PresetOptions */
-        "PresetOptions-Input": {
-            /**
-             * Stages
-             * @default {}
-             */
-            stages: {
-                [key: string]: boolean;
-            };
-            /**
-             * @default {
-             *       "strong_bias": false,
-             *       "subcortical_segmentation": false
-             *     }
-             */
-            anatomical: components["schemas"]["AnatomicalOptions"];
-            /**
-             * @default {
-             *       "delete_volumes": 5,
-             *       "smoothing_fwhm_mm": 5,
-             *       "highpass_cutoff_s": 150,
-             *       "use_fieldmap": true,
-             *       "slice_timing": false
-             *     }
-             */
-            functional: components["schemas"]["mrforge__processing__FunctionalOptions"];
-            /**
-             * @default {
-             *       "uncertain_as": "signal",
-             *       "aggressive": false,
-             *       "mode": "manual"
-             *     }
-             */
-            artifact: components["schemas"]["ArtifactOptions"];
-        };
-        /** PresetOptions */
-        "PresetOptions-Output": {
+        PresetOptions: {
             /**
              * Stages
              * @default {}
@@ -1778,7 +1839,7 @@ export interface components {
              * @default
              */
             description: string;
-            options: components["schemas"]["PresetOptions-Input"];
+            options: components["schemas"]["PresetOptions"];
         };
         /** ProgressStep */
         ProgressStep: {
@@ -1952,6 +2013,182 @@ export interface components {
             not_safe: string[];
             /** Only In Dicom */
             only_in_dicom: string[];
+        };
+        /** ReportCommand */
+        ReportCommand: {
+            /** Command */
+            command: string;
+            /** Return Code */
+            return_code: number;
+            /** Stdout Log */
+            stdout_log: string;
+            /** Stderr Log */
+            stderr_log: string;
+        };
+        /** ReportDecision */
+        ReportDecision: {
+            /** Decision */
+            decision: string;
+            /** Reason */
+            reason: string;
+            /** Who */
+            who: string | null;
+            /** When */
+            when: string;
+            /** Motion */
+            motion?: {
+                [key: string]: number;
+            } | null;
+        };
+        /**
+         * ReportExport
+         * @description A saved copy of a subject's report (a self-contained HTML file in reports/).
+         */
+        ReportExport: {
+            /** Name */
+            name: string;
+            /** Subject */
+            subject: string;
+            /**
+             * Created
+             * Format: date-time
+             */
+            created: string;
+            /** Size */
+            size: number;
+            /** Url */
+            url: string;
+        };
+        /**
+         * ReportLayout
+         * @description The order of the pictures (first = first shown) and, per picture, size and hidden.
+         */
+        ReportLayout: {
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["LayoutItem"][];
+        };
+        /** ReportQc */
+        ReportQc: {
+            /** Name */
+            name: string;
+            /** Kind */
+            kind: string;
+            /** Value */
+            value?: string | null;
+            /** Warning */
+            warning?: string | null;
+            /** Image */
+            image?: string | null;
+            /**
+             * Slices
+             * @default []
+             */
+            slices: components["schemas"]["ReportSlice"][];
+        };
+        /** ReportRun */
+        ReportRun: {
+            /** Step */
+            step: string;
+            /** Title */
+            title: string;
+            /** Label */
+            label: string;
+            /** Recording */
+            recording: string;
+            /** Job Id */
+            job_id: number;
+            /** Step Version */
+            step_version: string;
+            /** Started */
+            started: string | null;
+            /** Finished */
+            finished: string | null;
+            /** Started By */
+            started_by: string | null;
+            /** Parameters */
+            parameters: {
+                [key: string]: unknown;
+            };
+            /** Inputs */
+            inputs: number;
+            /** Outputs */
+            outputs: number;
+            /**
+             * Qc
+             * @default []
+             */
+            qc: components["schemas"]["ReportQc"][];
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
+            /**
+             * Commands
+             * @default []
+             */
+            commands: components["schemas"]["ReportCommand"][];
+            /**
+             * Tool Versions
+             * @default {}
+             */
+            tool_versions: {
+                [key: string]: string;
+            };
+            /** Run Dir */
+            run_dir: string;
+        };
+        /** ReportSection */
+        ReportSection: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /**
+             * Runs
+             * @default []
+             */
+            runs: components["schemas"]["ReportRun"][];
+            /**
+             * Not Run
+             * @default []
+             */
+            not_run: string[];
+        };
+        /** ReportSeries */
+        ReportSeries: {
+            /** Number */
+            number: number | null;
+            /** Description */
+            description: string;
+            /** Kind */
+            kind: string;
+            /** Volumes */
+            volumes: number | null;
+            /** Matrix */
+            matrix: string;
+            /** Repetition Time S */
+            repetition_time_s: number | null;
+            /** Echo Time S */
+            echo_time_s: number | null;
+            /** Import Id */
+            import_id: string;
+            /** Session */
+            session: string | null;
+        };
+        /** ReportSlice */
+        ReportSlice: {
+            /** Plane */
+            plane: string;
+            /** Position */
+            position: number;
+            /** Layer */
+            layer: string;
+            /** Image */
+            image: string;
         };
         /** ResearcherCreate */
         ResearcherCreate: {
@@ -2291,6 +2528,27 @@ export interface components {
             total: number;
             /** Now */
             now?: string | null;
+        };
+        /** SubjectReport */
+        SubjectReport: {
+            /** Subject */
+            subject: string;
+            /** Generated */
+            generated: string;
+            /** Mrforge Version */
+            mrforge_version: string;
+            /** Acquisition */
+            acquisition: components["schemas"]["ReportSeries"][];
+            /** Sections */
+            sections: components["schemas"]["ReportSection"][];
+            /** Decisions */
+            decisions: components["schemas"]["ReportDecision"][];
+            /** Warnings */
+            warnings: string[];
+            /** Software */
+            software: {
+                [key: string]: string;
+            };
         };
         /**
          * UndoPlanInfo
@@ -3807,6 +4065,139 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QcGroup"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    subject_report_api_workspaces__ws_id__subjects__label__report_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                label: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubjectReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    subject_report_layout_api_workspaces__ws_id__subjects__label__report_layout_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                label: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportLayout"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_subject_report_api_workspaces__ws_id__subjects__label__report_export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+                label: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportLayout"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportExport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reports_api_workspaces__ws_id__reports_get: {
+        parameters: {
+            query?: {
+                subject?: string | null;
+            };
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportExport"][];
                 };
             };
             /** @description Validation Error */

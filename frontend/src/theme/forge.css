@@ -20,3 +20,10 @@
   --accent-contrast: #1c1b22;
   --focus-8: #e8871e;
 }
+
+/* Controls that do not belong on paper. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

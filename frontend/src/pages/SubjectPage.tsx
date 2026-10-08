@@ -8,7 +8,7 @@ import { useOverview } from "../api/hooks";
 import type { StageChip, WorkspaceState } from "../api/types";
 import { ConfirmProcessDialog } from "../components/ConfirmProcessDialog";
 import { JobsPanel } from "../components/JobsPanel";
-import { QcPanel } from "../components/QcPanel";
+import { ReportView } from "../components/ReportView";
 import { QualityDecisionCard } from "../components/QualityDecisionCard";
 import { StageBadge } from "../components/ui/Badges";
 import { EmptyState, PageHeader } from "../components/ui/Layout";
@@ -217,18 +217,12 @@ export function SubjectPage({ ws, label, tab, state }: { ws: string; label?: str
 
       {current === "results" && (
         <>
-          <Callout.Root color="gray" size="1">
-            <Callout.Text>
-              This is what MRForge recorded for {label}: quality checks, numbers and images. A full report will replace this page in
-              a later version.
-            </Callout.Text>
-          </Callout.Root>
           {row && !row.stages.some((c) => c.state === "done") && (
             <Badge color="gray" variant="soft" style={{ alignSelf: "flex-start" }}>
               Nothing has finished for this subject yet.
             </Badge>
           )}
-          <QcPanel ws={ws} subject={label} />
+          <ReportView ws={ws} subject={label} />
           <Files ws={ws} subject={label} />
         </>
       )}
