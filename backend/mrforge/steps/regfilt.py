@@ -144,7 +144,10 @@ class RegfiltStep(Step[RegfiltInput, RegfiltParams, RegfiltOutput]):
             "before minus after, as a percentage of before",
         }
         (ctx.output_dir / out.metrics).write_text(json.dumps(metrics, indent=2) + "\n")
-        _draw(std_before, std_after, mask, ctx.output_dir / out.picture, noise)
+        import nibabel as nib
+
+        zooms = tuple(float(z) for z in nib.load(source).header.get_zooms()[:3])  # type: ignore[attr-defined]
+        _draw(std_before, std_after, mask, ctx.output_dir / out.picture, noise, zooms)
         return StepResult()
 
     def validate_outputs(self, ctx: StepContext[RegfiltInput, RegfiltParams]) -> list[Problem]:
@@ -191,6 +194,7 @@ def _draw(
     mask: NDArray[np.bool_],
     out: Path,
     noise: list[int],
+    zooms: tuple[float, ...] = (1.0, 1.0, 1.0),
 ) -> None:
     """Temporal standard deviation before (top) and after (bottom), same colour scale,
     through the middle of the brain in three planes."""
@@ -206,15 +210,16 @@ def _draw(
     top = float(np.percentile(before[mask], 99)) if mask.any() else 1.0
     fig, axes = plt.subplots(2, 3, figsize=(10, 6.6), dpi=90)
     for row, (name, data) in enumerate((("before", before), ("after", after))):
-        for col, (plane, sl) in enumerate(
+        for col, (plane, sl, aspect) in enumerate(
             (
-                ("Axial", data[:, :, centre[2]]),
-                ("Coronal", data[:, centre[1], :]),
-                ("Sagittal", data[centre[0], :, :]),
+                ("Axial", data[:, :, centre[2]], zooms[1] / zooms[0]),
+                ("Coronal", data[:, centre[1], :], zooms[2] / zooms[0]),
+                ("Sagittal", data[centre[0], :, :], zooms[2] / zooms[1]),
             )
         ):
             ax = axes[row, col]
-            ax.imshow(np.rot90(sl), cmap="inferno", vmin=0, vmax=top)
+            # pixel height / width in mm, so thick slices are not squashed
+            ax.imshow(np.rot90(sl), cmap="inferno", vmin=0, vmax=top, aspect=aspect)
             ax.set_axis_off()
             ax.set_title(f"{plane}, {name}", fontsize=9)
     removed = ", ".join(str(n) for n in noise) or "none"
