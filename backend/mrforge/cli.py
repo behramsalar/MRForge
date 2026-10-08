@@ -751,6 +751,38 @@ def status_command(workspace: WorkspaceOption = Path(".")) -> None:
         )
 
 
+@app.command("report")
+@friendly
+def report_command(
+    subject: Annotated[str, typer.Argument(help="e.g. sub-001.")],
+    workspace: WorkspaceOption = Path("."),
+    as_json: Annotated[bool, typer.Option("--json", help="The full report as JSON.")] = False,
+) -> None:
+    """Show what was done to a subject, from what was recorded."""
+    from mrforge.report import build_report
+
+    r = build_report(Workspace.open(workspace), subject)
+    if as_json:
+        typer.echo(r.model_dump_json(indent=2))
+        return
+    typer.echo(f"Report for {r.subject} (MRForge {r.mrforge_version})")
+    typer.echo(f"\nAcquisition: {len(r.acquisition)} series imported")
+    for a in r.acquisition:
+        typer.echo(f"  {a.number}  {a.description}  {a.kind}  {a.matrix}")
+    for sec in r.sections:
+        typer.echo(f"\n{sec.title}")
+        for run in sec.runs:
+            typer.echo(f"  done: {run.title} {run.recording}".rstrip())
+        for name in sec.not_run:
+            typer.echo(f"  not run: {name}")
+    for d in r.decisions[-1:]:
+        typer.echo(f"\nQuality decision: {d.decision} ({d.reason}) by {d.who or 'unknown'}")
+    if r.warnings:
+        typer.echo("\nWarnings:")
+        for w in r.warnings:
+            typer.echo(f"  - {w}")
+
+
 @app.command("log")
 @friendly
 def log_command(
