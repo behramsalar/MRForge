@@ -19,6 +19,7 @@ export function parse(hash: string): Route {
   const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
   if (parts[0] === "design") return { page: "design" };
   if (parts[0] === "settings") return { page: "settings" };
+  if (parts[0] === "system") return { page: "system" };
   if (parts[0] === "w" && parts[1]) {
     const raw = parts[2] ?? "dashboard";
     const legacy = LEGACY[raw];

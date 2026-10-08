@@ -1,6 +1,7 @@
 import {
   ActivityLogIcon,
   ArchiveIcon,
+  DesktopIcon,
   EyeOpenIcon,
   GearIcon,
   HomeIcon,
@@ -47,9 +48,10 @@ export const WORKSPACE_NAV: NavItem[] = [
 ];
 
 export const GLOBAL_NAV: NavItem[] = [{ id: "workspaces", label: "Workspaces", icon: LayersIcon }];
+export const SYSTEM_NAV: NavItem = { id: "system", label: "System", icon: DesktopIcon };
 export const SETTINGS_NAV: NavItem = { id: "settings", label: "Settings", icon: GearIcon };
 
-const ALL = [...WORKSPACE_NAV, ...GLOBAL_NAV, SETTINGS_NAV];
+const ALL = [...WORKSPACE_NAV, ...GLOBAL_NAV, SYSTEM_NAV, SETTINGS_NAV];
 
 /** Pages that are reached by clicking something, not from the sidebar. */
 const HIDDEN_PAGES: Record<string, string> = { subject: "Subject" };

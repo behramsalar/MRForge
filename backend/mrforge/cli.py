@@ -772,6 +772,22 @@ def redraw_ica_pictures(
         typer.echo("No MELODIC results found.")
 
 
+@app.command("doctor")
+@friendly
+def doctor() -> None:
+    """Is this computer ready for MRForge? Checks FSL, dcm2niix, the BIDS validator and more."""
+    from mrforge import system_check
+
+    results = system_check.run_checks(app_aware=True)
+    typer.echo(system_check.format_report(results))
+    for c in results:
+        if c.fix and c.status in (system_check.FAIL, system_check.OPTIONAL):
+            typer.echo(f"\n{c.name}: {c.fix}")
+    code = system_check.exit_code(results)
+    typer.echo("\nAll required checks passed." if code == 0 else "\nSome required checks FAILED.")
+    raise typer.Exit(code)
+
+
 @app.command("report")
 @friendly
 def report_command(

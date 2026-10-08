@@ -169,6 +169,9 @@ export function Settings() {
       <Card size="3">
         <Flex direction="column" gap={space.group}>
           <Heading as="h2" size={type.sectionTitle}>Tools and folders</Heading>
+          <Text size={type.help} color="gray">
+            The full check, with what to do about anything missing, is on the <a href="#/system">System page</a>.
+          </Text>
           {health.error && <ErrorCallout error={(health.error as ApiError).body} />}
           {health.data && (
             <>

@@ -51,3 +51,4 @@ export type ReportRun = S["ReportRun"];
 export type ReportQc = S["ReportQc"];
 export type ReportExport = S["ReportExport"];
 export type JobRecord = S["JobRecord"];
+export type SystemStatus = S["SystemStatus"];

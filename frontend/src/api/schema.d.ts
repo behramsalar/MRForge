@@ -56,6 +56,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/system": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * System Status
+         * @description The environment checks, found the way MRForge itself finds its tools.
+         */
+        get: operations["system_status_api_system_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/resources": {
         parameters: {
             query?: never;
@@ -2648,6 +2668,37 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** SystemCheck */
+        SystemCheck: {
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PASS" | "FAIL" | "OPTIONAL" | "INFO";
+            /** Detail */
+            detail: string;
+            /**
+             * Fix
+             * @default
+             */
+            fix: string;
+        };
+        /**
+         * SystemStatus
+         * @description Is this computer ready for MRForge? Same checks as 'mrforge doctor'.
+         */
+        SystemStatus: {
+            /** Version */
+            version: string;
+            /** Workspaces Root */
+            workspaces_root: string;
+            /** Ready */
+            ready: boolean;
+            /** Checks */
+            checks: components["schemas"]["SystemCheck"][];
+        };
         /**
          * UndoPlanInfo
          * @description What undoing an import would do (shown before the user confirms).
@@ -2911,6 +2962,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    system_status_api_system_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemStatus"];
                 };
             };
         };

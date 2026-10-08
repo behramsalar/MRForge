@@ -324,3 +324,19 @@ class ReportExport(BaseModel):
 
 class RerunRequest(BaseModel):
     force: bool = False  # run it even if a valid completed run exists
+
+
+class SystemCheck(BaseModel):
+    name: str
+    status: Literal["PASS", "FAIL", "OPTIONAL", "INFO"]
+    detail: str
+    fix: str = ""
+
+
+class SystemStatus(BaseModel):
+    """Is this computer ready for MRForge? Same checks as 'mrforge doctor'."""
+
+    version: str
+    workspaces_root: str
+    ready: bool  # no required check failed
+    checks: list[SystemCheck]

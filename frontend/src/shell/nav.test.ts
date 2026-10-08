@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { GLOBAL_NAV, SETTINGS_NAV, WORKSPACE_NAV, pageLabel } from "./nav";
+import { GLOBAL_NAV, SETTINGS_NAV, SYSTEM_NAV, WORKSPACE_NAV, pageLabel } from "./nav";
 
 describe("sidebar", () => {
   it("has unique pages with a label and an icon", () => {
-    const all = [...WORKSPACE_NAV, ...GLOBAL_NAV, SETTINGS_NAV];
+    const all = [...WORKSPACE_NAV, ...GLOBAL_NAV, SYSTEM_NAV, SETTINGS_NAV];
     expect(new Set(all.map((n) => n.id)).size).toBe(all.length);
     for (const n of all) {
       expect(n.label).toBeTruthy();

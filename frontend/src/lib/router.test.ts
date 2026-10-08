@@ -8,6 +8,7 @@ describe("router", () => {
   });
   it("has global pages", () => {
     expect(parse("#/settings")).toEqual({ page: "settings" });
+    expect(parse("#/system")).toEqual({ page: "system" });
     expect(parse("#/design")).toEqual({ page: "design" });
   });
   it("opens a workspace on its dashboard", () => {

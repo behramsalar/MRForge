@@ -12,6 +12,7 @@ import { JobsPage } from "./pages/JobsPage";
 import { ProcessPage } from "./pages/ProcessPage";
 import { SubjectPage } from "./pages/SubjectPage";
 import { Settings } from "./pages/Settings";
+import { SystemPage } from "./pages/SystemPage";
 import { Workspaces } from "./pages/Workspaces";
 import { AppShell } from "./shell/AppShell";
 import { ResearcherProvider } from "./shell/ResearcherProvider";
@@ -55,6 +56,7 @@ function App() {
   let body: ReactNode;
   if (route.workspace) body = <WorkspacePage page={route.page} extra={route.extra} extra2={route.extra2} />;
   else if (route.page === "settings") body = <Settings />;
+  else if (route.page === "system") body = <SystemPage />;
   else body = <Workspaces />;
   const shell = <AppShell route={route}>{body}</AppShell>;
   return route.workspace ? <WorkspaceProvider ws={route.workspace}>{shell}</WorkspaceProvider> : shell;

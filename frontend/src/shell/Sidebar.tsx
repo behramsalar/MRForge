@@ -3,7 +3,7 @@ import { DropdownMenu, Theme } from "@radix-ui/themes";
 import { Fragment, useEffect, useState } from "react";
 import { useWorkspaces } from "../api/hooks";
 import { href, type Route } from "../lib/router";
-import { GLOBAL_NAV, SETTINGS_NAV, WORKSPACE_NAV, defaultChild, type NavItem } from "./nav";
+import { GLOBAL_NAV, SETTINGS_NAV, SYSTEM_NAV, WORKSPACE_NAV, defaultChild, type NavItem } from "./nav";
 
 function Item({ item, to, active, collapsed }: { item: NavItem; to: string; active: boolean; collapsed: boolean }) {
   const Icon = item.icon;
@@ -149,6 +149,7 @@ export function Sidebar({
         </nav>
 
         <div className="sidebar-foot">
+          <Item item={SYSTEM_NAV} to="#/system" active={route.page === "system"} collapsed={collapsed} />
           <Item item={SETTINGS_NAV} to="#/settings" active={route.page === "settings"} collapsed={collapsed} />
           <button className="nav-item" onClick={onToggle} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
             {collapsed ? <DoubleArrowRightIcon width={18} height={18} /> : <DoubleArrowLeftIcon width={18} height={18} />}

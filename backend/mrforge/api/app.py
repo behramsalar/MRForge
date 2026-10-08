@@ -292,6 +292,23 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             cpu_cores=os.cpu_count(),
         )
 
+    @app.get("/api/system", response_model=S.SystemStatus)
+    def system_status() -> S.SystemStatus:
+        """The environment checks, found the way MRForge itself finds its tools."""
+        from mrforge import system_check
+
+        path = str(root if root.is_dir() else root.parent)
+        results = system_check.run_checks(app_aware=True, path=path)
+        return S.SystemStatus(
+            version=__version__,
+            workspaces_root=str(root),
+            ready=system_check.exit_code(results) == 0,
+            checks=[
+                S.SystemCheck(name=c.name, status=c.status, detail=c.detail, fix=c.fix)  # type: ignore[arg-type]
+                for c in results
+            ],
+        )
+
     @app.get("/api/resources", response_model=S.ResourcesInfo)
     def get_resources() -> S.ResourcesInfo:
         """How much of the computer MRForge may use, the presets, and what the machine has."""
