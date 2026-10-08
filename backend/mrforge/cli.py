@@ -757,11 +757,19 @@ def report_command(
     subject: Annotated[str, typer.Argument(help="e.g. sub-001.")],
     workspace: WorkspaceOption = Path("."),
     as_json: Annotated[bool, typer.Option("--json", help="The full report as JSON.")] = False,
+    html: Annotated[
+        bool, typer.Option("--html", help="Save it as an HTML file in reports/.")
+    ] = False,
 ) -> None:
     """Show what was done to a subject, from what was recorded."""
     from mrforge.report import build_report
+    from mrforge.report_html import ReportLayout, export_report
 
-    r = build_report(Workspace.open(workspace), subject)
+    ws = Workspace.open(workspace)
+    r = build_report(ws, subject)
+    if html:
+        typer.echo(f"Saved {export_report(ws, r, ReportLayout())}")
+        return
     if as_json:
         typer.echo(r.model_dump_json(indent=2))
         return

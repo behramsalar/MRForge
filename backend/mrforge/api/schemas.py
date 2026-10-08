@@ -310,3 +310,13 @@ class ImportsRunReady(BaseModel):
 class ImportsTask(BaseModel):
     import_ids: list[str]
     task: str  # applied to every BOLD series that still waits for a task name
+
+
+class ReportExport(BaseModel):
+    """A saved copy of a subject's report (a self-contained HTML file in reports/)."""
+
+    name: str
+    subject: str
+    created: datetime
+    size: int
+    url: str  # open it in a browser tab

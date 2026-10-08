@@ -213,6 +213,10 @@ def _run(ws: Workspace, job: Job) -> ReportRun | None:
     )
 
 
+def _r(value: float | None) -> float | None:
+    return None if value is None else round(value, 4)
+
+
 def _acquisition(ws: Workspace, subject: str) -> list[ReportSeries]:
     rules = load_rules(ws)
     rows: list[ReportSeries] = []
@@ -230,8 +234,8 @@ def _acquisition(ws: Workspace, subject: str) -> list[ReportSeries]:
                     kind=plan[series.uid].kind,
                     volumes=series.volumes,
                     matrix=series.matrix,
-                    repetition_time_s=series.repetition_time_s,
-                    echo_time_s=series.echo_time_s,
+                    repetition_time_s=_r(series.repetition_time_s),
+                    echo_time_s=_r(series.echo_time_s),
                     import_id=manifest.id,
                     session=manifest.session,
                 )
