@@ -166,3 +166,11 @@ The user could not change an import once written (skipping a series or renaming 
 - Privacy: only a short hash of the study UID is stored; no patient tags are read. Rescanning the same source finds the existing imports (no duplicates).
 - Series decisions are keyed by unique series id, not number (Philips exports have several number-0 objects).
 - Tar archives (tar, gz, bz2, xz) are accepted with safe extraction. Flow: review table + "Import all that are ready"; one scan failing does not stop the others.
+
+## 2026-10-09 Stage 8: reports, history, system page (agreed with the user)
+- The report is built only from recorded provenance, import manifests and quality decisions (`report.py`); nothing is estimated and no tool is run. Steps that never ran are listed as "not run". One report per subject, sections per step with the recording named. No methods text yet (MVP 2).
+- Delivery: the Results tab is the report, plus a saved self-contained HTML file in `reports/<subject>/` (pictures embedded, no outside requests). Picture layout is fixed (per layer, three columns sagittal / coronal / axial of four slices each); the first version had per-picture reorder, resize and hide controls, which the user rejected as clutter and unnecessary.
+- QC pictures keep their single slices (`<picture>_slices/`, listed in the QC record) so any layout can be made later; the joined picture is still written. Old runs show the joined picture only until the steps rerun.
+- Command history: the Jobs page row has a Details dialog from the job's `provenance.json` (settings, shell-quoted commands, hashes, tool versions). "Run again" is its own operation kind (`rerun`), not a pipeline, so Resume still means the pipeline the user started; "Run again anyway" forces.
+- System checks: one implementation (`system_check.py`) for `scripts/check_env.py` (shell-only, unchanged output), `mrforge doctor` and the System page (both find tools the way MRForge itself does).
+- Plan-level lesson: pictures drawn with matplotlib/slicer must use voxel size in mm, not voxel counts (two bugs found by the user on 0.32 x 0.32 x 1 mm and 4 mm slice data).

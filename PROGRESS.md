@@ -1,16 +1,14 @@
 # Progress
 
-**Current stage:** Stage 7 (batch, resources, QC decisions, presets) built, waiting for the user's check. Branch `stage-7-batch`. Stages 0-6.5 accepted (tags up to `stage6.5-accepted`).
+**Current stage:** Stage 8 (reports, command history, system page) built, waiting for the user's check. Branch `stage-8-reports`. Stages 0-7 accepted (tag `stage7-accepted`, with the import fix for several scans per folder, series decisions by id and tar archives merged in).
 
-Stage 7 sub-steps: 7a batch runs (one operation, a few subjects at once, failures and waits isolated, per-subject progress, batch dialog, multi-select on Pipelines) | 7b resource limits (cap, memory reserve, thread variables, Settings card, waiting reason shown) | 7c QC decisions with required reasons, head-motion flag, exclusion rules | 7d dashboard counts (processed / needs your review / failed / excluded) and filters | 7e presets (two built-in, user presets, recorded with the run): all done.
+Stage 8 sub-steps: 8a report data model (`report.py`, `mrforge report`) | 8b separate slice pictures kept for the registration, unwarping and standard-space QC (`func_qc` v2, `func_to_mni` v3) | 8c report API and self-contained HTML export | 8d report screen in the Results tab (fixed picture layout, Save as HTML, Print) | 8e step record dialog on the Jobs page (settings, exact commands with Copy, files with hashes, Run again), history search and paging | 8f System page and `mrforge doctor` on one shared check (`system_check.py`): all done.
 
-Last test status: `pytest -m "not fsl"` all passed (see the stage-end report for the number); frontend 26 passed, `tsc`, ruff, mypy clean. Real runs on the scratch copy `mri-test-data/full-art`: a two-subject batch with real FEAT (about 17 minutes, both subjects in parallel, load average up to 16 on 8 cores); one broken subject (junk T1) failed alone with a plain-language error while the other finished; resume re-ran only the unfinished subject. Not tested: a batch of 5-10 real subjects; the effect of the thread variables on FSL tools (FEAT starts processes of its own); real-FSL tests were not re-run in this stage.
+Fixes made in this stage after the user's testing: batch used a fixed "2 subjects at once" instead of the Settings value; a subject waiting for artifact labels now carries on as soon as the labels are saved while the batch still runs (before, it waited until the whole batch ended); the variance-cleaning picture and the component slice pictures respect non-cubic voxels (`mrforge redraw-ica-pictures` redraws old ones without rerunning MELODIC).
 
-Bugs found by tests/real runs and fixed in this stage: a race that let two subjects start a job at the same moment despite the cap; jobs left Queued by a cancelled or killed batch made later runs look incomplete; the analysis-ready folder was not refreshed after pipelines (hook had been lost in 6.5); with a memory reserve above the free memory nothing would ever start (now one job always may start, the rest wait with the reason shown).
+Last test status (2026-10-09): `pytest -m "not fsl"` 577 passed, 1 skipped; `pytest -m fsl` 17 passed, 3 skipped (prepared test data missing for those), 33 minutes; frontend 26 passed; tsc, ruff, mypy clean.
 
-Import fix (branch `fix-import-multi-subject`, after Stage 7): several scans per folder/archive, series decisions by id, tar family archives, group review table: built and checked on full-deneme (5 scans; one has a truncated BOLD run that dcm2niix cannot convert, reported plainly).
-
-Next action: user checks the Stage 7 manual checklist (CLAUDE.md), accepts the stage; then Stage 8 (reports).
+Next action: user checks the Stage 8 manual checklist (CLAUDE.md, plus the list in the stage-end report), accepts the stage; then tag `stage8-accepted` and `v0.1`. After that: lab user test (Stage 4 task), then MVP 2.
 
 ## Stage 5 (Functional preprocessing, on FEAT)
 | Sub-step | Status |

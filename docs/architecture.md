@@ -182,3 +182,9 @@ BIDS dataset ------ import bids (copy, no conversion) ----------> rawbids/
 - **Privacy**: only acquisition tags are read from DICOM; source folder and file names are never stored; JSON sidecars lose site, device and study-description fields (`sidecar_privacy.yaml`).
 - **External files are copied, never linked**; files inside the workspace (converted to rawbids) are hard-linked, so there is no second copy on disk.
 
+
+## 14. Reports, history and system checks (Stage 8)
+- **Report** (`backend/mrforge/report.py`): `build_report(ws, subject)` returns a `SubjectReport` from the latest completed run of every step instance (one per results folder) whose registered outputs still exist, the import manifests (acquisition: only series that went into `rawbids/`) and the quality-decision history. Sections: structural, functional, artifact rejection, standard space, other. API: `GET /subjects/{label}/report`, `POST .../report/export` (writes `reports/<subject>/<subject>_report_<time>.html`), `GET /reports`. CLI: `mrforge report <subject> [--json | --html]`.
+- **QC slices:** a `QCItem` may carry `slices` (plane, position, layer, path relative to the step output folder) next to the joined picture.
+- **Step record** (`history.py`): `GET /jobs/{id}/record` (settings, files with hashes, commands as shell-quoted strings, tool versions; only provenance of that very job is used). `POST /jobs/{id}/rerun {force}` starts operation kind `rerun`.
+- **System** (`system_check.py`): `GET /api/system`, `mrforge doctor`, `scripts/check_env.py`.
