@@ -51,12 +51,20 @@ STEP_TITLES = {
 }
 
 
+class ReportSlice(BaseModel):
+    plane: str
+    position: float
+    layer: str
+    image: str  # workspace-relative path
+
+
 class ReportQc(BaseModel):
     name: str
     kind: str
     value: str | None = None
     warning: str | None = None
     image: str | None = None  # workspace-relative path of a picture
+    slices: list[ReportSlice] = []  # the single slices of that picture, when they were kept
 
 
 class ReportCommand(BaseModel):
@@ -162,6 +170,16 @@ def _run(ws: Workspace, job: Job) -> ReportRun | None:
                 value=None if item.value is None else str(item.value),
                 warning=item.warning,
                 image=ws.relpath(out_dir / item.path) if item.path else None,
+                slices=[
+                    ReportSlice(
+                        plane=sl.plane,
+                        position=sl.position,
+                        layer=sl.layer,
+                        image=ws.relpath(out_dir / sl.path),
+                    )
+                    for sl in item.slices
+                    if (out_dir / sl.path).is_file()
+                ],
             )
         )
     warnings = [w.message for w in prov.warnings] + [q.warning for q in qc if q.warning]

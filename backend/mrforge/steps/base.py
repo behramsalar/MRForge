@@ -35,6 +35,15 @@ class Problem(BaseModel):
     suggested_action: str = ""
 
 
+class SliceRef(BaseModel):
+    """One single slice picture of a QC picture, so that a report can arrange them freely."""
+
+    plane: Literal["sagittal", "coronal", "axial"]
+    position: float  # fraction of the image along the axis (0 to 1)
+    layer: str  # which picture row it belongs to, e.g. "functional", "t1", "before", "after"
+    path: str  # relative to the step output directory
+
+
 class QCItem(BaseModel):
     """A QC artifact for human review. QC flags; it never decides (CLAUDE.md principle 6)."""
 
@@ -43,6 +52,7 @@ class QCItem(BaseModel):
     path: str | None = None  # relative to the step output directory
     value: float | str | None = None
     warning: str | None = None
+    slices: list[SliceRef] = []  # the joined picture's single slices, when they were kept
 
 
 class CommandRecord(BaseModel):

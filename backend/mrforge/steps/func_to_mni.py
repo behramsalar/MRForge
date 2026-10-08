@@ -27,7 +27,7 @@ from mrforge.fsl_env import find_fsl
 from mrforge.niftiutil import image_info, is_readable_nifti
 from mrforge.steps.base import Problem, QCItem, Step, StepContext, StepResult
 from mrforge.steps.fsl_anat import STANDARD_SPACE
-from mrforge.steps.qcpics import slice_row
+from mrforge.steps.qcpics import known_slices, slice_row, slices_dir
 from mrforge.steps.registry import register_step
 
 
@@ -68,7 +68,7 @@ def standard_brain(env: dict[str, str] | None, resolution_mm: int) -> Path | Non
 @register_step
 class FuncToMniStep(Step[FuncToMniInput, FuncToMniParams, FuncToMniOutput]):
     name = "func_to_mni"
-    version = "2"  # 2: the result is named for the data it comes from (preproc or denoised)
+    version = "3"  # 3: single slices kept; 2: result named for the data it comes from
     InputSpec, ParamSpec, OutputSpec = FuncToMniInput, FuncToMniParams, FuncToMniOutput
     requires_fsl = True
     datatype = "func"
@@ -198,7 +198,9 @@ class FuncToMniStep(Step[FuncToMniInput, FuncToMniParams, FuncToMniOutput]):
             )  # fmt: skip
         mean = work / "mean"
         ctx.run_command(["fslmaths", str(ctx.output_dir / out.bold_mni), "-Tmean", str(mean)])
-        slice_row(ctx, work / "mean.nii.gz", ref, work / "mni.png")
+        slice_row(
+            ctx, work / "mean.nii.gz", ref, work / "mni.png", slices_dir(ctx, out.qc_picture), "mni"
+        )
         os.replace(work / "mni.png", ctx.output_dir / out.qc_picture)
         shutil.rmtree(work, ignore_errors=True)
         return StepResult()
@@ -210,5 +212,6 @@ class FuncToMniStep(Step[FuncToMniInput, FuncToMniParams, FuncToMniOutput]):
                 name="Alignment to standard space (red: outline of the MNI brain)",
                 kind="image",
                 path=out.qc_picture,
+                slices=known_slices(ctx, slices_dir(ctx, out.qc_picture), "mni"),
             )
         ]

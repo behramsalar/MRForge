@@ -146,5 +146,13 @@ def test_step_makes_pictures_numbers_and_records_qc(
     assert qc["Largest framewise displacement (mm)"].value == pytest.approx(0.1)
     assert qc["Head motion"].path == "sub-001_task-rest_desc-motion_qc.png"
     assert ("Distortion correction (before above, after below)" in qc) == unwarped
+    # the single slices of the registration picture are kept and listed (12 per row, 2 rows)
+    reg = qc["Registration to the T1"]
+    assert {sl.layer for sl in reg.slices} == {"functional", "t1"} and len(reg.slices) == 24
+    assert {sl.plane for sl in reg.slices} == {"sagittal", "coronal", "axial"}
+    assert all((func / sl.path).read_bytes()[:8] == b"\x89PNG\r\n\x1a\n" for sl in reg.slices)
+    assert ("Distortion correction (before above, after below)" in qc) == unwarped
+    if unwarped:
+        assert len(qc["Distortion correction (before above, after below)"].slices) == 24
     again = run_step(ws, LocalJobQueue(ws), "func_qc", "sub-001", inputs, {})
     assert again.action == Action.REUSED

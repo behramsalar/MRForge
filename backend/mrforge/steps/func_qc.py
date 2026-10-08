@@ -27,7 +27,7 @@ from mrforge.errors import StepError
 from mrforge.niftiutil import is_readable_nifti
 from mrforge.steps.base import Problem, QCItem, Step, StepContext, StepResult
 from mrforge.steps.feat_preproc import WM_LABEL
-from mrforge.steps.qcpics import slice_row, stack_rows
+from mrforge.steps.qcpics import known_slices, slice_row, slices_dir, stack_rows
 from mrforge.steps.registry import register_step
 
 MOTION_COLUMNS = ["rot_x", "rot_y", "rot_z", "trans_x", "trans_y", "trans_z"]
@@ -131,7 +131,7 @@ def draw_motion_plot(rows: list[list[float]], fd: list[float], threshold: float,
 @register_step
 class FuncQcStep(Step[FuncQcInput, FuncQcParams, FuncQcOutput]):
     name = "func_qc"
-    version = "1"
+    version = "2"  # 2: single slices of the pictures are kept for the report
     InputSpec, ParamSpec, OutputSpec = FuncQcInput, FuncQcParams, FuncQcOutput
     requires_fsl = True
     datatype = "func"
@@ -199,12 +199,17 @@ class FuncQcStep(Step[FuncQcInput, FuncQcParams, FuncQcOutput]):
             ]
         )
         ref, t1 = ctx.input_path(i.boldref_t1), ctx.input_path(i.t1_head)
-        slice_row(ctx, ref, wm, work / "func.png")  # functional with the white-matter boundary
-        slice_row(ctx, t1, ref, work / "t1.png")  # T1 with the edges of the functional image
+        reg = slices_dir(ctx, out.registration)
+        # functional with the white-matter boundary, then the T1 with the functional's edges
+        slice_row(ctx, ref, wm, work / "func.png", reg, "functional")
+        slice_row(ctx, t1, ref, work / "t1.png", reg, "t1")
         stack_rows(ctx, [work / "func.png", work / "t1.png"], ctx.output_dir / out.registration)
         if out.unwarping and i.boldref_distorted_t1:
-            slice_row(ctx, ctx.input_path(i.boldref_distorted_t1), wm, work / "before.png")
-            slice_row(ctx, ref, wm, work / "after.png")
+            unw = slices_dir(ctx, out.unwarping)
+            slice_row(
+                ctx, ctx.input_path(i.boldref_distorted_t1), wm, work / "before.png", unw, "before"
+            )
+            slice_row(ctx, ref, wm, work / "after.png", unw, "after")
             stack_rows(
                 ctx, [work / "before.png", work / "after.png"], ctx.output_dir / out.unwarping
             )
@@ -236,9 +241,19 @@ class FuncQcStep(Step[FuncQcInput, FuncQcParams, FuncQcOutput]):
                 value=f"{m['fd_above_threshold']} of {m['n_volumes']}",
             ),
             QCItem(name="Head motion", kind="plot", path=out.motion_plot),
-            QCItem(name="Registration to the T1", kind="image", path=out.registration),
+            QCItem(
+                name="Registration to the T1",
+                kind="image",
+                path=out.registration,
+                slices=[
+                    *known_slices(ctx, slices_dir(ctx, out.registration), "functional"),
+                    *known_slices(ctx, slices_dir(ctx, out.registration), "t1"),
+                ],
+            ),
         ]
         if out.unwarping:
             label = "Distortion correction (before above, after below)"
-            items.append(QCItem(name=label, kind="image", path=out.unwarping))
+            unw = slices_dir(ctx, out.unwarping)
+            slices = [*known_slices(ctx, unw, "before"), *known_slices(ctx, unw, "after")]
+            items.append(QCItem(name=label, kind="image", path=out.unwarping, slices=slices))
         return items
