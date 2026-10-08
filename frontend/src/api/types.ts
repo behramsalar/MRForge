@@ -49,5 +49,4 @@ export type Preset = S["Preset"];
 export type SubjectReport = S["SubjectReport"];
 export type ReportRun = S["ReportRun"];
 export type ReportQc = S["ReportQc"];
-export type ReportLayout = S["ReportLayout"];
 export type ReportExport = S["ReportExport"];

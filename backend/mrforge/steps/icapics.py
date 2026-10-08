@@ -94,18 +94,30 @@ def draw_planes(
         picks = list(range(int(box[axis][0]), int(box[axis][-1]) + 1, step))
         others = [ax for ax in range(3) if ax != axis]
         groups.append(
-            (axis, name, picks, [slice(int(box[ax][0]), int(box[ax][-1]) + 1) for ax in others])
+            (
+                axis,
+                name,
+                picks,
+                [slice(int(box[ax][0]), int(box[ax][-1]) + 1) for ax in others],
+                others,
+            )
         )
+    # Height / width of a cropped tile in millimetres (images are shown rotated). Voxels are
+    # often not cubes (for example 0.3 x 0.3 x 1 mm), so counting voxels would squash a plane.
     tile_ratio = max(
-        (g[3][1].stop - g[3][1].start) / max(1, g[3][0].stop - g[3][0].start) for g in groups
-    )  # height / width of a cropped tile (images are shown rotated)
+        (g[3][1].stop - g[3][1].start)
+        * float(voxel[g[4][1]])
+        / max(1e-6, (g[3][0].stop - g[3][0].start) * float(voxel[g[4][0]]))
+        for g in groups
+    )
     rows = [(len(g[2]) + columns - 1) // columns for g in groups]
     fig = plt.figure(figsize=(14, 14 * tile_ratio * sum(rows) / columns + 0.5), dpi=80)
     grid = fig.add_gridspec(
         sum(rows), columns, wspace=0.02, hspace=0.02, left=0, right=1, top=0.97, bottom=0
     )
     row0 = 0
-    for (axis, name, picks, crop), n_rows in zip(groups, rows, strict=True):
+    for (axis, name, picks, crop, others), n_rows in zip(groups, rows, strict=True):
+        aspect = float(voxel[others[1]] / voxel[others[0]])  # pixel height / width in mm
         for k in range(n_rows * columns):
             ax = fig.add_subplot(grid[row0 + k // columns, k % columns])
             ax.set_axis_off()
@@ -115,11 +127,25 @@ def draw_planes(
                 background, background_affine, axis, picks[k], values, values_affine
             )
             bg_slice, z_slice = bg_slice[crop[0], crop[1]], z_slice[crop[0], crop[1]]
-            ax.imshow(np.rot90(bg_slice), cmap="gray", vmin=0, vmax=hi, interpolation="nearest")
+            ax.imshow(
+                np.rot90(bg_slice),
+                cmap="gray",
+                vmin=0,
+                vmax=hi,
+                interpolation="nearest",
+                aspect=aspect,
+            )
             z = np.rot90(z_slice)
             for sign, cmap in ((1, "autumn"), (-1, "winter")):
                 shown = np.where(sign * z < Z_THRESHOLD, np.nan, np.abs(z))
-                ax.imshow(shown, cmap=cmap, vmin=Z_THRESHOLD, vmax=Z_MAX, interpolation="nearest")
+                ax.imshow(
+                    shown,
+                    cmap=cmap,
+                    vmin=Z_THRESHOLD,
+                    vmax=Z_MAX,
+                    interpolation="nearest",
+                    aspect=aspect,
+                )
             if k == 0:
                 ax.text(
                     0.03, 0.97, name, transform=ax.transAxes, color="white", fontsize=9, va="top"

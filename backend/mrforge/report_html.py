@@ -11,49 +11,26 @@ import html
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal
-
-from pydantic import BaseModel
 
 from mrforge.report import ReportQc, ReportRun, SubjectReport
 from mrforge.workspace import Workspace
 
-Size = Literal["s", "m", "l"]
-TILE_WIDTH = {"s": "110px", "m": "190px", "l": "300px"}  # single slices
-WIDE_WIDTH = {"s": "40%", "m": "70%", "l": "100%"}  # joined pictures
+LAYER_NAMES = {
+    "functional": "Functional image, white-matter boundary in red",
+    "t1": "T1 image, edges of the functional image in red",
+    "before": "Before distortion correction",
+    "after": "After distortion correction",
+    "mni": "Mean functional image, outline of the standard brain in red",
+}
 
 
-class LayoutItem(BaseModel):
-    image: str  # workspace-relative path of the picture (single slice or joined picture)
-    hidden: bool = False
-    size: Size = "m"
-
-
-class ReportLayout(BaseModel):
-    """The order of the pictures (first = first shown) and, per picture, size and hidden."""
-
-    items: list[LayoutItem] = []
-
-
-def _pictures(qc: ReportQc, layout: ReportLayout) -> list[tuple[str, LayoutItem, bool]]:
-    """The pictures of one QC item with the layout applied: (path, settings, is_single_slice).
-    Single slices are used when they were kept; otherwise the joined picture."""
-    chosen = {i.image: i for i in layout.items}
-    order = {i.image: n for n, i in enumerate(layout.items)}
-    if qc.slices:
-        paths = [s.image for s in qc.slices]
-        wide = False
-    elif qc.image:
-        paths, wide = [qc.image], True
-    else:
-        return []
-    paths = sorted(paths, key=lambda p: order.get(p, len(order)))  # stable: unknown keep order
-    out = []
-    for p in paths:
-        item = chosen.get(p) or LayoutItem(image=p, size="l" if wide else "m")
-        if not item.hidden:
-            out.append((p, item, wide))
-    return out
+def _planes(qc: ReportQc) -> list[tuple[str, list[str]]]:
+    """The single slices of one picture as (layer, [paths]) in reading order, grouped by plane
+    inside a layer: sagittal, coronal, axial."""
+    layers: dict[str, list[str]] = {}
+    for sl in qc.slices:
+        layers.setdefault(sl.layer, []).append(sl.image)
+    return list(layers.items())
 
 
 def _data_uri(ws: Workspace, rel: str) -> str | None:
@@ -74,15 +51,18 @@ h1{margin-bottom:.2rem} h2{margin-top:2.2rem;border-bottom:1px solid #ccc;paddin
 h3{margin:1.4rem 0 .3rem} table{border-collapse:collapse;margin:.4rem 0}
 td,th{border:1px solid #ddd;padding:.25rem .6rem;text-align:left;vertical-align:top}
 .muted{color:#666;font-size:.9em} .warn{background:#fff4d6;padding:.3rem .6rem;border-radius:4px}
-.tiles{display:flex;flex-wrap:wrap;gap:6px;background:#000;padding:6px;border-radius:4px}
-.tiles img,.wide{display:block;background:#000;border-radius:3px}
+.planes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.plane{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;background:#000;padding:4px;border-radius:4px;align-content:center}
+.plane img{width:100%;display:block}
+.wide{display:block;width:100%;background:#000;border-radius:3px}
+@media(max-width:700px){.planes{grid-template-columns:1fr}}
 pre{background:#f5f5f5;padding:.5rem;overflow:auto;font-size:.85em}
 details{margin:.3rem 0} .notrun{color:#777}
 @media print{details{display:block} body{margin:0}}
 """
 
 
-def _run_html(ws: Workspace, run: ReportRun, layout: ReportLayout) -> str:
+def _run_html(ws: Workspace, run: ReportRun) -> str:
     title = f"{_e(run.title)} <span class='muted'>{_e(run.recording)}</span>"
     parts = [f"<h3>{title}</h3>"]
     when = f"{_e(run.started)} to {_e(run.finished)}"
@@ -95,25 +75,23 @@ def _run_html(ws: Workspace, run: ReportRun, layout: ReportLayout) -> str:
     for q in run.qc:
         if q.kind == "metric":
             continue
-        pics = _pictures(q, layout)
-        if not pics:
-            continue
         parts.append(f"<p><strong>{_e(q.name)}</strong></p>")
-        if pics[0][2]:  # a joined picture
-            for path, item, _ in pics:
-                uri = _data_uri(ws, path)
-                if uri:
-                    parts.append(
-                        f"<img class='wide' alt='{_e(q.name)}' src='{uri}' "
-                        f"style='width:{WIDE_WIDTH[item.size]}'>"
+        if q.slices:
+            for layer, paths in _planes(q):
+                cols = []
+                for k in range(0, len(paths), 4):  # 4 slices per plane
+                    tiles = "".join(
+                        f"<img alt='' src='{uri}'>"
+                        for p in paths[k : k + 4]
+                        if (uri := _data_uri(ws, p))
                     )
-        else:
-            tiles = []
-            for path, item, _ in pics:
-                uri = _data_uri(ws, path)
-                if uri:
-                    tiles.append(f"<img alt='' src='{uri}' style='width:{TILE_WIDTH[item.size]}'>")
-            parts.append(f"<div class='tiles'>{''.join(tiles)}</div>")
+                    cols.append(f"<div class='plane'>{tiles}</div>")
+                caption = _e(LAYER_NAMES.get(layer, layer))
+                parts.append(
+                    f"<p class='muted'>{caption}</p><div class='planes'>{''.join(cols)}</div>"
+                )
+        elif q.image and (uri := _data_uri(ws, q.image)):
+            parts.append(f"<img class='wide' alt='{_e(q.name)}' src='{uri}'>")
     for w in run.warnings:
         parts.append(f"<p class='warn'>{_e(w)}</p>")
     params = json.dumps(run.parameters, indent=2, default=str)
@@ -127,8 +105,7 @@ def _run_html(ws: Workspace, run: ReportRun, layout: ReportLayout) -> str:
     return "".join(parts)
 
 
-def render_html(ws: Workspace, report: SubjectReport, layout: ReportLayout | None = None) -> str:
-    layout = layout or ReportLayout()
+def render_html(ws: Workspace, report: SubjectReport) -> str:
     body = [
         f"<h1>Processing report: {_e(report.subject)}</h1>",
         f"<p class='muted'>Generated {_e(report.generated)} by MRForge "
@@ -167,7 +144,7 @@ def render_html(ws: Workspace, report: SubjectReport, layout: ReportLayout | Non
         body.append("<p class='muted'>No imported series are recorded for this subject.</p>")
     for section in report.sections:
         body.append(f"<h2>{_e(section.title)}</h2>")
-        body.extend(_run_html(ws, run, layout) for run in section.runs)
+        body.extend(_run_html(ws, run) for run in section.runs)
         if section.not_run:
             body.append("<p class='notrun'>Not run: " + _e(", ".join(section.not_run)) + "</p>")
     body.append("<h2>Software</h2><table>")
@@ -185,8 +162,8 @@ def reports_dir(ws: Workspace, subject: str) -> Path:
     return ws.root / "reports" / subject
 
 
-def export_report(ws: Workspace, report: SubjectReport, layout: ReportLayout) -> Path:
-    """Write the report (and the layout it used) into ``reports/<subject>/``."""
+def export_report(ws: Workspace, report: SubjectReport) -> Path:
+    """Write the report into ``reports/<subject>/``."""
     stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     folder = reports_dir(ws, report.subject)
     folder.mkdir(parents=True, exist_ok=True)
@@ -196,9 +173,8 @@ def export_report(ws: Workspace, report: SubjectReport, layout: ReportLayout) ->
         n += 1
         target = folder / f"{report.subject}_report_{stamp}-{n}.html"
     tmp = target.with_suffix(".tmp")
-    tmp.write_text(render_html(ws, report, layout), encoding="utf-8")
+    tmp.write_text(render_html(ws, report), encoding="utf-8")
     tmp.replace(target)
-    target.with_suffix(".layout.json").write_text(layout.model_dump_json(indent=2) + "\n")
     return target
 
 
@@ -206,14 +182,3 @@ def list_exports(ws: Workspace, subject: str | None = None) -> list[Path]:
     root = ws.root / "reports"
     pattern = f"{subject}/*_report_*.html" if subject else "*/*_report_*.html"
     return sorted(root.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
-
-
-def latest_layout(ws: Workspace, subject: str) -> ReportLayout:
-    for page in list_exports(ws, subject):
-        layout_file = page.with_suffix(".layout.json")
-        if layout_file.is_file():
-            try:
-                return ReportLayout.model_validate_json(layout_file.read_text())
-            except ValueError:
-                continue
-    return ReportLayout()

@@ -751,6 +751,27 @@ def status_command(workspace: WorkspaceOption = Path(".")) -> None:
         )
 
 
+@app.command("redraw-ica-pictures")
+@friendly
+def redraw_ica_pictures(
+    workspace: WorkspaceOption = Path("."),
+    subject: Annotated[str | None, typer.Option(help="Only this subject, e.g. sub-002.")] = None,
+) -> None:
+    """Draw the slice pictures of the component review again (for results made before the
+    pictures respected non-cubic voxels). MELODIC is not run again; nothing else changes."""
+    from mrforge.icalabels import SUMMARY_SUFFIX
+    from mrforge.steps.melodic import redraw_planes
+
+    ws = Workspace.open(workspace)
+    pattern = f"{subject or '*'}/**/*{SUMMARY_SUFFIX}"
+    found = sorted(ws.derivatives_dir.glob(pattern))
+    for path in found:
+        n = redraw_planes(ws, ws.relpath(path))
+        typer.echo(f"{path.name}: {n} pictures drawn")
+    if not found:
+        typer.echo("No MELODIC results found.")
+
+
 @app.command("report")
 @friendly
 def report_command(
@@ -763,12 +784,12 @@ def report_command(
 ) -> None:
     """Show what was done to a subject, from what was recorded."""
     from mrforge.report import build_report
-    from mrforge.report_html import ReportLayout, export_report
+    from mrforge.report_html import export_report
 
     ws = Workspace.open(workspace)
     r = build_report(ws, subject)
     if html:
-        typer.echo(f"Saved {export_report(ws, r, ReportLayout())}")
+        typer.echo(f"Saved {export_report(ws, r)}")
         return
     if as_json:
         typer.echo(r.model_dump_json(indent=2))

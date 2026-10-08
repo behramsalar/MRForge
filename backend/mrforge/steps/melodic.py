@@ -319,6 +319,26 @@ class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
         ]
 
 
+def redraw_planes(ws: Any, summary_rel: str) -> int:
+    """Draw the three-plane pictures of a finished MELODIC result again from the files on disk
+    (the maps and the background named in its summary), without running MELODIC again.
+    Returns how many pictures were drawn."""
+    import nibabel as nib
+
+    summary = json.loads(ws.abspath(summary_rel).read_text())
+    bg_img: Any = nib.as_closest_canonical(nib.load(ws.abspath(summary["background"])))  # type: ignore[attr-defined,no-untyped-call]
+    bg_data = np.asarray(bg_img.dataobj, dtype=np.float64)
+    entries = summary["components"]
+    for entry in entries:
+        map_img: Any = nib.as_closest_canonical(nib.load(ws.abspath(entry["map"])))  # type: ignore[attr-defined,no-untyped-call]
+        draw_planes(
+            bg_data, bg_img.affine,
+            np.asarray(map_img.dataobj, dtype=np.float64), map_img.affine,
+            entry["number"], len(entries), ws.abspath(entry["planes"]),
+        )  # fmt: skip
+    return len(entries)
+
+
 def _load(path: Path) -> NDArray[np.float64]:
     import nibabel as nib
 

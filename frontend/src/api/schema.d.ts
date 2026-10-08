@@ -758,26 +758,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/workspaces/{ws_id}/subjects/{label}/report/layout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Subject Report Layout
-         * @description The picture arrangement used by the latest saved report (to start from it again).
-         */
-        get: operations["subject_report_layout_api_workspaces__ws_id__subjects__label__report_layout_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/workspaces/{ws_id}/subjects/{label}/report/export": {
         parameters: {
             query?: never;
@@ -1606,22 +1586,6 @@ export interface components {
             /** Started By */
             started_by?: string | null;
         };
-        /** LayoutItem */
-        LayoutItem: {
-            /** Image */
-            image: string;
-            /**
-             * Hidden
-             * @default false
-             */
-            hidden: boolean;
-            /**
-             * Size
-             * @default m
-             * @enum {string}
-             */
-            size: "s" | "m" | "l";
-        };
         /** LogText */
         LogText: {
             /** Name */
@@ -1793,10 +1757,45 @@ export interface components {
              * @default false
              */
             builtin: boolean;
-            options: components["schemas"]["PresetOptions"];
+            options: components["schemas"]["PresetOptions-Output"];
         };
         /** PresetOptions */
-        PresetOptions: {
+        "PresetOptions-Input": {
+            /**
+             * Stages
+             * @default {}
+             */
+            stages: {
+                [key: string]: boolean;
+            };
+            /**
+             * @default {
+             *       "strong_bias": false,
+             *       "subcortical_segmentation": false
+             *     }
+             */
+            anatomical: components["schemas"]["AnatomicalOptions"];
+            /**
+             * @default {
+             *       "delete_volumes": 5,
+             *       "smoothing_fwhm_mm": 5,
+             *       "highpass_cutoff_s": 150,
+             *       "use_fieldmap": true,
+             *       "slice_timing": false
+             *     }
+             */
+            functional: components["schemas"]["mrforge__processing__FunctionalOptions"];
+            /**
+             * @default {
+             *       "uncertain_as": "signal",
+             *       "aggressive": false,
+             *       "mode": "manual"
+             *     }
+             */
+            artifact: components["schemas"]["ArtifactOptions"];
+        };
+        /** PresetOptions */
+        "PresetOptions-Output": {
             /**
              * Stages
              * @default {}
@@ -1839,7 +1838,7 @@ export interface components {
              * @default
              */
             description: string;
-            options: components["schemas"]["PresetOptions"];
+            options: components["schemas"]["PresetOptions-Input"];
         };
         /** ProgressStep */
         ProgressStep: {
@@ -2058,17 +2057,6 @@ export interface components {
             size: number;
             /** Url */
             url: string;
-        };
-        /**
-         * ReportLayout
-         * @description The order of the pictures (first = first shown) and, per picture, size and hidden.
-         */
-        ReportLayout: {
-            /**
-             * Items
-             * @default []
-             */
-            items: components["schemas"]["LayoutItem"][];
         };
         /** ReportQc */
         ReportQc: {
@@ -4110,38 +4098,6 @@ export interface operations {
             };
         };
     };
-    subject_report_layout_api_workspaces__ws_id__subjects__label__report_layout_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                ws_id: string;
-                label: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReportLayout"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     export_subject_report_api_workspaces__ws_id__subjects__label__report_export_post: {
         parameters: {
             query?: never;
@@ -4152,11 +4108,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReportLayout"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

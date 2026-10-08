@@ -57,28 +57,17 @@ def test_report_route_returns_the_recorded_figures(client: TestClient, tmp_path:
     assert client.get(f"/api/workspaces/{wsid}/subjects/sub-999/report").status_code == 404
 
 
-def test_export_is_self_contained_and_applies_the_layout(
-    client: TestClient, tmp_path: Path
-) -> None:
+def test_export_is_self_contained_with_a_fixed_layout(client: TestClient, tmp_path: Path) -> None:
     wsid, ws, paths = make_subject(client, tmp_path / "workspaces")
-    layout = {
-        "items": [
-            {"image": paths[2], "size": "l"},
-            {"image": paths[0], "hidden": True},
-        ]
-    }
-    r = client.post(f"/api/workspaces/{wsid}/subjects/sub-001/report/export", json=layout)
+    r = client.post(f"/api/workspaces/{wsid}/subjects/sub-001/report/export")
     assert r.status_code == 200
     info = r.json()
     page = (ws.root / "reports" / "sub-001" / info["name"]).read_text()
     assert "Mean FD (mm)" in page and "0.2" in page
-    assert page.count("data:image/png;base64") == 2  # one slice was hidden
-    assert "width:300px" in page  # the large one
+    assert page.count("data:image/png;base64") == 3  # the three slices, in one plane column
+    assert "class='planes'" in page
     assert not re.search(r"(?:src|href)=['\"]https?://", page)  # nothing is fetched from outside
-    # a second export is a second file; the arrangement is remembered
-    again = client.post(f"/api/workspaces/{wsid}/subjects/sub-001/report/export", json=layout)
-    assert again.json()["name"] != info["name"]
+    again = client.post(f"/api/workspaces/{wsid}/subjects/sub-001/report/export")
+    assert again.json()["name"] != info["name"]  # a second export is a second file
     assert len(client.get(f"/api/workspaces/{wsid}/reports").json()) == 2
-    saved = client.get(f"/api/workspaces/{wsid}/subjects/sub-001/report/layout").json()
-    assert saved["items"][1]["hidden"] is True
     assert client.get(info["url"]).status_code == 200  # served from the reports folder

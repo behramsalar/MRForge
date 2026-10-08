@@ -1,140 +1,57 @@
-import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, EyeClosedIcon, EyeOpenIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import { Badge, Button, Callout, Card, Code, Flex, Heading, IconButton, Table, Text } from "@radix-ui/themes";
+import { DownloadIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { Badge, Button, Callout, Card, Code, Flex, Grid, Heading, Table, Text } from "@radix-ui/themes";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { ApiError, call } from "../api/call";
 import type { ReportQc, ReportRun } from "../api/types";
 import { helpFor } from "../lib/qcHelp";
-import { type LayoutItem, type Size, arrange, move, nextSize, resize, setHidden } from "../lib/reportLayout";
 import { href } from "../lib/router";
 import { space, type } from "../theme/tokens";
 import { ErrorCallout } from "./ErrorCallout";
 
-const TILE: Record<Size, string> = { s: "110px", m: "190px", l: "300px" };
-const WIDE: Record<Size, string> = { s: "40%", m: "70%", l: "100%" };
-const SIZE_WORD: Record<Size, string> = { s: "Small", m: "Medium", l: "Large" };
+const LAYER_NAMES: Record<string, string> = {
+  functional: "Functional image, white-matter boundary in red",
+  t1: "T1 image, edges of the functional image in red",
+  before: "Before distortion correction",
+  after: "After distortion correction",
+  mni: "Mean functional image, outline of the standard brain in red",
+};
 
-type Layout = { items: LayoutItem[]; set: (items: LayoutItem[]) => void };
-
-/** The arrangement is the researcher's; it is remembered in this browser (a convenience) and
- * saved with every exported report, which is where it is restored from on another computer. */
-function useLayout(ws: string, subject: string): Layout {
-  const key = `mrforge.reportLayout.${ws}.${subject}`;
-  const saved = useQuery({
-    queryKey: ["ws", ws, "report-layout", subject],
-    queryFn: () =>
-      call(api.GET("/api/workspaces/{ws_id}/subjects/{label}/report/layout", { params: { path: { ws_id: ws, label: subject } } })),
-  });
-  const [items, setItems] = useState<LayoutItem[] | null>(null);
-  useEffect(() => {
-    if (items !== null || saved.isLoading) return;
-    let local: LayoutItem[] | null = null;
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw) local = JSON.parse(raw) as LayoutItem[];
-    } catch {
-      local = null;
-    }
-    setItems(local ?? (saved.data?.items as LayoutItem[] | undefined) ?? []);
-  }, [items, saved.isLoading, saved.data, key]);
-  return {
-    items: items ?? [],
-    set: (next) => {
-      setItems(next);
-      try {
-        localStorage.setItem(key, JSON.stringify(next));
-      } catch {
-        // private window or blocked storage: the arrangement just is not remembered
-      }
-    },
-  };
-}
-
-function PictureControls({
-  name,
-  size,
-  first,
-  last,
-  onMove,
-  onSize,
-  onHide,
-}: {
-  name: string;
-  size: Size;
-  first: boolean;
-  last: boolean;
-  onMove: (d: -1 | 1) => void;
-  onSize: () => void;
-  onHide: () => void;
-}) {
-  return (
-    <Flex gap="1" align="center" justify="center" className="no-print">
-      <IconButton size="1" variant="ghost" color="gray" disabled={first} aria-label={`Move ${name} earlier`} onClick={() => onMove(-1)}>
-        <ChevronLeftIcon />
-      </IconButton>
-      <Button size="1" variant="ghost" color="gray" aria-label={`Size of ${name}: ${SIZE_WORD[size]}. Press to change`} onClick={onSize}>
-        {SIZE_WORD[size]}
-      </Button>
-      <IconButton size="1" variant="ghost" color="gray" aria-label={`Hide ${name}`} onClick={onHide}>
-        <EyeClosedIcon />
-      </IconButton>
-      <IconButton size="1" variant="ghost" color="gray" disabled={last} aria-label={`Move ${name} later`} onClick={() => onMove(1)}>
-        <ChevronRightIcon />
-      </IconButton>
-    </Flex>
-  );
-}
-
-function Pictures({ ws, qc, layout }: { ws: string; qc: ReportQc; layout: Layout }) {
-  const wide = qc.slices.length === 0;
-  const paths = wide ? (qc.image ? [qc.image] : []) : qc.slices.map((s) => s.image);
-  const dflt: Size = wide ? "l" : "m";
-  const arranged = arrange(paths, layout.items, dflt);
-  const shown = arranged.filter((p) => !p.hidden);
-  const hidden = arranged.filter((p) => p.hidden);
-  const layerOf = new Map(qc.slices.map((s) => [s.image, s.layer]));
+/** The slices of one picture in a fixed layout: per layer, three columns (sagittal, coronal,
+ * axial) of four slices each (2 by 2). Without kept slices, the joined picture, full width. */
+function Pictures({ ws, qc }: { ws: string; qc: ReportQc }) {
   const url = (rel: string) => `/api/workspaces/${ws}/file/${rel}`;
-  if (paths.length === 0) return null;
+  const layers = new Map<string, string[]>();
+  for (const s of qc.slices) layers.set(s.layer, [...(layers.get(s.layer) ?? []), s.image]);
+  if (layers.size === 0 && !qc.image) return null;
   return (
     <Flex direction="column" gap="2">
       <Text size={type.help} weight="medium">
         {qc.name}
       </Text>
-      <Flex wrap="wrap" gap="2" style={{ background: "black", padding: "var(--space-2)", borderRadius: "var(--radius-3)" }}>
-        {shown.map((p, n) => (
-          <Flex key={p.image} direction="column" gap="1" style={{ width: wide ? WIDE[p.size] : TILE[p.size] }}>
-            <a href={url(p.image)} target="_blank" rel="noreferrer">
-              <img src={url(p.image)} alt={qc.name} style={{ width: "100%", display: "block", borderRadius: "var(--radius-2)" }} />
-            </a>
-            {layerOf.get(p.image) && (
-              <Text size="1" style={{ color: "white", opacity: 0.7 }}>
-                {layerOf.get(p.image)}
-              </Text>
-            )}
-            <PictureControls
-              name={qc.name}
-              size={p.size}
-              first={n === 0}
-              last={n === shown.length - 1}
-              onMove={(d) => layout.set(move(layout.items, paths, p.image, d, dflt))}
-              onSize={() => layout.set(resize(layout.items, paths, p.image, nextSize(p.size), dflt))}
-              onHide={() => layout.set(setHidden(layout.items, paths, p.image, true, dflt))}
-            />
+      {layers.size === 0 ? (
+        <a href={url(qc.image!)} target="_blank" rel="noreferrer">
+          <img src={url(qc.image!)} alt={qc.name} style={{ width: "100%", display: "block", background: "black", borderRadius: "var(--radius-3)" }} />
+        </a>
+      ) : (
+        [...layers.entries()].map(([layer, paths]) => (
+          <Flex key={layer} direction="column" gap="1">
+            <Text size={type.caption} color="gray">
+              {LAYER_NAMES[layer] ?? layer}
+            </Text>
+            <Grid columns={{ initial: "1", sm: "3" }} gap="2">
+              {[0, 4, 8].map((from) => (
+                <Grid key={from} columns="2" gap="1" align="center" style={{ background: "black", padding: "var(--space-1)", borderRadius: "var(--radius-3)" }}>
+                  {paths.slice(from, from + 4).map((p) => (
+                    <a key={p} href={url(p)} target="_blank" rel="noreferrer">
+                      <img src={url(p)} alt={qc.name} style={{ width: "100%", display: "block" }} />
+                    </a>
+                  ))}
+                </Grid>
+              ))}
+            </Grid>
           </Flex>
-        ))}
-      </Flex>
-      {hidden.length > 0 && (
-        <Flex gap="2" align="center" wrap="wrap" className="no-print">
-          <Text size={type.caption} color="gray">
-            Hidden ({hidden.length}):
-          </Text>
-          {hidden.map((p) => (
-            <Button key={p.image} size="1" variant="soft" color="gray" onClick={() => layout.set(setHidden(layout.items, paths, p.image, false, dflt))}>
-              <EyeOpenIcon /> {p.image.split("/").pop()?.replace(/\.png$/, "")}
-            </Button>
-          ))}
-        </Flex>
+        ))
       )}
       {helpFor(qc.name) && (
         <Text size={type.caption} color="gray">
@@ -145,7 +62,7 @@ function Pictures({ ws, qc, layout }: { ws: string; qc: ReportQc; layout: Layout
   );
 }
 
-function RunCard({ ws, subject, run, layout }: { ws: string; subject: string; run: ReportRun; layout: Layout }) {
+function RunCard({ ws, subject, run }: { ws: string; subject: string; run: ReportRun }) {
   const metrics = run.qc.filter((q) => q.kind === "metric");
   const pictures = run.qc.filter((q) => q.kind !== "metric");
   return (
@@ -184,7 +101,7 @@ function RunCard({ ws, subject, run, layout }: { ws: string; subject: string; ru
           </Table.Root>
         )}
         {pictures.map((q) => (
-          <Pictures key={q.name} ws={ws} qc={q} layout={layout} />
+          <Pictures key={q.name} ws={ws} qc={q} />
         ))}
         {run.warnings.map((w) => (
           <Callout.Root key={w} color="amber" size="1">
@@ -226,13 +143,11 @@ export function ReportView({ ws, subject }: { ws: string; subject: string }) {
     queryKey: ["ws", ws, "report", subject],
     queryFn: () => call(api.GET("/api/workspaces/{ws_id}/subjects/{label}/report", { params: { path: { ws_id: ws, label: subject } } })),
   });
-  const layout = useLayout(ws, subject);
   const save = useMutation({
     mutationFn: () =>
       call(
         api.POST("/api/workspaces/{ws_id}/subjects/{label}/report/export", {
           params: { path: { ws_id: ws, label: subject } },
-          body: { items: layout.items.map((i) => ({ image: i.image, hidden: i.hidden ?? false, size: i.size ?? "m" })) },
         }),
       ),
   });
@@ -256,8 +171,7 @@ export function ReportView({ ws, subject }: { ws: string; subject: string }) {
         </Flex>
       </Flex>
       <Text size={type.help} color="gray">
-        Built from what MRForge recorded for {subject}, nothing estimated. You can reorder, resize and hide the pictures; the saved HTML
-        file keeps your arrangement.
+        Built from what MRForge recorded for {subject}, nothing estimated. Save it as an HTML file to keep a copy or send it to a colleague.
       </Text>
       {save.error && <ErrorCallout error={(save.error as ApiError).body} />}
       {save.data && (
@@ -336,7 +250,7 @@ export function ReportView({ ws, subject }: { ws: string; subject: string }) {
             {s.title}
           </Heading>
           {s.runs.map((run) => (
-            <RunCard key={run.job_id} ws={ws} subject={subject} run={run} layout={layout} />
+            <RunCard key={run.job_id} ws={ws} subject={subject} run={run} />
           ))}
           {s.not_run.length > 0 && (
             <Text size={type.help} color="gray">

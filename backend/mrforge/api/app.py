@@ -65,12 +65,7 @@ from mrforge.progress import OperationProgress, operation_progress
 from mrforge.provenance import read_provenance
 from mrforge.qc_decisions import MotionThresholds, QcDecisionEntry
 from mrforge.report import SubjectReport, build_report
-from mrforge.report_html import (
-    ReportLayout,
-    export_report,
-    latest_layout,
-    list_exports,
-)
+from mrforge.report_html import export_report, list_exports
 from mrforge.runner.jobs import get_job, list_jobs, process_alive, recover_stale_jobs
 from mrforge.viewerimages import find_images
 from mrforge.workspace import Workspace, WorkspaceError
@@ -998,20 +993,14 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         ws = ws_of(ws_id)
         return build_report(ws, report_subject(ws, label))
 
-    @app.get("/api/workspaces/{ws_id}/subjects/{label}/report/layout", response_model=ReportLayout)
-    def subject_report_layout(ws_id: str, label: str) -> ReportLayout:
-        """The picture arrangement used by the latest saved report (to start from it again)."""
-        ws = ws_of(ws_id)
-        return latest_layout(ws, report_subject(ws, label))
-
     @app.post(
         "/api/workspaces/{ws_id}/subjects/{label}/report/export", response_model=S.ReportExport
     )
-    def export_subject_report(ws_id: str, label: str, layout: ReportLayout) -> S.ReportExport:
+    def export_subject_report(ws_id: str, label: str) -> S.ReportExport:
         """Save the report as a self-contained HTML file in reports/<subject>/."""
         ws = ws_of(ws_id)
         report = build_report(ws, report_subject(ws, label))
-        return export_info(ws_id, ws, export_report(ws, report, layout))
+        return export_info(ws_id, ws, export_report(ws, report))
 
     @app.get("/api/workspaces/{ws_id}/reports", response_model=list[S.ReportExport])
     def reports(ws_id: str, subject: str | None = None) -> list[S.ReportExport]:
