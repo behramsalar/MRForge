@@ -43,6 +43,7 @@ from mrforge.importing.scan import TAR_ENDINGS, set_labels
 from mrforge.importing.sourcedata import removal_plan
 from mrforge.importing.undo import undo_plan
 from mrforge.models import Job, JobStatus, Subject
+from mrforge.niftiutil import image_info
 from mrforge.operations import (
     active_operation,
     cancel_operation,
@@ -68,6 +69,7 @@ from mrforge.qc_decisions import MotionThresholds, QcDecisionEntry
 from mrforge.report import SubjectReport, build_report
 from mrforge.report_html import export_report, list_exports
 from mrforge.runner.jobs import get_job, list_jobs, process_alive, recover_stale_jobs
+from mrforge.steps.resample_t1 import needs_resampling
 from mrforge.viewerimages import find_images
 from mrforge.workspace import Workspace, WorkspaceError
 
@@ -838,11 +840,22 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         steps: list[PipelineStep] = []
         if req.bet:
             steps.append(PipelineStep(id="bet", step="bet", inputs={"t1": req.t1}))
+        t1_input = req.t1
+        title = f"Anatomical preprocessing of {req.subject}"
+        if req.resample_to_1mm:
+            zooms = image_info(ws.abspath(req.t1))[1]
+            if needs_resampling(zooms):
+                steps.append(
+                    PipelineStep(id="resample_t1", step="resample_t1", inputs={"t1": req.t1})
+                )
+                t1_input = "${resample_t1.result}"
+            else:
+                title += " (T1 already 1 mm or coarser: not resampled)"
         steps.append(
             PipelineStep(
                 id="fsl_anat",
                 step="fsl_anat",
-                inputs={"t1": req.t1},
+                inputs={"t1": t1_input},
                 params={
                     "strong_bias": req.strong_bias,
                     "subcortical_segmentation": req.subcortical_segmentation,
@@ -852,7 +865,7 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         for st in steps:
             st.session = req.session
         spec = PipelineSpec(name=f"anatomical-{req.subject}", subject=req.subject, steps=steps)
-        return _start_pipeline(ws, spec, f"Anatomical preprocessing of {req.subject}", who)
+        return _start_pipeline(ws, spec, title, who)
 
     @app.post("/api/workspaces/{ws_id}/resume", response_model=S.OperationStarted)
     def resume(ws_id: str, who: accounts.Researcher | None = Researcher) -> S.OperationStarted:

@@ -22,6 +22,7 @@ export function AnatomicalPage({ ws, state }: { ws: string; state: WorkspaceStat
   const [bet, setBet] = useState(false);
   const [strongBias, setStrongBias] = useState(false);
   const [subcortical, setSubcortical] = useState(false);
+  const [resample, setResample] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const busy = !!state?.operations.some((o) => o.status === "Queued" || o.status === "Running");
 
@@ -35,6 +36,7 @@ export function AnatomicalPage({ ws, state }: { ws: string; state: WorkspaceStat
             t1: t1Path!,
             bet,
             strong_bias: strongBias,
+            resample_to_1mm: resample,
             subcortical_segmentation: subcortical,
           },
         }),
@@ -114,6 +116,12 @@ export function AnatomicalPage({ ws, state }: { ws: string; state: WorkspaceStat
                   <Flex gap={space.inline} align="center">
                     <Switch checked={strongBias} onCheckedChange={setStrongBias} />
                     Strong intensity correction (for images with very uneven brightness)
+                  </Flex>
+                </Text>
+                <Text as="label" size={type.help}>
+                  <Flex gap={space.inline} align="center">
+                    <Switch checked={resample} onCheckedChange={setResample} />
+                    Resample the T1 to 1 mm voxels first (much faster for very high-resolution scans; skipped if the T1 is already 1 mm or coarser)
                   </Flex>
                 </Text>
                 <Text as="label" size={type.help}>
