@@ -112,6 +112,18 @@ def test_refuses_bet_output_as_input(ws: Workspace) -> None:
     assert not any(ctx.output_dir.glob("*.anat"))  # nothing was started
 
 
+def test_accepts_the_resampled_t1_and_names_the_native_folder_after_it(ws: Workspace) -> None:
+    rel = f"{ANAT}/sub-001_desc-1mm_T1w.nii.gz"
+    put_nifti(ws, rel)
+    with ws.session() as s:  # what a finished resample_t1 run registers
+        s.add(File(relpath=rel, kind="resample_t1"))
+    step, ctx = build_context(ws, "fsl_anat", "sub-001", None, {"t1": rel}, {})
+    assert step.validate_inputs(ctx) == []
+    assert native_folder_name(rel) == "sub-001_desc-1mm_T1w.anat"
+    # the BIDS result names do not depend on the input's name
+    assert any(p.endswith("sub-001_desc-brain_T1w.nii.gz") for p in step.output_relpaths(ctx))
+
+
 def test_warns_when_name_suggests_brain_extraction(ws: Workspace) -> None:
     rel = "rawbids/sub-001/anat/sub-001_T1w_brain.nii.gz"
     put_nifti(ws, rel)

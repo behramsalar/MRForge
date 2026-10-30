@@ -305,7 +305,7 @@ def build_overview(ws: Workspace) -> Overview:
         has_t1 = any(kind == "T1w" for _, kind in raw)
         ready = check_ready(ws, sub.label)
 
-        anat_jobs = [j for j in mine if j.step_name == "fsl_anat"]
+        anat_jobs = [j for j in mine if j.step_name in ("resample_t1", "fsl_anat")]
         if ready.anat_ready:
             anat = StageStatus(state="done")
             if anat_jobs and anat_jobs[-1].status in (

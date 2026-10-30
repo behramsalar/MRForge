@@ -24,7 +24,7 @@ from mrforge.workspace import Workspace
 
 # Report sections in reading order: id, title, steps that belong there (in processing order).
 SECTIONS: list[tuple[str, str, list[str]]] = [
-    ("anatomical", "Structural (anatomical) processing", ["bet", "fsl_anat"]),
+    ("anatomical", "Structural (anatomical) processing", ["resample_t1", "bet", "fsl_anat"]),
     (
         "functional",
         "Functional preprocessing",
@@ -38,6 +38,7 @@ SECTIONS: list[tuple[str, str, list[str]]] = [
     ("standard", "Standard space", ["func_to_mni"]),
 ]
 STEP_TITLES = {
+    "resample_t1": "Resampling of the T1 to 1 mm",
     "bet": "Brain extraction (bet)",
     "fsl_anat": "Anatomical processing (fsl_anat)",
     "fieldmap_prep": "Field map preparation",

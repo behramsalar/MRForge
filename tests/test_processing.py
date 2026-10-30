@@ -451,3 +451,45 @@ def test_an_old_cleaned_image_is_not_used_when_preprocessing_runs_again(tmp_path
     _, spec = plan(ws, stages={"functional": True, "standard_space": True})
     mni = next(s for s in spec.steps if s.step == "func_to_mni")  # type: ignore[union-attr]
     assert mni.inputs["bold"] == "${feat_preproc__task-rest.preproc_bold}"
+
+
+# -- resampling the T1 to 1 mm before fsl_anat ---------------------------------------------
+
+
+def fine_t1(ws: Workspace, voxel: float = 0.5) -> None:
+    nib.save(
+        nib.Nifti1Image(np.ones((4, 4, 4), "float32"), np.diag([voxel] * 3 + [1.0])), ws.root / T1
+    )
+
+
+def test_resampling_is_off_by_default(tmp_path: Path) -> None:
+    ws = workspace(tmp_path)
+    fine_t1(ws)
+    _, spec = plan(ws)
+    assert spec is not None and "resample_t1" not in [s.step for s in spec.steps]
+
+
+def test_resampling_runs_before_fsl_anat_and_fsl_anat_uses_its_result(tmp_path: Path) -> None:
+    ws = workspace(tmp_path)
+    fine_t1(ws)
+    p, spec = plan(ws, anatomical={"resample_to_1mm": True})
+    assert spec is not None
+    assert ids(spec)[:2] == ["resample_t1", "fsl_anat"]
+    assert spec.steps[0].inputs == {"t1": T1}
+    assert spec.steps[1].inputs == {"t1": "${resample_t1.result}"}
+    parse_pipeline(spec.model_dump(mode="json"))
+    shown = {s.name: s.value for s in p.stages[0].items[0].settings}
+    assert shown["Resample to 1 mm first"].startswith("yes")
+    feat = next(s for s in spec.steps if s.step == "feat_preproc")
+    assert feat.inputs["t1_head"] == "${fsl_anat.biascorr}"  # functional stage is unchanged
+
+
+def test_a_t1_that_is_already_1_mm_is_not_resampled_and_the_reason_is_shown(
+    tmp_path: Path,
+) -> None:
+    ws = workspace(tmp_path)  # 1 mm voxels
+    p, spec = plan(ws, anatomical={"resample_to_1mm": True})
+    assert spec is not None and "resample_t1" not in [s.step for s in spec.steps]
+    item = p.stages[0].items[0]
+    assert item.note is not None and "Not resampled" in item.note
+    assert {s.name: s.value for s in item.settings}["Resample to 1 mm first"].startswith("skipped")

@@ -48,6 +48,13 @@ def build(tmp_path: Path) -> Workspace:
     return ws
 
 
+def test_the_resampled_t1_has_a_plain_name(tmp_path: Path) -> None:
+    ws = build(tmp_path)
+    image(ws, f"{D}/anat/sub-001_desc-1mm_T1w.nii.gz", (4, 4, 4))
+    names = {f.described.name for f in find_images(ws, "sub-001")}
+    assert "T1, resampled to 1 mm" in names
+
+
 def test_groups_names_and_roles(tmp_path: Path) -> None:
     found = {
         (f.described.group, f.described.name, f.described.role)
