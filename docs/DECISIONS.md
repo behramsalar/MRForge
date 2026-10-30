@@ -174,3 +174,8 @@ The user could not change an import once written (skipping a series or renaming 
 - Command history: the Jobs page row has a Details dialog from the job's `provenance.json` (settings, shell-quoted commands, hashes, tool versions). "Run again" is its own operation kind (`rerun`), not a pipeline, so Resume still means the pipeline the user started; "Run again anyway" forces.
 - System checks: one implementation (`system_check.py`) for `scripts/check_env.py` (shell-only, unchanged output), `mrforge doctor` and the System page (both find tools the way MRForge itself does).
 - Plan-level lesson: pictures drawn with matplotlib/slicer must use voxel size in mm, not voxel counts (two bugs found by the user on 0.32 x 0.32 x 1 mm and 4 mm slice data).
+
+## 2026-10-30 Optional T1 resampling to 1 mm before fsl_anat (agreed with the user)
+- Why: `fsl_anat` took 14 h on a very high-resolution T1; the user measured a large time saving after resampling to 1 mm first.
+- Decisions: off by default; resample only when a voxel side is finer than 1 mm (tolerance 0.001 mm), otherwise skipped and the reason is shown; interpolation is spline (the highest-quality option of `flirt -interp`; REVIEW(domain)); segmentation, registration and all later steps then use the 1 mm image (users who want the original resolution simply leave the option off).
+- Implementation: a separate step `resample_t1` (principle 2) wired in front of `fsl_anat` by the anatomical stage; command verified with `flirt -help`. See `docs/architecture.md` section 15.
