@@ -77,6 +77,7 @@ def describe(path: Path, raw: bool) -> Described | None:
             "biascorr": ("T1, bias-corrected", 0),
             "brain": ("T1, brain only", 1),
             "bet": ("T1, brain only (bet)", 2),
+            "1mm": ("T1, resampled to 1 mm", 3),
         }
         if desc in t1_names:
             return result(ANAT, t1_names[desc][0], rank=t1_names[desc][1])

@@ -208,6 +208,7 @@ class AnatRequest(BaseModel):
     bet: bool = False  # also run FSL bet (optional, independent of fsl_anat)
     strong_bias: bool = False
     subcortical_segmentation: bool = False
+    resample_to_1mm: bool = False  # only done when a voxel side is finer than 1 mm
 
 
 class ViewerImage(BaseModel):

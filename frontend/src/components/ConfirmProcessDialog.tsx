@@ -12,7 +12,7 @@ const STAGE_IDS = ["anatomical", "functional", "artifact_rejection", "standard_s
 const DEFAULTS: FullOptions = {
   subject: "",
   stages: {},
-  anatomical: { strong_bias: false, subcortical_segmentation: false },
+  anatomical: { strong_bias: false, subcortical_segmentation: false, resample_to_1mm: false },
   functional: {
     delete_volumes: 5,
     smoothing_fwhm_mm: 5,
@@ -379,6 +379,15 @@ export function ConfirmProcessDialog({
                     onCheckedChange={(on) => setOpts({ ...opts, anatomical: { ...a, strong_bias: on } })}
                   />
                   Strong intensity correction of the T1
+                </Flex>
+              </Text>
+              <Text as="label" size={type.help}>
+                <Flex gap={space.inline} align="center">
+                  <Switch
+                    checked={a.resample_to_1mm ?? false}
+                    onCheckedChange={(on) => setOpts({ ...opts, anatomical: { ...a, resample_to_1mm: on } })}
+                  />
+                  Resample the T1 to 1 mm voxels first (much faster for very high-resolution scans)
                 </Flex>
               </Text>
             </Flex>

@@ -1120,6 +1120,11 @@ export interface components {
              * @default false
              */
             subcortical_segmentation: boolean;
+            /**
+             * Resample To 1Mm
+             * @default false
+             */
+            resample_to_1mm: boolean;
         };
         /** AnatomicalOptions */
         AnatomicalOptions: {
@@ -1133,6 +1138,11 @@ export interface components {
              * @default false
              */
             subcortical_segmentation: boolean;
+            /**
+             * Resample To 1Mm
+             * @default false
+             */
+            resample_to_1mm: boolean;
         };
         /** ArtifactOptions */
         ArtifactOptions: {
@@ -1171,7 +1181,8 @@ export interface components {
             /**
              * @default {
              *       "strong_bias": false,
-             *       "subcortical_segmentation": false
+             *       "subcortical_segmentation": false,
+             *       "resample_to_1mm": false
              *     }
              */
             anatomical: components["schemas"]["AnatomicalOptions"];
@@ -1320,7 +1331,8 @@ export interface components {
             /**
              * @default {
              *       "strong_bias": false,
-             *       "subcortical_segmentation": false
+             *       "subcortical_segmentation": false,
+             *       "resample_to_1mm": false
              *     }
              */
             anatomical: components["schemas"]["AnatomicalOptions"];
@@ -1893,7 +1905,8 @@ export interface components {
             /**
              * @default {
              *       "strong_bias": false,
-             *       "subcortical_segmentation": false
+             *       "subcortical_segmentation": false,
+             *       "resample_to_1mm": false
              *     }
              */
             anatomical: components["schemas"]["AnatomicalOptions"];
@@ -1928,7 +1941,8 @@ export interface components {
             /**
              * @default {
              *       "strong_bias": false,
-             *       "subcortical_segmentation": false
+             *       "subcortical_segmentation": false,
+             *       "resample_to_1mm": false
              *     }
              */
             anatomical: components["schemas"]["AnatomicalOptions"];

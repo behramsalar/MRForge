@@ -36,6 +36,7 @@ from mrforge.results import existing_cleaned, existing_functional
 from mrforge.resume import check_reusable
 from mrforge.runner.jobs import build_context
 from mrforge.steps.melodic import MIN_VOLUMES
+from mrforge.steps.resample_t1 import needs_resampling
 from mrforge.workspace import Workspace
 
 # -- what the user can choose ---------------------------------------------------------------
@@ -44,6 +45,9 @@ from mrforge.workspace import Workspace
 class AnatomicalOptions(BaseModel):
     strong_bias: bool = False
     subcortical_segmentation: bool = False  # slow; not needed for the functional pipeline
+    # Resample a T1 with voxels finer than 1 mm to 1 mm before fsl_anat (much faster on very
+    # high-resolution scans; segmentation then comes from the 1 mm image).
+    resample_to_1mm: bool = False
 
 
 class FunctionalOptions(BaseModel):
@@ -211,6 +215,12 @@ def recording_slug(bold_rel: str, default: str = "bold") -> str:
 # -- the stages -----------------------------------------------------------------------------
 
 
+def _resampled_t1_path(ctx: PlanContext, t1_rel: str) -> str:
+    """Where the resample_t1 step will put its result (the same name the step itself builds)."""
+    step, sctx = build_context(ctx.ws, "resample_t1", ctx.subject, None, {"t1": t1_rel}, {})
+    return ctx.ws.relpath(sctx.output_dir / step.expected_outputs(sctx).result)
+
+
 class AnatomicalStage(Stage):
     id = "anatomical"
     label = "Anatomical"
@@ -241,9 +251,26 @@ class AnatomicalStage(Stage):
             "strong_bias": opts.strong_bias,
             "subcortical_segmentation": opts.subcortical_segmentation,
         }
+        t1_input = t1.relpath
+        resample_note: str | None = None
+        resample_path: str | None = None
+        if opts.resample_to_1mm:
+            zooms = image_info(ctx.ws.abspath(t1.relpath))[1]
+            if needs_resampling(zooms):
+                resample_path = _resampled_t1_path(ctx, t1.relpath)
+                t1_input = resample_path
+            else:
+                sizes = " × ".join(f"{z:.3g}" for z in zooms[:3])
+                resample_note = (
+                    f"Not resampled: the T1 already has voxels of {sizes} mm (1 mm or coarser)."
+                )
         recorded = check_reusable(
-            ctx.ws, "fsl_anat", ctx.subject, {"t1": t1.relpath}, params
+            ctx.ws, "fsl_anat", ctx.subject, {"t1": t1_input}, params
         ).reusable
+        if recorded and resample_path is not None:
+            recorded = check_reusable(
+                ctx.ws, "resample_t1", ctx.subject, {"t1": t1.relpath}, {}
+            ).reusable
         stage.already_done = recorded
         notes = [f"{len(t1s)} T1 images found; the first one is used."] if len(t1s) > 1 else []
         if existing is not None and not recorded and enabled:
@@ -252,12 +279,20 @@ class AnatomicalStage(Stage):
                 "these settings, so they are made again (this takes a while). Untick Anatomical "
                 "to use the existing results as they are."
             )
+        if resample_note:
+            notes.append(resample_note)
         note = " ".join(notes) or None
+        resample_value = "yes, to 1 mm (spline)" if resample_path else "skipped (1 mm or coarser)"
         stage.items = [
             PlanItem(
                 title=f"Process {Path(t1.relpath).name}",
                 note=note,
                 settings=[
+                    *(
+                        [PlanSetting(name="Resample to 1 mm first", value=resample_value)]
+                        if opts.resample_to_1mm
+                        else []
+                    ),
                     PlanSetting(
                         name="Intensity correction",
                         value="strong" if opts.strong_bias else "standard",
@@ -276,11 +311,15 @@ class AnatomicalStage(Stage):
                 ctx.anat = existing
                 ctx.ready.add(self.id)
             return stage
+        if resample_path is not None:
+            ctx.steps.append(
+                PipelineStep(id="resample_t1", step="resample_t1", inputs={"t1": t1.relpath})
+            )
         ctx.steps.append(
             PipelineStep(
                 id="fsl_anat",
                 step="fsl_anat",
-                inputs={"t1": t1.relpath},
+                inputs={"t1": "${resample_t1.result}" if resample_path else t1.relpath},
                 params=params,
             )
         )

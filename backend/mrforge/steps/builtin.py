@@ -12,4 +12,5 @@ from mrforge.steps import (  # noqa: F401
     ica_labels,
     melodic,
     regfilt,
+    resample_t1,
 )

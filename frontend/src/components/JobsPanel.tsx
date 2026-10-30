@@ -13,6 +13,7 @@ import { StatusBadge } from "./ui/Badges";
 
 /** Plain-language names for the steps the engine runs. */
 export const stepName: Record<string, string> = {
+  resample_t1: "Resample the T1 to 1 mm (flirt)",
   fsl_anat: "Anatomical processing (fsl_anat)",
   bet: "Brain extraction (bet)",
   fieldmap_prep: "Prepare the fieldmap",

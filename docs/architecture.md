@@ -188,3 +188,8 @@ BIDS dataset ------ import bids (copy, no conversion) ----------> rawbids/
 - **QC slices:** a `QCItem` may carry `slices` (plane, position, layer, path relative to the step output folder) next to the joined picture.
 - **Step record** (`history.py`): `GET /jobs/{id}/record` (settings, files with hashes, commands as shell-quoted strings, tool versions; only provenance of that very job is used). `POST /jobs/{id}/rerun {force}` starts operation kind `rerun`.
 - **System** (`system_check.py`): `GET /api/system`, `mrforge doctor`, `scripts/check_env.py`.
+
+## 15. Optional T1 resampling before fsl_anat
+- **Step `resample_t1`** (`steps/resample_t1.py`): `flirt -in T1 -ref T1 -applyisoxfm 1 -interp spline`, result `sub-XXX_desc-1mm_T1w.nii.gz` in `derivatives/.../anat/`; the raw T1 is never changed. It validates that the output voxels are exactly the target size and reports the original and new matrix and a warning if spline overshoot created negative values.
+- **When it runs:** only when the option `resample_to_1mm` is on (off by default) and a spatial voxel side is finer than 1 mm (`needs_resampling`). Otherwise the step is not planned and the plan shows why. The anatomical stage (`processing.py`) then gives `fsl_anat` the input `${resample_t1.result}`; its native folder is named after that input (`sub-XXX_desc-1mm_T1w.anat`). All BIDS-named fsl_anat results keep their names, so the functional stages and result lookups are unchanged.
+- **Where to choose it:** the full-processing dialog (anatomical options), the Anatomical page (advanced options), `POST /anat` field `resample_to_1mm`.
