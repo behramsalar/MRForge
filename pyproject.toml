@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 dependencies = ["pydantic>=2", "sqlalchemy>=2", "typer", "psutil", "pyyaml", "pydicom>=3", "nibabel", "fastapi", "uvicorn", "python-multipart", "sse-starlette", "matplotlib"]
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff", "mypy", "types-psutil", "types-PyYAML", "numpy", "httpx2"]
+dev = ["pytest", "ruff", "mypy", "types-psutil", "types-PyYAML", "numpy", "httpx", "httpx2"]
 
 [project.scripts]
 mrforge = "mrforge.cli:app"

@@ -115,7 +115,7 @@ class StepContext(Generic[I, P]):
                 proc = subprocess.run(
                     argv, stdout=out, stderr=err, env=self.env or os.environ.copy(), check=False
                 )
-            except FileNotFoundError as exc:
+            except (FileNotFoundError, PermissionError) as exc:
                 raise StepError(
                     code="TOOL_NOT_FOUND",
                     message=f"The program '{argv[0]}' could not be found.",
