@@ -340,6 +340,23 @@ def classify_all(series: list[DicomSeries], rules: RuleSet) -> dict[str, Classif
 def apply_rules(manifest: ImportManifest, rules: RuleSet) -> ImportManifest:
     """(Re)run the rules; user overrides are kept."""
     manifest.classifications = classify_all(manifest.series, rules)
+    if manifest.source.kind == "nifti":
+        by_uid = {x.uid: x for x in manifest.series}
+        for uid, c in manifest.classifications.items():
+            named_fmap = c.kind == "unknown" and re.search(
+                r"(?i)(field_?map|fmap|gre_field)", series_fields(by_uid[uid])["text"]
+            )
+            if c.datatype == "fmap" or named_fmap:  # needs magnitude and phase images together
+                manifest.classifications[uid] = c.model_copy(
+                    update={
+                        "action": "skip",
+                        "reasons": [
+                            *c.reasons,
+                            "Fieldmaps cannot be imported from loose NIfTI files "
+                            "(import them from DICOM or a BIDS dataset)",
+                        ],
+                    }
+                )
     return manifest
 
 
