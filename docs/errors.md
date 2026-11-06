@@ -432,6 +432,26 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 - **What happened:** The image has an odd number of slices and FSL's `b02b0_1.cnf` was not found.
 - **Suggested action:** Check the FSL installation on the System page.
 
+## Diffusion: eddy-current correction and tensor fit (Stage 9d)
+
+### EDDY_PROGRAM_UNKNOWN
+- **What happened:** The eddy program name is not the name of a program in the FSL folder.
+- **Suggested action:** Choose `eddy_cpu`, `eddy`, `eddy_cuda` or `eddy_correct`.
+
+### EDDY_PROGRAM_MISSING
+- **What happened:** The chosen FSL program (for example `eddy_cuda`) was not found.
+- **Probable cause:** GPU versions of eddy exist only in the Linux builds of FSL and need an NVIDIA graphics card.
+- **Suggested action:** Choose `eddy_cpu`, or check the FSL installation on the System page.
+
+### EDDY_TOPUP_INCOMPLETE
+- **What happened:** Only some of the TOPUP results were given to eddy.
+- **Suggested action:** Give all of them (acquisition parameters, field coefficients, movement parameters, mask) or none; without TOPUP eddy runs without distortion correction and the result says so.
+
+### EDDY_OUTPUT_MISSING
+- **What happened:** eddy finished but did not write one of its result files.
+- **Probable cause:** eddy stopped early or the disk is full.
+- **Suggested action:** Open the raw log; try again with another eddy program.
+
 ## Diffusion: template space (Stage 9e)
 
 ### TEMPLATE_MISSING
