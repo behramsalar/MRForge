@@ -37,6 +37,7 @@ from mrforge.history import JobRecord, job_record
 from mrforge.icareview import IcaRecording, find_ica_results, save_labels
 from mrforge.importing.bids_validate import find_validator
 from mrforge.importing.classify import effective_all, load_rules, set_override
+from mrforge.importing.inspect import inspect_source
 from mrforge.importing.manifest import list_manifests, load_manifest, save_manifest
 from mrforge.importing.models import ImportManifest
 from mrforge.importing.scan import TAR_ENDINGS, set_labels
@@ -543,6 +544,17 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             started_by=who.name if who else None,
         )
         return S.OperationStarted(operation_id=op)
+
+    @app.post("/api/workspaces/{ws_id}/imports/inspect", response_model=S.InspectResult)
+    def inspect_import(ws_id: str, req: S.InspectRequest) -> S.InspectResult:
+        ws_of(ws_id)
+        plan = inspect_source(_inside_home(req.source))
+        return S.InspectResult(
+            kind=plan.kind,
+            name=plan.name,
+            summary=plan.summary,
+            count=len(plan.archives) or len(plan.nifti) or 1,
+        )
 
     @app.post("/api/workspaces/{ws_id}/imports/scan", response_model=S.OperationStarted)
     def scan(

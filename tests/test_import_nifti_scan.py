@@ -151,3 +151,26 @@ def test_a_bids_dataset_is_imported_from_the_same_entry_point(
     assert (ws.root / "rawbids" / "sub-002" / "func").is_dir()
     again = _scan(ws, {"source": str(source)}, lambda _m: None)
     assert not again["is_new"] and again["import_id"] == result["import_id"]
+
+
+def test_the_api_says_what_a_chosen_folder_is(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from fastapi.testclient import TestClient
+
+    from mrforge.api.app import create_app
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("MRFORGE_CONFIG", str(tmp_path / "cfg" / "config.json"))
+    write(tmp_path / "data" / "alpha", "scan", (8, 8, 70))
+    app = create_app(tmp_path / "workspaces")
+    client = TestClient(app)
+    ws_id = client.post("/api/workspaces", json={"name": "w"}).json()["id"]
+    r = client.post(
+        f"/api/workspaces/{ws_id}/imports/inspect", json={"source": str(tmp_path / "data")}
+    )
+    assert r.status_code == 200 and r.json()["kind"] == "nifti" and r.json()["count"] == 1
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    bad = client.post(f"/api/workspaces/{ws_id}/imports/inspect", json={"source": str(empty)})
+    assert bad.status_code == 400 and bad.json()["code"] == "IMPORT_SOURCE_EMPTY"

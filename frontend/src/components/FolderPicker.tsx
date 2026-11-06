@@ -27,9 +27,9 @@ export function FolderPicker({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Content maxWidth="640px">
-        <Dialog.Title>Choose the scanner files</Dialog.Title>
+        <Dialog.Title>Choose what to import</Dialog.Title>
         <Dialog.Description size={type.help} color="gray">
-          Pick the folder that holds the DICOM files (subfolders are included), or an archive of it (ZIP, TAR, TAR.GZ, TAR.BZ2 or TAR.XZ).
+          Pick a folder with your scans (scanner files, several archives, NIfTI files or a BIDS dataset; subfolders are included), or one archive (ZIP, TAR, TAR.GZ, TAR.BZ2 or TAR.XZ).
         </Dialog.Description>
         <Flex direction="column" gap={space.group} mt="3">
           <Flex align="center" gap={space.inline}>

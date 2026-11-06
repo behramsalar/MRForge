@@ -66,7 +66,7 @@ export function DecisionDialog({ ws, detail, row }: { ws: string; detail: Import
           Series {row.number}: {row.label}
         </Dialog.Title>
         <Dialog.Description size={type.help} color="gray">
-          {size(row)} · {row.n_files} files
+          {size(row)}{row.n_files > 1 ? ` · ${row.n_files} files` : ""}
         </Dialog.Description>
         {row.reasons.length > 0 && (
           <Callout.Root size="1" mt="3" color="gray">

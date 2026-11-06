@@ -134,6 +134,19 @@ class ScanRequest(BaseModel):
     session: str | None = None
 
 
+class InspectRequest(BaseModel):
+    source: str  # folder or archive on the computer running MRForge
+
+
+class InspectResult(BaseModel):
+    """What a chosen folder or archive is, before anything is read or copied."""
+
+    kind: Literal["dicom", "archives", "nifti", "bids"]
+    name: str
+    summary: str  # plain language, e.g. "Found 12 archives. Each one is read as its own scan."
+    count: int  # archives / subjects with NIfTI files; 1 otherwise
+
+
 class ImportRunRequest(BaseModel):
     remove_dicom: bool = False
 

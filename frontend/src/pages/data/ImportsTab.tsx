@@ -75,7 +75,7 @@ function ImportsList({ ws, imports, selected }: { ws: string; imports: ImportSum
                   style={{ cursor: "pointer", background: i.id === selected ? "var(--accent-a3)" : undefined }}
                 >
                   <Table.RowHeaderCell>
-                    {i.subject}
+                    {i.subject || "Whole dataset"}
                     {i.session ? ` · ${i.session}` : ""}
                   </Table.RowHeaderCell>
                   <Table.Cell>
@@ -163,13 +163,15 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
   const row = d?.series.find((s) => s.uid === uid) ?? d?.series.find((s) => s.action === "ask") ?? d?.series[0];
   const runOp = selected ? lastOperation(state, "import_run", selected) : undefined;
   const bids = typeof runOp?.result?.bids_report === "string" ? runOp.result.bids_report : null;
+  const scanOpOf = selected ? lastOperation(state, "scan", selected) : undefined;
+  const datasetReport = typeof scanOpOf?.result?.bids_report === "string" ? scanOpOf.result.bids_report : null;
   const justImported = runOp?.status === "Completed" && d && d.organized > 0;
 
   if (state && imports.length === 0) {
     return (
       <EmptyState
         title="Start your first import"
-        text="Choose the folder or archive (ZIP, TAR, TAR.GZ, TAR.BZ2, TAR.XZ) with your scanner files. MRForge reads them, shows what it found and asks only about what it cannot decide itself."
+        text="Choose a folder or archive (ZIP, TAR, TAR.GZ, TAR.BZ2, TAR.XZ) with your scanner files, a folder with several archives, a folder of NIfTI files, or an existing BIDS dataset. MRForge looks at what it is, shows what it found and asks only about what it cannot decide itself."
       >
         <NewImportDialog ws={ws} disabled={busy} onStarted={setScanOp} />
       </EmptyState>
@@ -195,11 +197,11 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
           <>
             <Flex align="center" gap={space.group} wrap="wrap">
               <Heading as="h2" size={type.sectionTitle}>
-                {d.subject}
+                {d.subject || "Whole dataset"}
                 {d.session ? ` · ${d.session}` : ""}
               </Heading>
               <Badge variant="soft" color="gray">
-                {d.n_series} series found
+                {d.kind === "bids" ? "BIDS dataset" : `${d.n_series} series found`}
               </Badge>
               {d.created_by && (
                 <Badge variant="soft" color="gray">
@@ -207,6 +209,29 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
                 </Badge>
               )}
             </Flex>
+            {d.kind === "bids" && (
+              <Callout.Root color="green">
+                <Flex direction="column" gap={space.inline} style={{ width: "100%" }}>
+                  <Text weight="bold">
+                    This existing BIDS dataset was copied into the workspace as it is. Nothing was converted or
+                    overwritten.
+                  </Text>
+                  {datasetReport && (
+                    <details>
+                      <summary>
+                        <Text size={type.help}>What was copied and the BIDS check</Text>
+                      </summary>
+                      <pre style={{ whiteSpace: "pre-wrap", fontSize: "var(--font-size-1)" }}>{datasetReport}</pre>
+                    </details>
+                  )}
+                  <Flex>
+                    <Button asChild>
+                      <a href={href(ws, "process")}>Next: process the data</a>
+                    </Button>
+                  </Flex>
+                </Flex>
+              </Callout.Root>
+            )}
             {d.needs_input > 0 && (
               <Callout.Root color="amber">
                 <Callout.Text>
@@ -220,7 +245,7 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
                 <Callout.Text>{d.warnings.join(" ")}</Callout.Text>
               </Callout.Root>
             )}
-            {d.organized > 0 && (
+            {d.organized > 0 && d.kind !== "bids" && (
               <Callout.Root color="gray">
                 <Flex align="center" justify="between" gap={space.group} wrap="wrap" style={{ width: "100%" }}>
                   <Callout.Text>
@@ -238,13 +263,14 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
                 </Callout.Text>
               </Callout.Root>
             )}
-            <SeriesTable ws={ws} detail={d} selected={row?.uid} onSelect={setUid} />
+            {d.kind !== "bids" && <SeriesTable ws={ws} detail={d} selected={row?.uid} onSelect={setUid} />}
 
+            {d.kind !== "bids" && (
             <Flex direction="column" gap={space.group}>
               <Button variant="ghost" size="1" style={{ alignSelf: "flex-start" }} onClick={() => setShowMore(!showMore)}>
                 {showMore ? "Hide advanced options" : "Advanced options"}
               </Button>
-              {showMore && (
+              {showMore && d.kind !== "nifti" && (
                 <Text as="label" size={type.help}>
                   <Flex gap={space.inline} align="start">
                     <Checkbox checked={removeDicom} onCheckedChange={(v) => setRemoveDicom(v === true)} />
@@ -265,6 +291,7 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
               </Flex>
               {run.error && <ErrorCallout error={(run.error as ApiError).body} />}
             </Flex>
+            )}
 
             {justImported && (
               <Callout.Root color="green">

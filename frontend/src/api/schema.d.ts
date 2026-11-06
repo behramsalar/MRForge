@@ -321,6 +321,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/imports/inspect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Inspect Import */
+        post: operations["inspect_import_api_workspaces__ws_id__imports_inspect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/imports/scan": {
         parameters: {
             query?: never;
@@ -1644,6 +1661,28 @@ export interface components {
             import_ids: string[];
             /** Task */
             task: string;
+        };
+        /** InspectRequest */
+        InspectRequest: {
+            /** Source */
+            source: string;
+        };
+        /**
+         * InspectResult
+         * @description What a chosen folder or archive is, before anything is read or copied.
+         */
+        InspectResult: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "dicom" | "archives" | "nifti" | "bids";
+            /** Name */
+            name: string;
+            /** Summary */
+            summary: string;
+            /** Count */
+            count: number;
         };
         /** JobInfo */
         JobInfo: {
@@ -3461,6 +3500,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OperationStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    inspect_import_api_workspaces__ws_id__imports_inspect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InspectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InspectResult"];
                 };
             };
             /** @description Validation Error */
