@@ -431,3 +431,14 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 ### TOPUP_CONFIG_MISSING
 - **What happened:** The image has an odd number of slices and FSL's `b02b0_1.cnf` was not found.
 - **Suggested action:** Check the FSL installation on the System page.
+
+## Diffusion: template space (Stage 9e)
+
+### TEMPLATE_MISSING
+- **What happened:** The template image for registration was not found (a template you chose, or one of FSL's own).
+- **Suggested action:** Choose the template file again, or check the FSL installation on the System page.
+
+### TENSOR_NOT_SIX_VOLUMES
+- **What happened:** The diffusion tensor file does not have the 6 volumes a fitted tensor has.
+- **Probable cause:** It was not made by the tensor fit of this app, or the transformation to the template went wrong.
+- **Suggested action:** Run the tensor fit again, then this step.

@@ -5,6 +5,7 @@ from mrforge.steps import (  # noqa: F401
     aroma_classify,
     bet,
     dwi_mrtrix,
+    dwi_to_template,
     dwi_topup,
     fake,
     feat_preproc,
