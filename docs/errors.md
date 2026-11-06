@@ -390,3 +390,24 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 ### IMPORTS_FAILED
 - **What happened:** In "Import all that are ready", some scans did not import (the others did).
 - **Suggested action:** Open the failed scan from the list; its own message says why. Imported scans are not affected.
+
+## Import: what the chosen folder is (web import, November 2026)
+
+### IMPORT_SOURCE_EMPTY
+- **What happened:** The chosen folder holds no scans MRForge can import.
+- **Probable cause:** It is empty, or only holds other files (text, pictures, reports).
+- **Suggested action:** Choose the folder with the scanner files, NIfTI files, archives (ZIP, TAR) or a BIDS dataset.
+
+### IMPORT_SOURCE_MIXED
+- **What happened:** The folder mixes kinds of data (for example archives and NIfTI files). Nothing was read.
+- **Probable cause:** MRForge imports one kind at a time so nothing is put in the wrong place.
+- **Suggested action:** Choose a folder with only one kind, or import the kinds one after another from separate folders.
+
+### IMPORT_NO_ARCHIVE_READABLE
+- **What happened:** A folder of archives was chosen, but none of them could be read.
+- **Probable cause:** The archives hold no readable scanner files, or are damaged.
+- **Suggested action:** Check that they are archives of DICOM folders. If only some fail, the others are imported and the failed ones are listed with their own reason.
+
+### NIFTI_WRONG_SHAPE / DWI_NEEDS_DIRECTIONS (shown as "CONVERSION_FAILED" in the web import)
+- **What happened:** A NIfTI file does not fit the type chosen for it (for example a T1 with many volumes, a BOLD image with one volume), or a diffusion image has no `.bval`/`.bvec` files next to it. Nothing was written to `rawbids/`.
+- **Suggested action:** Change the type of that file in the table, or skip it. A diffusion image with a single volume is fine (it is stored as a reverse phase-encoding image for TOPUP) as long as its `.bval` and `.bvec` exist.

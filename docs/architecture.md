@@ -176,6 +176,15 @@ NIfTI files  ------ import nifti (copy, checks) ----------------^ (same organize
 BIDS dataset ------ import bids (copy, no conversion) ----------> rawbids/
 ```
 
+**One entry point in the web interface.** The chosen folder or archive is first looked at (`importing/inspect.py`, route `POST /imports/inspect`, nothing is read or copied) and routed:
+- *DICOM* (a folder, or one archive): as above.
+- *Several archives in one folder* (`importing/archives.py`): each archive is scanned as its own source (an archive may itself hold several studies); all scans are shown as one group; an unreadable archive is reported and does not stop the others.
+- *Loose NIfTI files* (`importing/nifti_scan.py`): a folder (or a `sub-XX` in the file names) is one subject and one scan. Each file is a "series" described from its sidecar and header; the same rule engine proposes a type, unsure files ask; fieldmaps from loose files are shown as skipped. Files are copied into `imports/import-NNN/converted/` at scan time (source kind `nifti`), `convert_import` only checks shapes and diffusion directions, and `organize` writes `rawbids/` as for DICOM.
+- *BIDS dataset*: checked with the validator and copied by `import_bids` as one finished import (no review table).
+- A folder that mixes kinds is explained, never guessed.
+
+A diffusion series with a single volume (a reverse phase-encoding b0 for TOPUP) is written to `fmap/..._dir-XX_epi` with `IntendedFor` (see DECISIONS.md 2026-11-06).
+
 - **Manifest** (`imports/import-NNN/manifest.json`): the scan result (series table, no patient information), the rules' classification, the user's overrides, the conversion records (command, tool version, file hashes) and what was written to `rawbids/`. It is the provenance of an import and can change; `rawbids/` itself never does.
 - **Rules** (`classification_rules.yaml`): plain-text clues grouped in families (name, image type, geometry, relation to other series); confidence counts how many families agree. Unknown or conflicting series are never imported until the user decides.
 - **Immutability of rawbids/**: files are read-only; nothing is overwritten or renamed; all checks run before the first file is written. Only exception: a fieldmap sidecar may gain `IntendedFor` entries when a run is added later.
