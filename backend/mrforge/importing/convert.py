@@ -281,8 +281,9 @@ def _check_copied(manifest: ImportManifest, plan: dict[str, Classification]) -> 
         problems: list[str] = []
         if kind in ("T1w", "T2w", "FLAIR") and volumes != 1:
             problems.append(f"a {kind} image should be one 3D volume, but it has {volumes}")
-        elif kind in ("bold", "dwi") and volumes < 2:
-            problems.append(f"a {kind} image needs several volumes, but it has one")
+        elif kind == "bold" and volumes < 2:
+            problems.append("a bold image needs several volumes, but it has one")
+        # a diffusion image may be a single b0 (the reverse phase-encoding image for TOPUP)
         image = conversion.images[0] if conversion and conversion.images else None
         if kind == "dwi" and image is not None and not (image.bval and image.bvec):
             problems.append("the b-value and b-vector files (.bval, .bvec) are missing")
