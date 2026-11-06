@@ -43,7 +43,10 @@ Every page: `PageHeader` (title + one plain sentence), then cards. The page titl
    (`ConfirmProcessDialog`, `UndoImportDialog`).
 10. Keyboard: everything reachable by Tab, visible focus ring (Radix default), buttons and
     links have text or an `aria-label`.
-11. Adding a function: one line in `nav.ts`, its page in `main.tsx`; for processing, a stage
+11. Tables of results (`DiffusionResultsTable`): numbers come from the recorded files, flags use an
+    amber badge with the reason in a tooltip, a researcher's decision uses the decision colours,
+    and an export states where the files were saved.
+12. Adding a function: one line in `nav.ts`, its page in `main.tsx`; for processing, a stage
     in `backend/mrforge/processing.py` (it then appears in the full-processing dialog).
 
 ## Not used
