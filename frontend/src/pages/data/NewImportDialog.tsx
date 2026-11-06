@@ -1,5 +1,5 @@
-import { Button, Code, Dialog, Flex, Text, TextField } from "@radix-ui/themes";
-import { useMutation } from "@tanstack/react-query";
+import { Button, Callout, Code, Dialog, Flex, Text, TextField } from "@radix-ui/themes";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { ApiError, call } from "../../api/call";
@@ -7,7 +7,8 @@ import { ErrorCallout } from "../../components/ErrorCallout";
 import { FolderPicker } from "../../components/FolderPicker";
 import { space, type } from "../../theme/tokens";
 
-/** Choose the scanner files and read them. The series table then appears for confirmation. */
+/** Choose what to import (scanner files, archives, NIfTI files, a BIDS dataset) and read it.
+ * The series table then appears for confirmation. */
 export function NewImportDialog({
   ws,
   disabled,
@@ -21,6 +22,20 @@ export function NewImportDialog({
   const [picker, setPicker] = useState(false);
   const [source, setSource] = useState<{ path: string; name: string } | null>(null);
   const [subject, setSubject] = useState("");
+  // What the chosen folder is, shown before anything is read ("Found 12 archives ...").
+  const looked = useQuery({
+    queryKey: ["inspect", ws, source?.path],
+    enabled: !!source,
+    retry: false,
+    queryFn: () =>
+      call(
+        api.POST("/api/workspaces/{ws_id}/imports/inspect", {
+          params: { path: { ws_id: ws } },
+          body: { source: source!.path },
+        }),
+      ),
+  });
+  const kind = looked.data?.kind;
   const scan = useMutation({
     mutationFn: () =>
       call(
@@ -44,10 +59,12 @@ export function NewImportDialog({
         </Button>
       </Dialog.Trigger>
       <Dialog.Content maxWidth="520px">
-        <Dialog.Title>Import scanner files</Dialog.Title>
+        <Dialog.Title>Import scans</Dialog.Title>
         <Dialog.Description size={type.help} color="gray">
-          MRForge reads the files, tells you what it found and asks only about what it cannot decide
-          itself. Your original files are copied into the workspace and never changed.
+          Choose a folder or archive with scanner files (DICOM), a folder with several archives,
+          NIfTI files (one folder per subject), or an existing BIDS dataset. MRForge looks at what it is, tells
+          you what it found and asks only about what it cannot decide itself. Your original files are copied
+          into the workspace and never changed.
         </Dialog.Description>
         <Flex direction="column" gap={space.group} mt="4">
           <Flex gap={space.group} align="center" wrap="wrap">
@@ -57,12 +74,20 @@ export function NewImportDialog({
             {source && <Code>{source.name}</Code>}
           </Flex>
           <FolderPicker open={picker} onOpenChange={setPicker} onPick={(path, name) => setSource({ path, name })} />
+          {looked.data && (
+            <Callout.Root color="gray" size="1">
+              <Callout.Text>{looked.data.summary}</Callout.Text>
+            </Callout.Root>
+          )}
+          {looked.error && <ErrorCallout error={(looked.error as ApiError).body} />}
+          {(kind === "dicom" || kind === undefined) && (
           <Flex direction="column" gap="1">
             <Text size={type.help} weight="medium">
               Subject label (optional)
             </Text>
             <TextField.Root placeholder="next free, e.g. sub-002" value={subject} onChange={(e) => setSubject(e.target.value)} />
           </Flex>
+          )}
           {scan.error && <ErrorCallout error={(scan.error as ApiError).body} />}
         </Flex>
         <Flex justify="end" gap={space.group} mt="4">
@@ -71,8 +96,8 @@ export function NewImportDialog({
               Cancel
             </Button>
           </Dialog.Close>
-          <Button disabled={!source || scan.isPending} onClick={() => scan.mutate()}>
-            Read scanner files
+          <Button disabled={!looked.data || scan.isPending} onClick={() => scan.mutate()}>
+            {kind === "bids" ? "Import dataset" : kind === "nifti" ? "Read NIfTI files" : kind === "archives" ? "Read all archives" : "Read scanner files"}
           </Button>
         </Flex>
       </Dialog.Content>

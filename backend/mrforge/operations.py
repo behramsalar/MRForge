@@ -27,10 +27,14 @@ from mrforge.analysis_ready import refresh as refresh_analysis_ready
 from mrforge.batch import run_batch
 from mrforge.engine import Action, run_pipeline, run_step
 from mrforge.errors import StepError
+from mrforge.importing.archives import scan_archives
 from mrforge.importing.bids_validate import format_report, validate_dataset
 from mrforge.importing.classify import effective_all, load_rules
 from mrforge.importing.convert import convert_import
+from mrforge.importing.existing import format_bids_import, import_bids
+from mrforge.importing.inspect import inspect_source
 from mrforge.importing.manifest import load_manifest, save_manifest
+from mrforge.importing.nifti_scan import scan_nifti_group
 from mrforge.importing.organize import organize
 from mrforge.importing.scan import scan_group
 from mrforge.importing.sourcedata import remove_dicom
@@ -51,19 +55,53 @@ ACTIVE = (JobStatus.QUEUED.value, JobStatus.RUNNING.value)
 
 
 def _scan(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
-    log("Reading the scanner files...")
-    manifests, is_new = scan_group(
-        ws, Path(args["source"]), args.get("subject"), args.get("session"), progress=log
-    )
-    if is_new and args.get("started_by"):
-        for manifest in manifests:
+    log("Looking at what you chose...")
+    source = Path(args["source"])
+    plan = inspect_source(source)
+    failures: list[tuple[str, str]] = []
+    if plan.kind == "archives":
+        log(plan.summary)
+        manifests, failures, is_new = scan_archives(ws, source, plan.archives, progress=log)
+    elif plan.kind == "nifti":
+        log(plan.summary)
+        manifests, is_new = scan_nifti_group(ws, source, plan.nifti, progress=log)
+    elif plan.kind == "bids":
+        # an existing dataset needs no review: it is checked, then copied (never overwriting)
+        log("Checking the BIDS dataset, then copying it into this workspace...")
+        done = import_bids(ws, source)
+        manifest = done.manifest
+        if done.is_new and args.get("started_by") and manifest.created_by is None:
             manifest.created_by = args["started_by"]
             save_manifest(ws, manifest)
+        return {
+            "import_id": manifest.id,
+            "import_ids": [manifest.id],
+            "group_size": 1,
+            "is_new": done.is_new,
+            "source_kind": "bids",
+            "failed_sources": [],
+            "subjects": done.summary.subjects,
+            "written": len(done.summary.written),
+            "in_place": len(done.summary.in_place),
+            "bids_report": format_bids_import(done),
+        }
+    else:
+        log("Reading the scanner files...")
+        manifests, is_new = scan_group(
+            ws, source, args.get("subject"), args.get("session"), progress=log
+        )
+    if is_new and args.get("started_by"):
+        for manifest in manifests:
+            if manifest.created_by is None:
+                manifest.created_by = args["started_by"]
+                save_manifest(ws, manifest)
     return {
         "import_id": manifests[0].id,  # the first (the only one for a single scan)
         "import_ids": [m.id for m in manifests],
         "group_size": len(manifests),
         "is_new": is_new,
+        "source_kind": plan.kind,
+        "failed_sources": [{"name": n, "error": e} for n, e in failures],
     }
 
 
@@ -115,7 +153,12 @@ def _import_run(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]
             code="CONVERSION_FAILED",
             message="Some series could not be converted: "
             + ", ".join(map(str, summary.failed))
-            + ". Nothing was written to rawbids/.",
+            + ". Nothing was written to rawbids/."
+            + "".join(
+                f" Series {s.number}: {'; '.join(c.problems)}."
+                for s in manifest.series
+                if (c := manifest.conversions.get(s.uid)) and c.problems
+            ),
             probable_cause="The scanner files of those series are incomplete or unusual.",
             suggested_action="Leave those series out (set them to skip) and import again; "
             "series that already converted are not converted twice.",
@@ -134,7 +177,7 @@ def _import_run(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]
     except StepError as err:  # the check is a bonus: its absence must not undo the import
         result["bids_ok"] = None
         result["bids_report"] = f"BIDS check skipped: {err.message} {err.suggested_action}"
-    if args.get("remove_dicom"):
+    if args.get("remove_dicom") and manifest.source.kind != "nifti":
         remove_dicom(ws, manifest, rules)
         result["dicom_removed"] = True
     return result

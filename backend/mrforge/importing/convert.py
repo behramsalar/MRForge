@@ -268,6 +268,35 @@ def is_up_to_date(ws: Workspace, conversion: Conversion | None, version: str) ->
     return bool(conversion.images)
 
 
+def _check_copied(manifest: ImportManifest, plan: dict[str, Classification]) -> ConvertSummary:
+    """Loose NIfTI files were copied when scanned. Check what the decisions now require:
+    the right number of volumes, and the direction files of a diffusion image."""
+    summary = ConvertSummary()
+    for s in manifest.series:
+        if plan[s.uid].action != "import":
+            continue
+        conversion = manifest.conversions.get(s.uid)
+        kind = plan[s.uid].kind
+        volumes = s.volumes or 1
+        problems: list[str] = []
+        if kind in ("T1w", "T2w", "FLAIR") and volumes != 1:
+            problems.append(f"a {kind} image should be one 3D volume, but it has {volumes}")
+        elif kind == "bold" and volumes < 2:
+            problems.append("a bold image needs several volumes, but it has one")
+        # a diffusion image may be a single b0 (the reverse phase-encoding image for TOPUP)
+        image = conversion.images[0] if conversion and conversion.images else None
+        if kind == "dwi" and image is not None and not (image.bval and image.bvec):
+            problems.append("the b-value and b-vector files (.bval, .bvec) are missing")
+        if problems and conversion is not None:
+            conversion.status = "failed"
+            conversion.problems = problems
+        if problems or conversion is None or conversion.status != "ok":
+            summary.failed.append(s.number or 0)
+        else:
+            summary.up_to_date.append(s.number or 0)
+    return summary
+
+
 def convert_import(
     ws: Workspace,
     manifest: ImportManifest,
@@ -279,6 +308,8 @@ def convert_import(
     """Convert every series whose decision is "import". Finished series are not converted
     again; one failing series does not stop the others. The manifest is saved as it goes."""
     say = progress or (lambda _msg: None)
+    if manifest.source.kind == "nifti":  # already NIfTI: nothing to convert, only to check
+        return _check_copied(manifest, effective_all(manifest, rules))
     exe = shutil.which("dcm2niix")
     if exe is None:
         raise StepError(
