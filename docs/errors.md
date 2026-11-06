@@ -442,3 +442,19 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 - **What happened:** The diffusion tensor file does not have the 6 volumes a fitted tensor has.
 - **Probable cause:** It was not made by the tensor fit of this app, or the transformation to the template went wrong.
 - **Suggested action:** Run the tensor fit again, then this step.
+
+## Diffusion: regions of interest and the ALPS index (Stage 9b/9f)
+
+### ROI_GRID_MISMATCH
+- **What happened:** The regions of interest are not on the same grid as the FA map or the tensor.
+- **Probable cause:** The ROIs are drawn on the 1 mm template, but the diffusion maps are in another space (native space, or another template).
+- **Suggested action:** Analyse in template space (the maps are registered to the template first), or choose native space, where the ROIs are moved to the subject.
+
+### ROI_EMPTY
+- **What happened:** One of the four regions has no voxels.
+- **Probable cause:** The image does not cover that region, or the registration to the template failed.
+- **Suggested action:** Check the registration picture, then try another registration setting.
+
+### ROI_NEED_FOUR / ROI_TEMPLATE_MISSING
+- **What happened:** Custom regions need exactly four files (projection left, projection right, association left, association right), or the template file you chose was not found.
+- **Suggested action:** Choose the files again.

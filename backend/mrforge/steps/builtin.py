@@ -1,6 +1,7 @@
 """Importing this module registers every built-in step."""
 
 from mrforge.steps import (  # noqa: F401
+    alps_index,
     alps_rois,
     aroma_classify,
     bet,
