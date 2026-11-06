@@ -54,7 +54,7 @@ def test_files_are_proposed_a_type_and_unsure_ones_ask(ws: Workspace, subject_fo
     assert found["t1_mprage"] == ("T1w", "import")
     assert found["resting_state_bold"] == ("bold", "import")
     assert found["mystery"][1] == "ask"
-    assert found["fmap"][1] == "skip"  # fieldmaps cannot come from loose files
+    assert found["fmap"][1] == "ask"  # a lone fieldmap file has no partner: the researcher decides
 
 
 def test_scanning_again_changes_nothing(ws: Workspace, subject_folder: Path) -> None:
@@ -174,3 +174,37 @@ def test_the_api_says_what_a_chosen_folder_is(
     empty.mkdir()
     bad = client.post(f"/api/workspaces/{ws_id}/imports/inspect", json={"source": str(empty)})
     assert bad.status_code == 400 and bad.json()["code"] == "IMPORT_SOURCE_EMPTY"
+
+
+def test_fieldmap_echoes_stay_together_and_are_written(ws: Workspace, tmp_path: Path) -> None:
+    root = tmp_path / "fm"
+    mag = ["ORIGINAL", "PRIMARY", "M", "NONE", "MAGNITUDE"]
+    base = {"SeriesDescription": "fmap"}
+    write(
+        root,
+        "m_e1",
+        (6, 6, 6),
+        {**base, "SeriesNumber": 4, "EchoNumber": 1, "EchoTime": 0.005, "ImageType": mag},
+    )
+    write(
+        root,
+        "m_e2",
+        (6, 6, 6),
+        {**base, "SeriesNumber": 4, "EchoNumber": 2, "EchoTime": 0.0074, "ImageType": mag},
+    )
+    write(root, "p_e2_ph", (6, 6, 6), {**base, "SeriesNumber": 5, "EchoNumber": 2, "EchoTime": 0.0074,
+                                       "ImageType": ["ORIGINAL", "PRIMARY", "P", "NONE", "PHASE"]})  # fmt: skip
+    write(root, "t1", (8, 8, 70), {"SeriesDescription": "t1_mprage", "SeriesNumber": 2})
+    _scan(ws, {"source": str(root)}, lambda _m: None)
+    manifest = load_manifest(ws)
+    kinds = {
+        s.number: c.kind
+        for s, c in zip(
+            manifest.series, effective_all(manifest, load_rules(ws)).values(), strict=True
+        )
+    }
+    assert kinds[4] == "fieldmap-magnitude" and kinds[5] == "fieldmap-phase"
+    _import_run(ws, {"import_id": manifest.id}, lambda _m: None)
+    fmap = ws.root / "rawbids" / "sub-001" / "fmap"
+    for name in ("magnitude1", "magnitude2", "phasediff"):
+        assert (fmap / f"sub-001_{name}.nii.gz").is_file()

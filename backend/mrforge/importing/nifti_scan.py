@@ -162,6 +162,31 @@ def scan_nifti_group(
     return manifests, True
 
 
+def _echo(f: NiftiFile) -> int:
+    value = f.sidecar.get("EchoNumber")
+    return int(value) if isinstance(value, int | float) else 0
+
+
+def _is_phase(f: NiftiFile) -> bool:
+    kinds = f.sidecar.get("ImageType")
+    return isinstance(kinds, list) and "P" in kinds
+
+
+def _series_groups(files: list[NiftiFile]) -> list[list[NiftiFile]]:
+    """Files of one scanner series stay together (dcm2niix writes one file per echo, for
+    example the two magnitude echoes of a fieldmap): same series number, description and size."""
+    groups: dict[tuple[object, ...], list[NiftiFile]] = {}
+    for f in files:
+        number = f.sidecar.get("SeriesNumber")
+        key: tuple[object, ...] = (
+            (number, f.sidecar.get("SeriesDescription"), tuple(f.shape))
+            if number is not None
+            else (str(f.path),)
+        )
+        groups.setdefault(key, []).append(f)
+    return [sorted(g, key=lambda f: (_echo(f), f.path.name)) for g in groups.values()]
+
+
 def _scan_one(
     ws: Workspace, folder: Path, g: NiftiFolder, fingerprint: str, taken: set[str], rules: Any
 ) -> ImportManifest:
@@ -177,29 +202,40 @@ def _scan_one(
     )
     used: set[int] = set()
     try:
-        for index, f in enumerate(inspected, start=1):
-            series, entities = _series_for(f, index, sha256_of(f.path), used)
+        for index, members in enumerate(_series_groups(inspected), start=1):
+            first = members[0]
+            digest = "".join(sha256_of(f.path)[:12] for f in members)
+            series, entities = _series_for(first, index, digest, used)
+            series.n_files = len(members)
             manifest.series.append(series)
             out = converted_dir(ws, manifest, series)
             shutil.rmtree(out, ignore_errors=True)
             out.mkdir(parents=True)
-            _copy_image(f.path, out / f"{index}.nii.gz")
-            sidecar = dict(f.sidecar)
-            try:
-                seconds, _note = _repetition_time(f, None) if len(f.shape) > 3 else (None, None)
-            except StepError as problem:
-                seconds = None
-                series.warnings.append(problem.message)
-            if seconds is not None and "RepetitionTime" not in sidecar:
-                sidecar["RepetitionTime"] = seconds
-                series.repetition_time_s = seconds
-            (out / f"{index}.json").write_text(json.dumps(sidecar, indent=2) + "\n")
-            if f.bval and f.bvec:
-                shutil.copyfile(f.bval, out / f"{index}.bval")
-                shutil.copyfile(f.bvec, out / f"{index}.bvec")
-            image = _read_image(ws, out, f"{index}.nii.gz")
+            images = []
+            for k, f in enumerate(members, start=1):
+                parts: list[str] = []
+                if len(members) > 1:
+                    parts.append(f"e{_echo(f) or k}")
+                if _is_phase(f):
+                    parts.append("ph")
+                stem = f"{index}" + ("_" + "_".join(parts) if parts else "")
+                _copy_image(f.path, out / f"{stem}.nii.gz")
+                sidecar = dict(f.sidecar)
+                try:
+                    seconds, _note = _repetition_time(f, None) if len(f.shape) > 3 else (None, None)
+                except StepError as problem:
+                    seconds = None
+                    series.warnings.append(problem.message)
+                if seconds is not None and "RepetitionTime" not in sidecar:
+                    sidecar["RepetitionTime"] = seconds
+                    series.repetition_time_s = seconds
+                (out / f"{stem}.json").write_text(json.dumps(sidecar, indent=2) + "\n")
+                if f.bval and f.bvec:
+                    shutil.copyfile(f.bval, out / f"{stem}.bval")
+                    shutil.copyfile(f.bvec, out / f"{stem}.bvec")
+                images.append(_read_image(ws, out, f"{stem}.nii.gz"))
             manifest.conversions[series.uid] = Conversion(
-                series_uid=series.uid, status="ok", images=[image], tool_version="copied"
+                series_uid=series.uid, status="ok", images=images, tool_version="copied"
             )
             valid = {k: v for k, v in entities.items() if ENTITY_VALUE.fullmatch(v)}
             if valid:
