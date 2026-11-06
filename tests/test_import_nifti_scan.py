@@ -116,3 +116,24 @@ def test_a_wrong_shape_stops_the_import_with_an_explanation(
     assert raised.value.code == "CONVERSION_FAILED"
     assert "Series 4" in raised.value.message
     assert not (ws.root / "rawbids" / "sub-001").exists()
+
+
+def test_a_single_diffusion_volume_is_written_as_a_reverse_phase_encoding_image(
+    ws: Workspace, tmp_path: Path
+) -> None:
+    root = tmp_path / "dti"
+    for name, shape, number, pe in (("ap", (6, 6, 6, 4), 11, "j-"), ("pa", (6, 6, 6), 10, "j")):
+        write(root, name, shape, {"SeriesDescription": f"dti_{name}", "SeriesNumber": number,
+                                  "PhaseEncodingDirection": pe, "ImageType": ["ORIGINAL", "PRIMARY", "DIFFUSION", "NONE"]})  # fmt: skip
+        (root / f"{name}.bval").write_text(
+            " ".join(["0"] + ["1000"] * (shape[-1] - 1 if len(shape) > 3 else 0))
+        )
+        n = shape[-1] if len(shape) > 3 else 1
+        (root / f"{name}.bvec").write_text("\n".join([" ".join(["0"] * n)] * 3))
+    _scan(ws, {"source": str(root)}, lambda _m: None)
+    manifest = load_manifest(ws)
+    _import_run(ws, {"import_id": manifest.id}, lambda _m: None)
+    sub = ws.root / "rawbids" / "sub-001"
+    assert (sub / "dwi" / "sub-001_dwi.nii.gz").is_file()  # no run number: only one real dwi
+    epi = sub / "fmap" / "sub-001_dir-PA_epi.json"
+    assert json.loads(epi.read_text())["IntendedFor"] == ["dwi/sub-001_dwi.nii.gz"]

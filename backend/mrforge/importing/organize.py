@@ -133,6 +133,14 @@ def _json_text(data: dict[str, Any]) -> str:
     return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
 
 
+# BIDS "dir" labels for the phase-encoding direction in a sidecar (j- = anterior to posterior)
+PE_DIR = {"i": "LR", "i-": "RL", "j": "PA", "j-": "AP", "k": "IS", "k-": "SI"}
+
+
+def _single_volume(shape: list[int]) -> bool:
+    return len(shape) < 4 or shape[3] == 1
+
+
 def build_plan(ws: Workspace, manifest: ImportManifest, rules: RuleSet) -> Plan:
     classes = effective_all(manifest, rules)
     chosen = [s for s in manifest.series if classes[s.uid].action == "import"]
@@ -158,11 +166,21 @@ def build_plan(ws: Workspace, manifest: ImportManifest, rules: RuleSet) -> Plan:
         """Path as BIDS writes it in IntendedFor: relative to the subject folder."""
         return f"{manifest.session + '/' if manifest.session else ''}{datatype}/{name}"
 
+    # a diffusion series that is a single volume is a reverse phase-encoding b0 (for TOPUP):
+    # BIDS keeps it in fmap/ as an "epi" image, not in dwi/
+    epi_uids = {
+        s.uid
+        for s in chosen
+        if classes[s.uid].datatype == "dwi"
+        and len(manifest.conversions[s.uid].images) == 1
+        and _single_volume(manifest.conversions[s.uid].images[0].shape)
+    }
+
     # -- run numbers: only when the same kind occurs more than once ---------------------
     groups: dict[tuple[str, ...], list[DicomSeries]] = {}
     for s in chosen:
         c = classes[s.uid]
-        if c.datatype in ("fmap", None):
+        if c.datatype in ("fmap", None) or s.uid in epi_uids:
             continue
         key = (
             c.datatype or "",
@@ -312,6 +330,44 @@ def build_plan(ws: Workspace, manifest: ImportManifest, rules: RuleSet) -> Plan:
             plan.notes.append(
                 f"Fieldmap series {mag.number}/{phase.number} is not assigned to any run."
             )
+
+    # -- single-volume diffusion images as fmap/..._dir-XX_epi --------------------------
+    dwi_paths = sorted(
+        inside_subject("dwi", names[s.uid] + ".nii.gz")
+        for s in chosen
+        if classes[s.uid].datatype == "dwi" and s.uid in names
+    )
+    epis = sorted((s for s in chosen if s.uid in epi_uids), key=lambda s: s.number or 0)
+    dir_counts: dict[str, int] = {}
+    for s in epis:
+        image = manifest.conversions[s.uid].images[0]
+        data = _sidecar(ws, image, remove)
+        direction = PE_DIR.get(str(data.get("PhaseEncodingDirection", "")))
+        if direction is None:
+            plan.notes.append(
+                f"Series {s.number} is a single diffusion volume, but its phase-encoding "
+                "direction is not known, so it was not written."
+            )
+            continue
+        dir_counts[direction] = dir_counts.get(direction, 0) + 1
+        ents = {**base_entities, "dir": direction}
+        if sum(1 for e in epis if e is not s) and dir_counts[direction] > 1:
+            ents["run"] = str(dir_counts[direction])
+        name = bids_name(ents, "epi", "")
+        data["IntendedFor"] = dwi_paths
+        plan.notes.append(
+            f"Series {s.number} is a single diffusion volume: written as a reverse "
+            f"phase-encoding image (fmap/{name}.nii.gz) for TOPUP."
+        )
+        plan.files.append(
+            PlannedFile(
+                s.uid, relpath("fmap", name + ".nii.gz"), "epi",
+                source=image.nifti, sha256=image.sha256[image.nifti],
+            )
+        )  # fmt: skip
+        plan.files.append(
+            PlannedFile(s.uid, relpath("fmap", name + ".json"), "epi.json", data=data)
+        )
 
     # -- write plans for anat, func and dwi ---------------------------------------------
     for s in chosen:
