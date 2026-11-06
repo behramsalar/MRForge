@@ -13,7 +13,10 @@ const toolName: Record<string, string> = {
   dcm2niix: "dcm2niix (DICOM conversion)",
   "bids-validator": "BIDS validator",
   "ica-aroma": "ICA-AROMA (optional: automatic component labelling)",
+  mrtrix3: "MRtrix3 (optional: denoising and ringing removal of diffusion data)",
 };
+
+const OPTIONAL_TOOLS = new Set(["ica-aroma", "mrtrix3"]);
 
 const PRESET_TEXT: Record<string, string> = {
   balanced: "Balanced: about half of the computer, so you can keep working.",
@@ -186,8 +189,8 @@ export function Settings() {
                             Found{version !== "installed" ? `, version ${version}` : ""}
                           </Badge>
                         ) : (
-                          <Badge color={key === "ica-aroma" ? "gray" : "red"} variant="soft">
-                            {key === "ica-aroma" ? "Not installed (optional)" : "Not found"}
+                          <Badge color={OPTIONAL_TOOLS.has(key) ? "gray" : "red"} variant="soft">
+                            {OPTIONAL_TOOLS.has(key) ? "Not installed (optional)" : "Not found"}
                           </Badge>
                         )}
                       </Table.Cell>

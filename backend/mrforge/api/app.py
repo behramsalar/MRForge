@@ -44,6 +44,7 @@ from mrforge.importing.scan import TAR_ENDINGS, set_labels
 from mrforge.importing.sourcedata import removal_plan
 from mrforge.importing.undo import undo_plan
 from mrforge.models import Job, JobStatus, Subject
+from mrforge.mrtrix_env import find_mrtrix
 from mrforge.niftiutil import image_info
 from mrforge.operations import (
     active_operation,
@@ -280,6 +281,8 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             tools["bids-validator"] = None
         aroma = find_aroma()
         tools["ica-aroma"] = aroma.version if aroma else None
+        mrtrix = find_mrtrix()
+        tools["mrtrix3"] = mrtrix.version if mrtrix else None
         free = total = None
         try:
             usage = shutil.disk_usage(root if root.is_dir() else root.parent)

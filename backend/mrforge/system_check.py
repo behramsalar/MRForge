@@ -110,6 +110,59 @@ def check_aroma() -> Check:
     )
 
 
+def check_mrtrix() -> Check:
+    from mrforge.mrtrix_env import find_mrtrix
+
+    found = find_mrtrix()
+    if found:
+        return Check("MRtrix3", PASS, f"{found.version} ({found.dwidenoise.parent})")
+    return Check(
+        "MRtrix3",
+        OPTIONAL,
+        "not found (optional; denoising and ringing removal of diffusion data are skipped "
+        "without it)",
+    )
+
+
+# Programs of the diffusion stage (besides the ones in FSL_BINARIES). One of the eddy programs
+# is enough; which one is used is a setting.
+DIFFUSION_BINARIES = [
+    "topup", "dtifit", "bet2", "fslroi", "fslmerge", "fslmaths", "fslstats", "fnirt",
+    "applywarp", "vecreg", "cluster",
+]  # fmt: skip
+EDDY_PROGRAMS = ["eddy_cpu", "eddy", "eddy_openmp", "eddy_cuda", "eddy_correct"]
+
+
+def check_fsl_diffusion(env: dict[str, str] | None = None) -> Check:
+    env = dict(os.environ) if env is None else env
+    fsldir = env.get("FSLDIR", "")
+    path = os.pathsep.join(
+        [str(Path(fsldir) / "share" / "fsl" / "bin"), str(Path(fsldir) / "bin")] if fsldir else []
+    )
+    path += os.pathsep + env.get("PATH", "")
+    missing = [n for n in DIFFUSION_BINARIES if shutil.which(n, path=path) is None]
+    eddies = [n for n in EDDY_PROGRAMS if shutil.which(n, path=path)]
+    if not eddies:
+        missing.append("eddy")
+    if missing:
+        return Check(
+            "FSL diffusion tools",
+            OPTIONAL,
+            "missing: " + ", ".join(missing) + " (needed for diffusion processing only)",
+        )
+    return Check("FSL diffusion tools", PASS, "topup, eddy (" + ", ".join(eddies) + "), dtifit")
+
+
+def check_fsl_diffusion_app() -> Check:
+    from mrforge.errors import StepError
+    from mrforge.fsl_env import find_fsl
+
+    try:
+        return check_fsl_diffusion(find_fsl().env)
+    except StepError:
+        return Check("FSL diffusion tools", OPTIONAL, "FSL was not found")
+
+
 def _ram_bytes() -> int | None:
     if sys.platform == "darwin":
         out = _run(["sysctl", "-n", "hw.memsize"])
@@ -140,6 +193,11 @@ FIXES = {
     "BIDS validator": "Install the BIDS validator (npm install -g bids-validator), or tell "
     "MRForge where it is with 'mrforge config bids-validator /path'.",
     "ICA-AROMA": "Optional. Run scripts/install_aroma.sh to install it.",
+    "MRtrix3": "Optional. Install MRtrix3 (https://www.mrtrix.org/download/) so that "
+    "diffusion data can be denoised and cleaned of ringing; without it those two steps are "
+    "skipped. If it is installed in an unusual place, set MRFORGE_MRTRIX to its bin folder.",
+    "FSL diffusion tools": "Optional. They come with a full FSL installation; update or "
+    "reinstall FSL if tools are missing.",
     "Python": f"MRForge needs Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]} or newer.",
 }
 
@@ -185,6 +243,8 @@ def run_checks(
         check_dcm2niix,
         check_validator_app if app_aware else check_bids_validator,
         check_aroma,
+        check_mrtrix,
+        check_fsl_diffusion_app if app_aware else check_fsl_diffusion,
         lambda: check_resources(path),
     ]
     results: list[Check] = []
