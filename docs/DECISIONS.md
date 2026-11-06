@@ -194,3 +194,8 @@ The user could not change an import once written (skipping a series or renaming 
 - Registration options of the script are ported exactly; default = the script's default (JHU-FA linear, tensor moved with flirt; REVIEW(domain): flirt does not rotate the tensor, `vecreg` does).
 - MRtrix3 (`dwidenoise`, `mrdegibbs`) is optional: when it is not installed those steps are skipped, the pipeline still runs, and the applied mode is recorded and shown in the exports.
 - ROIs (four 2.5 mm spheres and the older 5 mm set in JHU-ICBM-FA-1mm space, MIT licence) are packaged with the app.
+
+
+## 2026-11-06 — Stage 9g: the diffusion stage
+
+Decision: `DiffusionStage` (id `diffusion`) sits last in the stage registry, off by default (long run, needs a diffusion image), one step chain per diffusion series (denoise, unring, topup, eddy, dtifit, qc, to-template, ROIs, index). Topup is planned only when a field map of type epi or a second diffusion series has the opposite phase-encoding direction; otherwise the plan says "no distortion correction". Defaults follow `alps.sh` (linear JHU-FA, tensor moved with flirt: REVIEW(domain)). Eddy threads come from the Settings resource policy unless set.

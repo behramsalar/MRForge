@@ -41,6 +41,7 @@ export const WORKSPACE_NAV: NavItem[] = [
       { id: "func", label: "Preprocessing", section: "Functional" },
       { id: "ica", label: "Artifact rejection" },
       { id: "mni", label: "Standard space" },
+      { id: "dwi", label: "Diffusion (ALPS)", section: "Diffusion" },
     ],
   },
   { id: "viewer", label: "Viewer", icon: EyeOpenIcon },

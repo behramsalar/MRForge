@@ -251,10 +251,11 @@ def _stage_summaries(rows: list[SubjectOverview]) -> list[StageSummary]:
         "preprocessing",
         "artifact_rejection",
         "standard_space",
+        "diffusion",
     ):
         chips = [c for r in rows for c in r.stages if c.id == stage_id and c.state != "unavailable"]
         label = chips[0].label if chips else stage_id
-        if stage_id == "artifact_rejection":
+        if stage_id in ("artifact_rejection", "diffusion"):
             label += " (optional)"
         out.append(
             StageSummary(
@@ -333,7 +334,9 @@ def build_overview(ws: Workspace) -> Overview:
         pre = _stage_state(mine, ("feat_preproc", "func_qc"), also=("fieldmap_prep",))
         art = _stage_state(mine, ("melodic", "ica_labels", "regfilt"), also=("aroma_classify",))
         std = _stage_state(mine, ("func_to_mni",))
+        dwi = _stage_state(mine, ("alps_index",))
         has_func = bool(ready.runs)
+        has_dwi = any("/dwi/" in rel and rel.endswith(".nii.gz") for rel, _ in raw)
         chips = [
             StageChip(id="import", label="Import", state="done" if raw else "none"),
             StageChip(id="anatomical", label="Anatomical", state=anat.state, detail=anat.detail),
@@ -353,6 +356,12 @@ def build_overview(ws: Workspace) -> Overview:
                 id="standard_space",
                 label="Standard space",
                 state=std if has_func else "unavailable",
+            ),
+            StageChip(
+                id="diffusion",
+                label="Diffusion",
+                state=dwi if has_dwi else "unavailable",
+                detail=None if has_dwi else "No diffusion image",
             ),
         ]
         qc = _qc_summary(ws, sub.label)

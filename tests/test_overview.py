@@ -149,6 +149,7 @@ def test_the_overview_route(tmp_path: Path, monkeypatch) -> None:  # type: ignor
         "preprocessing",
         "artifact_rejection",
         "standard_space",
+        "diffusion",
     ]
     assert client.get("/api/workspaces/nothing/overview").status_code == 404
 
@@ -176,10 +177,11 @@ def chips(row) -> dict[str, str]:  # type: ignore[no-untyped-def]
     return {c.id: c.state for c in row.stages}
 
 
-def test_every_subject_has_the_same_five_stage_chips(tmp_path: Path) -> None:
+def test_every_subject_has_the_same_six_stage_chips(tmp_path: Path) -> None:
     row = subject(workspace(tmp_path))
     assert [c.id for c in row.stages] == [
         "import", "anatomical", "preprocessing", "artifact_rejection", "standard_space",
+        "diffusion",
     ]  # fmt: skip
     assert chips(row)["import"] == "none" or chips(row)["import"] == "done"
     assert not row.complete

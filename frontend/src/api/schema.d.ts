@@ -1221,6 +1221,24 @@ export interface components {
              *     }
              */
             artifact: components["schemas"]["ArtifactOptions"];
+            /**
+             * @default {
+             *       "denoise": true,
+             *       "unring": true,
+             *       "topup": true,
+             *       "second_is_opposite": false,
+             *       "eddy": "eddy_cpu",
+             *       "registration": "linear",
+             *       "structural": "none",
+             *       "template": "default",
+             *       "tensor_method": "flirt",
+             *       "roi_source": "default",
+             *       "roi_radius_mm": 2.5,
+             *       "custom_rois": [],
+             *       "round_like_script": false
+             *     }
+             */
+            diffusion: components["schemas"]["DiffusionOptions"];
             /** Preset */
             preset?: string | null;
         };
@@ -1275,6 +1293,84 @@ export interface components {
             groups: {
                 [key: string]: string[];
             };
+        };
+        /**
+         * DiffusionOptions
+         * @description The choices of the diffusion stage. Defaults are those of ``alps.sh`` unless noted.
+         */
+        DiffusionOptions: {
+            /**
+             * Denoise
+             * @default true
+             */
+            denoise: boolean;
+            /**
+             * Unring
+             * @default true
+             */
+            unring: boolean;
+            /**
+             * Topup
+             * @default true
+             */
+            topup: boolean;
+            /**
+             * Second Is Opposite
+             * @default false
+             */
+            second_is_opposite: boolean;
+            /**
+             * Eddy
+             * @default eddy_cpu
+             */
+            eddy: string;
+            /** Eddy Threads */
+            eddy_threads?: number | null;
+            /**
+             * Registration
+             * @default linear
+             * @enum {string}
+             */
+            registration: "native" | "linear" | "fnirt" | "linear_fnirt";
+            /**
+             * Structural
+             * @default none
+             * @enum {string}
+             */
+            structural: "none" | "t1" | "t2";
+            /**
+             * Template
+             * @default default
+             * @enum {string}
+             */
+            template: "default" | "jhu_fa" | "mni_t1" | "jhu_t2";
+            /**
+             * Tensor Method
+             * @default flirt
+             * @enum {string}
+             */
+            tensor_method: "flirt" | "vecreg";
+            /**
+             * Roi Source
+             * @default default
+             * @enum {string}
+             */
+            roi_source: "default" | "legacy5" | "sphere" | "custom";
+            /**
+             * Roi Radius Mm
+             * @default 2.5
+             */
+            roi_radius_mm: number;
+            /**
+             * Custom Rois
+             * @default []
+             */
+            custom_rois: string[];
+            /**
+             * Round Like Script
+             * @default false
+             */
+            round_like_script: boolean;
         };
         /**
          * ErrorBody
@@ -1371,6 +1467,24 @@ export interface components {
              *     }
              */
             artifact: components["schemas"]["ArtifactOptions"];
+            /**
+             * @default {
+             *       "denoise": true,
+             *       "unring": true,
+             *       "topup": true,
+             *       "second_is_opposite": false,
+             *       "eddy": "eddy_cpu",
+             *       "registration": "linear",
+             *       "structural": "none",
+             *       "template": "default",
+             *       "tensor_method": "flirt",
+             *       "roi_source": "default",
+             *       "roi_radius_mm": 2.5,
+             *       "custom_rois": [],
+             *       "round_like_script": false
+             *     }
+             */
+            diffusion: components["schemas"]["DiffusionOptions"];
         };
         /** FullPlan */
         FullPlan: {
@@ -1967,6 +2081,24 @@ export interface components {
              *     }
              */
             artifact: components["schemas"]["ArtifactOptions"];
+            /**
+             * @default {
+             *       "denoise": true,
+             *       "unring": true,
+             *       "topup": true,
+             *       "second_is_opposite": false,
+             *       "eddy": "eddy_cpu",
+             *       "registration": "linear",
+             *       "structural": "none",
+             *       "template": "default",
+             *       "tensor_method": "flirt",
+             *       "roi_source": "default",
+             *       "roi_radius_mm": 2.5,
+             *       "custom_rois": [],
+             *       "round_like_script": false
+             *     }
+             */
+            diffusion: components["schemas"]["DiffusionOptions"];
         };
         /** PresetOptions */
         "PresetOptions-Output": {
@@ -2003,6 +2135,24 @@ export interface components {
              *     }
              */
             artifact: components["schemas"]["ArtifactOptions"];
+            /**
+             * @default {
+             *       "denoise": true,
+             *       "unring": true,
+             *       "topup": true,
+             *       "second_is_opposite": false,
+             *       "eddy": "eddy_cpu",
+             *       "registration": "linear",
+             *       "structural": "none",
+             *       "template": "default",
+             *       "tensor_method": "flirt",
+             *       "roi_source": "default",
+             *       "roi_radius_mm": 2.5,
+             *       "custom_rois": [],
+             *       "round_like_script": false
+             *     }
+             */
+            diffusion: components["schemas"]["DiffusionOptions"];
         };
         /** PresetRequest */
         PresetRequest: {

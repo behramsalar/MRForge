@@ -7,7 +7,7 @@ import type { FullOptions, Preset, StagePlan } from "../api/types";
 import { space, type } from "../theme/tokens";
 import { ErrorCallout } from "./ErrorCallout";
 
-const STAGE_IDS = ["anatomical", "functional", "artifact_rejection", "standard_space"];
+const STAGE_IDS = ["anatomical", "functional", "artifact_rejection", "standard_space", "diffusion"];
 
 const DEFAULTS: FullOptions = {
   subject: "",
@@ -21,6 +21,22 @@ const DEFAULTS: FullOptions = {
     slice_timing: false,
   },
   artifact: { uncertain_as: "signal", aggressive: false, mode: "manual" },
+  diffusion: {
+    denoise: true,
+    unring: true,
+    topup: true,
+    second_is_opposite: false,
+    eddy: "eddy_cpu",
+    eddy_threads: null,
+    registration: "linear",
+    structural: "none",
+    template: "default",
+    tensor_method: "flirt",
+    roi_source: "default",
+    roi_radius_mm: 2.5,
+    custom_rois: [],
+    round_like_script: false,
+  },
 };
 
 function StageCard({
@@ -100,12 +116,12 @@ function StageCard({
  * left out and why, and a way to change the settings. Stages come from the plan, so a new
  * stage shows up here without changes to this dialog. */
 /** The choices without the subject, in a stable form, to see whether they still equal a preset. */
-function signature(o: Pick<FullOptions, "stages" | "anatomical" | "functional" | "artifact">): string {
+function signature(o: Pick<FullOptions, "stages" | "anatomical" | "functional" | "artifact" | "diffusion">): string {
   const sort = (v: unknown): unknown =>
     v && typeof v === "object" && !Array.isArray(v)
       ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([k, x]) => [k, sort(x)]))
       : v;
-  return JSON.stringify(sort({ s: o.stages ?? {}, a: o.anatomical, f: o.functional, r: o.artifact }));
+  return JSON.stringify(sort({ s: o.stages ?? {}, a: o.anatomical, f: o.functional, r: o.artifact, d: o.diffusion }));
 }
 
 export function ConfirmProcessDialog({
@@ -147,6 +163,7 @@ export function ConfirmProcessDialog({
       anatomical: x.options.anatomical,
       functional: x.options.functional,
       artifact: x.options.artifact,
+      diffusion: x.options.diffusion,
     });
   };
   const [saving, setSaving] = useState(false);
@@ -159,7 +176,7 @@ export function ConfirmProcessDialog({
           body: {
             name: presetNameInput,
             description: presetText,
-            options: { stages: opts.stages, anatomical: opts.anatomical, functional: opts.functional, artifact: opts.artifact },
+            options: { stages: opts.stages, anatomical: opts.anatomical, functional: opts.functional, artifact: opts.artifact, diffusion: opts.diffusion },
           },
         }),
       ),
@@ -178,7 +195,7 @@ export function ConfirmProcessDialog({
   });
   const request: FullOptions = { ...opts, subject, preset: presetName };
   const batch = subjects && subjects.length > 0 ? subjects : null;
-  const batchRequest = { subjects: batch ?? [], stages: opts.stages, anatomical: opts.anatomical, functional: opts.functional, artifact: opts.artifact, preset: presetName };
+  const batchRequest = { subjects: batch ?? [], stages: opts.stages, anatomical: opts.anatomical, functional: opts.functional, artifact: opts.artifact, diffusion: opts.diffusion, preset: presetName };
   const plan = useQuery({
     queryKey: ["ws", ws, "plan", batch ? JSON.stringify(batchRequest) : JSON.stringify(request)],
     enabled: open,
@@ -204,11 +221,15 @@ export function ConfirmProcessDialog({
   });
   const health = useQuery({ queryKey: ["health"], queryFn: () => call(api.GET("/api/health")) });
   const aromaInstalled = !!health.data?.tools["ica-aroma"];
+  const mrtrixInstalled = !!health.data?.tools["mrtrix3"];
   const f = opts.functional!;
   const setF = (change: Partial<NonNullable<FullOptions["functional"]>>) =>
     setOpts({ ...opts, functional: { ...f, ...change } });
   const a = opts.anatomical!;
   const r = opts.artifact!;
+  const d = opts.diffusion!;
+  const setD = (change: Partial<NonNullable<FullOptions["diffusion"]>>) =>
+    setOpts({ ...opts, diffusion: { ...d, ...change } });
   const functionalSettings = (
     <Flex direction="column" gap={space.group}>
               <Flex gap={space.group} wrap="wrap">
@@ -318,6 +339,128 @@ export function ConfirmProcessDialog({
                   </Text>
     </Flex>
   );
+  const diffusionSettings = (
+    <Flex direction="column" gap={space.group}>
+      <Text as="label" size={type.help}>
+        <Flex gap={space.inline} align="center">
+          <Switch checked={(d.denoise ?? true) && mrtrixInstalled} disabled={!mrtrixInstalled} onCheckedChange={(on) => setD({ denoise: on })} />
+          Remove noise (MRtrix3)
+        </Flex>
+      </Text>
+      <Text as="label" size={type.help}>
+        <Flex gap={space.inline} align="center">
+          <Switch checked={(d.unring ?? true) && mrtrixInstalled} disabled={!mrtrixInstalled} onCheckedChange={(on) => setD({ unring: on })} />
+          Remove Gibbs ringing (MRtrix3)
+        </Flex>
+      </Text>
+      {!mrtrixInstalled && (
+        <Text size={type.caption} color="gray">
+          MRtrix3 is not installed on this computer, so these two are skipped. The result says so.
+        </Text>
+      )}
+      <Text as="label" size={type.help}>
+        <Flex gap={space.inline} align="center">
+          <Switch checked={d.topup ?? true} onCheckedChange={(on) => setD({ topup: on })} />
+          Correct image distortion with TOPUP (where an image with the opposite phase-encoding direction exists)
+        </Flex>
+      </Text>
+      <Text as="label" size={type.help}>
+        <Flex gap={space.inline} align="center">
+          <Switch checked={d.second_is_opposite ?? false} onCheckedChange={(on) => setD({ second_is_opposite: on })} />
+          Philips: take the second image as the opposite direction
+        </Flex>
+      </Text>
+      <Flex gap={space.group} wrap="wrap">
+        <Flex direction="column" gap="1">
+          <Text size={type.help} weight="medium">
+            Eddy-current and motion correction
+          </Text>
+          <Select.Root value={d.eddy ?? "eddy_cpu"} onValueChange={(v) => setD({ eddy: v })}>
+            <Select.Trigger aria-label="Eddy program" />
+            <Select.Content>
+              <Select.Item value="eddy_cpu">eddy_cpu (recommended)</Select.Item>
+              <Select.Item value="eddy_correct">eddy_correct (older, simple)</Select.Item>
+              <Select.Item value="eddy_cuda">eddy_cuda (needs an NVIDIA card)</Select.Item>
+              <Select.Item value="none">None (flagged in the results)</Select.Item>
+            </Select.Content>
+          </Select.Root>
+        </Flex>
+        <Flex direction="column" gap="1">
+          <Text size={type.help} weight="medium">
+            Move the maps to
+          </Text>
+          <Select.Root value={d.registration ?? "linear"} onValueChange={(v) => setD({ registration: v as NonNullable<typeof d.registration> })}>
+            <Select.Trigger aria-label="Registration" />
+            <Select.Content>
+              <Select.Item value="linear">The JHU template, linear (script default)</Select.Item>
+              <Select.Item value="fnirt">The JHU template, non-linear</Select.Item>
+              <Select.Item value="linear_fnirt">The JHU template, linear then non-linear</Select.Item>
+              <Select.Item value="native">Nothing: measure in the person's own space</Select.Item>
+            </Select.Content>
+          </Select.Root>
+        </Flex>
+        <Flex direction="column" gap="1">
+          <Text size={type.help} weight="medium">
+            Through the person's
+          </Text>
+          <Select.Root value={d.structural ?? "none"} onValueChange={(v) => setD({ structural: v as NonNullable<typeof d.structural> })}>
+            <Select.Trigger aria-label="Structural image" />
+            <Select.Content>
+              <Select.Item value="none">No structural image</Select.Item>
+              <Select.Item value="t1">T1 image (to MNI)</Select.Item>
+              <Select.Item value="t2">T2 image (to the JHU T2 template)</Select.Item>
+            </Select.Content>
+          </Select.Root>
+        </Flex>
+      </Flex>
+      <Flex gap={space.group} wrap="wrap">
+        <Flex direction="column" gap="1">
+          <Text size={type.help} weight="medium">
+            Tensor moved with
+          </Text>
+          <Select.Root value={d.tensor_method ?? "flirt"} onValueChange={(v) => setD({ tensor_method: v as NonNullable<typeof d.tensor_method> })}>
+            <Select.Trigger aria-label="Tensor method" />
+            <Select.Content>
+              <Select.Item value="flirt">flirt (script default; does not rotate the tensor)</Select.Item>
+              <Select.Item value="vecreg">vecreg (rotates the tensor)</Select.Item>
+            </Select.Content>
+          </Select.Root>
+        </Flex>
+        <Flex direction="column" gap="1">
+          <Text size={type.help} weight="medium">
+            Regions
+          </Text>
+          <Select.Root value={d.roi_source ?? "default"} onValueChange={(v) => setD({ roi_source: v as NonNullable<typeof d.roi_source> })}>
+            <Select.Trigger aria-label="Regions" />
+            <Select.Content>
+              <Select.Item value="default">Packaged 2.5 mm spheres</Select.Item>
+              <Select.Item value="legacy5">Packaged 5 mm boxes (older)</Select.Item>
+              <Select.Item value="sphere">Spheres of my own radius</Select.Item>
+            </Select.Content>
+          </Select.Root>
+        </Flex>
+        {d.roi_source === "sphere" && (
+          <Flex direction="column" gap="1">
+            <Text size={type.help} weight="medium">
+              Radius (mm)
+            </Text>
+            <TextField.Root
+              type="number"
+              min="0.5"
+              max="20"
+              step="0.5"
+              value={String(d.roi_radius_mm ?? 2.5)}
+              onChange={(e) => setD({ roi_radius_mm: Math.min(20, Math.max(0.5, Number(e.target.value) || 2.5)) })}
+              style={{ width: 110 }}
+            />
+          </Flex>
+        )}
+      </Flex>
+      <Text size={type.caption} color="gray">
+        Eddy-current correction takes hours on a normal computer. Your own region files are available from the command line.
+      </Text>
+    </Flex>
+  );
   const anatomicalSettings = (
     <Flex direction="column" gap={space.group}>
               <Text as="label" size={type.help}>
@@ -353,6 +496,7 @@ export function ConfirmProcessDialog({
     anatomical: anatomicalSettings,
     functional: functionalSettings,
     artifact_rejection: artifactSettings,
+    diffusion: diffusionSettings,
   };
   const p = plan.data;
   return (
