@@ -1,6 +1,8 @@
 # Imaging data and workspaces: never committed
 *.nii
 *.nii.gz
+# the packaged ALPS ROIs are atlas masks (no patient data) and belong in the repository
+!backend/mrforge/data/alps_rois/**/*.nii.gz
 *.dcm
 *.zip
 workspaces/
