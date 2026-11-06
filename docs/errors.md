@@ -411,3 +411,23 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 ### NIFTI_WRONG_SHAPE / DWI_NEEDS_DIRECTIONS (shown as "CONVERSION_FAILED" in the web import)
 - **What happened:** A NIfTI file does not fit the type chosen for it (for example a T1 with many volumes, a BOLD image with one volume), or a diffusion image has no `.bval`/`.bvec` files next to it. Nothing was written to `rawbids/`.
 - **Suggested action:** Change the type of that file in the table, or skip it. A diffusion image with a single volume is fine (it is stored as a reverse phase-encoding image for TOPUP) as long as its `.bval` and `.bvec` exist.
+
+## Diffusion preparation (Stage 9c)
+
+### MRTRIX_MISSING
+- **What happened:** Denoising or ringing removal was asked for, but MRtrix3 (`dwidenoise`, `mrdegibbs`) is not installed.
+- **Probable cause:** MRtrix3 is not part of FSL; it is an optional extra.
+- **Suggested action:** Install MRtrix3 (Settings shows whether it is found), or leave these two steps out. In the full diffusion stage they are skipped automatically and the skip is recorded.
+
+### DWI_ENCODING_UNKNOWN
+- **What happened:** The metadata file (JSON) of a diffusion image does not give the phase-encoding direction or the total readout time.
+- **Probable cause:** The scanner or converter did not write them (Philips scanners need `PhaseEncodingAxis`; readout time is then assumed to be 0.1 s, as in the ALPS script).
+- **Suggested action:** Leave distortion correction (TOPUP) out, or add the missing values to the JSON file of the original import.
+
+### TOPUP_NOT_POSSIBLE
+- **What happened:** The two images do not fit TOPUP: their phase-encoding directions are not opposite, or one does not start with a b = 0 volume.
+- **Suggested action:** Leave distortion correction out, or import a reverse phase-encoding image. Two Philips images look alike (the axis has no sign); the option "second image is opposite" tells MRForge they are not.
+
+### TOPUP_CONFIG_MISSING
+- **What happened:** The image has an odd number of slices and FSL's `b02b0_1.cnf` was not found.
+- **Suggested action:** Check the FSL installation on the System page.

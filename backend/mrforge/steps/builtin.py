@@ -4,6 +4,8 @@ from mrforge.steps import (  # noqa: F401
     alps_rois,
     aroma_classify,
     bet,
+    dwi_mrtrix,
+    dwi_topup,
     fake,
     feat_preproc,
     fieldmap_prep,
