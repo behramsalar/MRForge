@@ -1,6 +1,6 @@
-import { Badge, Button, Callout, Checkbox, Dialog, Flex, RadioGroup, Select, Switch, Text, TextArea, TextField } from "@radix-ui/themes";
+import { Badge, Button, Callout, Card, Checkbox, Dialog, Flex, RadioGroup, Select, Switch, Text, TextArea, TextField } from "@radix-ui/themes";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { api } from "../api/client";
 import { ApiError, call } from "../api/call";
 import type { FullOptions, Preset, StagePlan } from "../api/types";
@@ -23,49 +23,76 @@ const DEFAULTS: FullOptions = {
   artifact: { uncertain_as: "signal", aggressive: false, mode: "manual" },
 };
 
-function StageBlock({
+function StageCard({
   stage,
   onToggle,
+  settings,
+  open,
+  onOpen,
 }: {
   stage: StagePlan;
   onToggle: (enabled: boolean) => void;
+  settings?: ReactNode;
+  open: boolean;
+  onOpen: (open: boolean) => void;
 }) {
+  const active = stage.enabled && stage.can_run;
+  const chips = active ? stage.items.flatMap((item) => item.settings.map((x) => `${x.name}: ${x.value}`)) : [];
   return (
-    <Flex direction="column" gap="2" style={{ opacity: stage.can_run ? 1 : 0.7 }}>
-      <Text as="label" size={type.body}>
-        <Flex gap={space.inline} align="center">
-          <Checkbox checked={stage.enabled && stage.can_run} disabled={!stage.can_run} onCheckedChange={(v) => onToggle(v === true)} />
-          <Text weight="bold">{stage.label}</Text>
+    <Card variant="surface" style={{ opacity: stage.can_run ? 1 : 0.7, flexShrink: 0 }}>
+      <Flex direction="column" gap="2">
+        <Flex align="center" gap={space.inline}>
+          <Text as="label" size={type.body}>
+            <Flex gap={space.inline} align="center">
+              <Checkbox checked={active} disabled={!stage.can_run} onCheckedChange={(v) => onToggle(v === true)} />
+              <Text weight="bold">{stage.label}</Text>
+            </Flex>
+          </Text>
           {stage.already_done && (
             <Badge color="green" variant="soft">
               Done earlier: not repeated if unchanged
             </Badge>
           )}
+          {settings && stage.can_run && (
+            <Button
+              size="1"
+              variant="ghost"
+              style={{ marginLeft: "auto" }}
+              aria-expanded={open}
+              onClick={() => onOpen(!open)}
+            >
+              {open ? "Hide settings" : "Edit settings"}
+            </Button>
+          )}
         </Flex>
-      </Text>
-      <Text size={type.help} color="gray" style={{ paddingLeft: 28 }}>
-        {stage.can_run ? stage.description : `Not possible: ${stage.reason}`}
-      </Text>
-      {stage.enabled && stage.can_run && (
-        <Flex direction="column" gap="2" style={{ paddingLeft: 28 }}>
-          {stage.items.map((item) => (
-            <Flex key={item.title} direction="column" gap="1">
-              <Text size={type.help} weight="medium">
-                {item.title}
-              </Text>
-              {item.note && (
-                <Text size={type.caption} color="orange">
+        <Text size={type.help} color="gray">
+          {stage.can_run ? stage.description : `Not possible: ${stage.reason}`}
+        </Text>
+        {active &&
+          stage.items.map(
+            (item) =>
+              item.note && (
+                <Text key={item.title} size={type.caption} color="orange">
                   {item.note}
                 </Text>
-              )}
-              <Text size={type.caption} color="gray">
-                {item.settings.map((s) => `${s.name}: ${s.value}`).join(" · ")}
-              </Text>
-            </Flex>
-          ))}
-        </Flex>
-      )}
-    </Flex>
+              ),
+          )}
+        {chips.length > 0 && (
+          <Flex gap="1" wrap="wrap">
+            {chips.map((c) => (
+              <Badge key={c} color="gray" variant="soft" size="1">
+                {c}
+              </Badge>
+            ))}
+          </Flex>
+        )}
+        {settings && stage.can_run && open && (
+          <Flex direction="column" gap={space.group} pt="2" style={{ borderTop: "1px solid var(--gray-a5)" }}>
+            {settings}
+          </Flex>
+        )}
+      </Flex>
+    </Card>
   );
 }
 
@@ -104,7 +131,7 @@ export function ConfirmProcessDialog({
     subject,
     stages: onlyStage ? Object.fromEntries(STAGE_IDS.map((id) => [id, id === onlyStage])) : {},
   });
-  const [showMore, setShowMore] = useState(false);
+  const [openCards, setOpenCards] = useState<Set<string>>(new Set());
   const presets = useQuery({ queryKey: ["presets"], queryFn: () => call(api.GET("/api/presets")), enabled: open });
   const [presetId, setPresetId] = useState<string>("custom");
   const chosenPreset = (presets.data ?? []).find((x) => x.id === presetId);
@@ -182,82 +209,8 @@ export function ConfirmProcessDialog({
     setOpts({ ...opts, functional: { ...f, ...change } });
   const a = opts.anatomical!;
   const r = opts.artifact!;
-  const artifactOn = opts.stages?.artifact_rejection === true;
-  const p = plan.data;
-  return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content maxWidth="640px">
-        <Dialog.Title>
-          {batch ? `Process ${batch.length} subjects` : onlyStage ? `Run one stage for ${subject}` : `Process ${subject}`}
-        </Dialog.Title>
-        <Dialog.Description size={type.help} color="gray">
-          MRForge will run these stages one after another{batch ? " for every subject, a few subjects at a time" : ""}. Work
-          that is already finished and unchanged is not repeated. You can close the page while it runs.
-        </Dialog.Description>
-        <Flex direction="column" gap={space.group} mt="4">
-          <Flex gap="2" align="end" wrap="wrap">
-            <Flex direction="column" gap="1" style={{ minWidth: 260 }}>
-              <Text size={type.help} weight="medium">
-                Settings
-              </Text>
-              <Select.Root value={presetName ? presetId : "custom"} onValueChange={applyPreset}>
-                <Select.Trigger aria-label="Preset" />
-                <Select.Content>
-                  <Select.Item value="custom">Custom (my own choices)</Select.Item>
-                  {(presets.data ?? []).map((x: Preset) => (
-                    <Select.Item key={x.id} value={x.id}>
-                      {x.name}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
-            </Flex>
-            <Button size="1" variant="soft" color="gray" onClick={() => setSaving(true)}>
-              Save these settings as a preset…
-            </Button>
-            {chosenPreset && !chosenPreset.builtin && (
-              <Button size="1" variant="ghost" color="red" onClick={() => removePreset.mutate(chosenPreset.id)}>
-                Delete this preset
-              </Button>
-            )}
-          </Flex>
-          {chosenPreset && presetName && (
-            <Text size={type.caption} color="gray">
-              {chosenPreset.description}
-            </Text>
-          )}
-          {plan.error && <ErrorCallout error={(plan.error as ApiError).body} />}
-          {p?.stages.map((st) => (
-            <StageBlock
-              key={st.id}
-              stage={st}
-              onToggle={(enabled) => setOpts({ ...opts, stages: { ...opts.stages, [st.id]: enabled } })}
-            />
-          ))}
-
-          {p?.batch && (
-            <Flex direction="column" gap="1">
-              <Text size={type.help} weight="medium">
-                Subjects ({p.batch.runnable} of {p.batch.subjects.length} can run)
-              </Text>
-              <div style={{ maxHeight: 150, overflow: "auto", border: "1px solid var(--gray-a5)", borderRadius: "var(--radius-2)", padding: "var(--space-2)" }}>
-                {p.batch.subjects.map((s) => (
-                  <Flex key={s.subject} justify="between" gap={space.group}>
-                    <Text size={type.help}>{s.subject}</Text>
-                    <Text size={type.caption} color={s.can_start ? "gray" : "orange"}>
-                      {s.can_start ? `${s.steps} steps planned` : `cannot run: ${s.reason}`}
-                    </Text>
-                  </Flex>
-                ))}
-              </div>
-            </Flex>
-          )}
-
-          <Button variant="ghost" size="1" style={{ alignSelf: "flex-start" }} onClick={() => setShowMore(!showMore)}>
-            {showMore ? "Hide settings" : "Change settings"}
-          </Button>
-          {showMore && (
-            <Flex direction="column" gap={space.group} style={{ paddingLeft: 4 }}>
+  const functionalSettings = (
+    <Flex direction="column" gap={space.group}>
               <Flex gap={space.group} wrap="wrap">
                 <Flex direction="column" gap="1">
                   <Text size={type.help} weight="medium">
@@ -319,8 +272,10 @@ export function ConfirmProcessDialog({
                   Slice timing correction (where the scan records it)
                 </Flex>
               </Text>
-              {artifactOn && (
-                <>
+    </Flex>
+  );
+  const artifactSettings = (
+    <Flex direction="column" gap={space.group}>
                   <Flex direction="column" gap="1">
                     <Text size={type.help} weight="medium">
                       Who labels the components?
@@ -361,8 +316,10 @@ export function ConfirmProcessDialog({
                       Aggressive removal (removes more; also signal shared with good components)
                     </Flex>
                   </Text>
-                </>
-              )}
+    </Flex>
+  );
+  const anatomicalSettings = (
+    <Flex direction="column" gap={space.group}>
               <Text as="label" size={type.help}>
                 <Flex gap={space.inline} align="center">
                   <Switch
@@ -390,8 +347,93 @@ export function ConfirmProcessDialog({
                   Resample the T1 to 1 mm voxels first (much faster for very high-resolution scans)
                 </Flex>
               </Text>
+    </Flex>
+  );
+  const settingsFor: Record<string, ReactNode> = {
+    anatomical: anatomicalSettings,
+    functional: functionalSettings,
+    artifact_rejection: artifactSettings,
+  };
+  const p = plan.data;
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Content maxWidth="640px">
+        <Dialog.Title>
+          {batch ? `Process ${batch.length} subjects` : onlyStage ? `Run one stage for ${subject}` : `Process ${subject}`}
+        </Dialog.Title>
+        <Dialog.Description size={type.help} color="gray">
+          MRForge will run these stages one after another{batch ? " for every subject, a few subjects at a time" : ""}. Work
+          that is already finished and unchanged is not repeated. You can close the page while it runs.
+        </Dialog.Description>
+        <Flex direction="column" gap={space.group} mt="4" style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: 4 }}>
+          <Flex gap="2" align="end" wrap="wrap">
+            <Flex direction="column" gap="1" style={{ minWidth: 260 }}>
+              <Text size={type.help} weight="medium">
+                Settings
+              </Text>
+              <Select.Root value={presetName ? presetId : "custom"} onValueChange={applyPreset}>
+                <Select.Trigger aria-label="Preset" />
+                <Select.Content>
+                  <Select.Item value="custom">Custom (my own choices)</Select.Item>
+                  {(presets.data ?? []).map((x: Preset) => (
+                    <Select.Item key={x.id} value={x.id}>
+                      {x.name}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </Flex>
+            <Button size="1" variant="soft" color="gray" onClick={() => setSaving(true)}>
+              Save these settings as a preset…
+            </Button>
+            {chosenPreset && !chosenPreset.builtin && (
+              <Button size="1" variant="ghost" color="red" onClick={() => removePreset.mutate(chosenPreset.id)}>
+                Delete this preset
+              </Button>
+            )}
+          </Flex>
+          {chosenPreset && presetName && (
+            <Text size={type.caption} color="gray">
+              {chosenPreset.description}
+            </Text>
+          )}
+          {plan.error && <ErrorCallout error={(plan.error as ApiError).body} />}
+          {p?.stages.map((st) => (
+            <StageCard
+              key={st.id}
+              stage={st}
+              onToggle={(enabled) => setOpts({ ...opts, stages: { ...opts.stages, [st.id]: enabled } })}
+              settings={settingsFor[st.id]}
+              open={openCards.has(st.id)}
+              onOpen={(on) =>
+                setOpenCards((prev) => {
+                  const next = new Set(prev);
+                  if (on) next.add(st.id);
+                  else next.delete(st.id);
+                  return next;
+                })
+              }
+            />
+          ))}
+
+          {p?.batch && (
+            <Flex direction="column" gap="1">
+              <Text size={type.help} weight="medium">
+                Subjects ({p.batch.runnable} of {p.batch.subjects.length} can run)
+              </Text>
+              <div style={{ maxHeight: 150, overflow: "auto", border: "1px solid var(--gray-a5)", borderRadius: "var(--radius-2)", padding: "var(--space-2)" }}>
+                {p.batch.subjects.map((s) => (
+                  <Flex key={s.subject} justify="between" gap={space.group}>
+                    <Text size={type.help}>{s.subject}</Text>
+                    <Text size={type.caption} color={s.can_start ? "gray" : "orange"}>
+                      {s.can_start ? `${s.steps} steps planned` : `cannot run: ${s.reason}`}
+                    </Text>
+                  </Flex>
+                ))}
+              </div>
             </Flex>
           )}
+
           {p && !p.can_start && (
             <Callout.Root color="amber">
               <Callout.Text>Nothing can run with these choices. Tick a stage that is possible.</Callout.Text>
@@ -420,7 +462,15 @@ export function ConfirmProcessDialog({
             </Flex>
           </Dialog.Content>
         </Dialog.Root>
-        <Flex justify="end" gap={space.group} mt="4">
+        <Flex justify="between" align="center" gap={space.group} mt="4">
+          <Text size={type.help} color="gray">
+            {p?.batch
+              ? `${p.batch.runnable} of ${p.batch.subjects.length} subjects can run`
+              : p?.can_start
+                ? `${p.steps} ${p.steps === 1 ? "step" : "steps"} will run`
+                : ""}
+          </Text>
+          <Flex gap={space.group}>
           <Dialog.Close>
             <Button variant="soft" color="gray">
               Cancel
@@ -429,6 +479,7 @@ export function ConfirmProcessDialog({
           <Button size="3" disabled={!p?.can_start || start.isPending} onClick={() => start.mutate()}>
             {batch ? `Start processing ${p?.batch?.runnable ?? batch.length} subjects` : "Start processing"}
           </Button>
+          </Flex>
         </Flex>
       </Dialog.Content>
     </Dialog.Root>
