@@ -1,3 +1,6 @@
+import { Flex } from "@radix-ui/themes";
+import { DiffusionResultsTable } from "../components/DiffusionResultsTable";
+import { space } from "../theme/tokens";
 import type { WorkspaceState } from "../api/types";
 import { AnatomicalPage } from "./AnatomicalPage";
 import { FullProcessingPage } from "./FullProcessingPage";
@@ -21,14 +24,17 @@ export function ProcessPage({ ws, tab, state }: { ws: string; tab?: string; stat
   }
   if (tab === "dwi") {
     return (
-      <StagePage
-        ws={ws}
-        state={state}
-        stage="diffusion"
-        title="Diffusion (ALPS)"
-        description="Corrects a subject's diffusion scan, fits the diffusion tensor and computes the ALPS index (diffusion along perivascular spaces). It does not need the anatomical or functional stages."
-        hint="Choose a subject with a diffusion scan."
-      />
+      <Flex direction="column" gap={space.section}>
+        <StagePage
+          ws={ws}
+          state={state}
+          stage="diffusion"
+          title="Diffusion (ALPS)"
+          description="Corrects a subject's diffusion scan, fits the diffusion tensor and computes the ALPS index (diffusion along perivascular spaces). It does not need the anatomical or functional stages."
+          hint="Choose a subject with a diffusion scan."
+        />
+        <DiffusionResultsTable ws={ws} />
+      </Flex>
     );
   }
   if (tab === "ica") return <ComponentReviewPage ws={ws} />;

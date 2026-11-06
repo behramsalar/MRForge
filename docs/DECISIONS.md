@@ -199,3 +199,8 @@ The user could not change an import once written (skipping a series or renaming 
 ## 2026-11-06 — Stage 9g: the diffusion stage
 
 Decision: `DiffusionStage` (id `diffusion`) sits last in the stage registry, off by default (long run, needs a diffusion image), one step chain per diffusion series (denoise, unring, topup, eddy, dtifit, qc, to-template, ROIs, index). Topup is planned only when a field map of type epi or a second diffusion series has the opposite phase-encoding direction; otherwise the plan says "no distortion correction". Defaults follow `alps.sh` (linear JHU-FA, tensor moved with flirt: REVIEW(domain)). Eddy threads come from the Settings resource policy unless set.
+
+
+## 2026-11-07 — Stage 9h: results table and export
+
+Decisions: (1) ROI means stay at full precision by default (user, 2026-11-07); `round_like_script` remains an option. The CSV writes full precision too. (2) The table is built only from the recorded `alps.json` (plus `dwi_qc` motion and the researcher's QC decision); nothing is recomputed. (3) Flags (notes, small ROIs, mean movement above 1 mm: REVIEW(domain) proposal) warn only; excluded subjects stay in the table and the export unless the researcher ticks "Leave out subjects I excluded", and the workbook then names who was left out. (4) Export files: `reports/alps/alps_results_<timestamp>.csv` and `.xlsx` (new dependency `openpyxl`, dev stubs `types-openpyxl`); sheets Summary, ROI diffusivities, FA & MD, Settings & versions, Flags & notes, About (citation, ROI origin, deterministic methods paragraph).
