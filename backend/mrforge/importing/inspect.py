@@ -9,7 +9,6 @@ guessed at.
 from __future__ import annotations
 
 import re
-import zipfile
 from pathlib import Path
 from typing import Literal
 
@@ -87,7 +86,7 @@ def inspect_source(src: Path) -> SourcePlan:
         low = path.name.lower()
         if low.endswith((".nii", ".nii.gz")):
             nifti.append(rel)
-        elif _is_archive_name(low) and (not low.endswith(".zip") or zipfile.is_zipfile(path)):
+        elif _is_archive_name(low):  # a damaged one is reported by name when it is read
             archives.append(str(rel))
         elif path.suffix.lower() not in NOT_IMAGES:
             others += 1
@@ -119,8 +118,11 @@ def inspect_source(src: Path) -> SourcePlan:
             f"{_plural(len(groups), 'subject', 'subjects')}.",
             nifti=[NiftiFolder(label=k, files=v) for k, v in groups.items()],
         )
-    if others and not archives and not nifti:
-        return SourcePlan(kind="dicom", name=src.name, summary="A folder with scanner files.")
+    if others:  # as before: a folder with scanner files is read as DICOM; strays are left out
+        summary = "A folder with scanner files."
+        if found[:-1]:
+            summary += f" Not imported: {', '.join(found[:-1])}."
+        return SourcePlan(kind="dicom", name=src.name, summary=summary)
     if not found:
         raise StepError(
             code="IMPORT_SOURCE_EMPTY",

@@ -27,9 +27,11 @@ from mrforge.analysis_ready import refresh as refresh_analysis_ready
 from mrforge.batch import run_batch
 from mrforge.engine import Action, run_pipeline, run_step
 from mrforge.errors import StepError
+from mrforge.importing.archives import scan_archives
 from mrforge.importing.bids_validate import format_report, validate_dataset
 from mrforge.importing.classify import effective_all, load_rules
 from mrforge.importing.convert import convert_import
+from mrforge.importing.inspect import inspect_source
 from mrforge.importing.manifest import load_manifest, save_manifest
 from mrforge.importing.organize import organize
 from mrforge.importing.scan import scan_group
@@ -51,19 +53,30 @@ ACTIVE = (JobStatus.QUEUED.value, JobStatus.RUNNING.value)
 
 
 def _scan(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
-    log("Reading the scanner files...")
-    manifests, is_new = scan_group(
-        ws, Path(args["source"]), args.get("subject"), args.get("session"), progress=log
-    )
+    log("Looking at what you chose...")
+    source = Path(args["source"])
+    plan = inspect_source(source)
+    failures: list[tuple[str, str]] = []
+    if plan.kind == "archives":
+        log(plan.summary)
+        manifests, failures, is_new = scan_archives(ws, source, plan.archives, progress=log)
+    else:
+        log("Reading the scanner files...")
+        manifests, is_new = scan_group(
+            ws, source, args.get("subject"), args.get("session"), progress=log
+        )
     if is_new and args.get("started_by"):
         for manifest in manifests:
-            manifest.created_by = args["started_by"]
-            save_manifest(ws, manifest)
+            if manifest.created_by is None:
+                manifest.created_by = args["started_by"]
+                save_manifest(ws, manifest)
     return {
         "import_id": manifests[0].id,  # the first (the only one for a single scan)
         "import_ids": [m.id for m in manifests],
         "group_size": len(manifests),
         "is_new": is_new,
+        "source_kind": plan.kind,
+        "failed_sources": [{"name": n, "error": e} for n, e in failures],
     }
 
 

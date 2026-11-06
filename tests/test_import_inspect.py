@@ -73,6 +73,14 @@ def test_a_bids_dataset(tmp_path: Path) -> None:
     assert inspect_source(tmp_path).kind == "bids"
 
 
+def test_a_dicom_folder_with_stray_files_is_still_dicom(tmp_path: Path) -> None:
+    for i in range(3):
+        touch(tmp_path / f"IM{i}")
+    make_zip(tmp_path / "backup.zip")
+    plan = inspect_source(tmp_path)
+    assert plan.kind == "dicom" and "Not imported: 1 archive" in plan.summary
+
+
 def test_mixed_kinds_are_explained_not_guessed(tmp_path: Path) -> None:
     make_zip(tmp_path / "s1.zip")
     touch(tmp_path / "t1.nii.gz")
