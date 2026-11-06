@@ -31,6 +31,7 @@ from mrforge.importing.archives import scan_archives
 from mrforge.importing.bids_validate import format_report, validate_dataset
 from mrforge.importing.classify import effective_all, load_rules
 from mrforge.importing.convert import convert_import
+from mrforge.importing.existing import format_bids_import, import_bids
 from mrforge.importing.inspect import inspect_source
 from mrforge.importing.manifest import load_manifest, save_manifest
 from mrforge.importing.nifti_scan import scan_nifti_group
@@ -65,11 +66,25 @@ def _scan(ws: Workspace, args: dict[str, Any], log: Log) -> dict[str, Any]:
         log(plan.summary)
         manifests, is_new = scan_nifti_group(ws, source, plan.nifti, progress=log)
     elif plan.kind == "bids":
-        raise StepError(
-            code="IMPORT_BIDS_LATER",
-            message="Importing a BIDS dataset from this screen is not ready yet.",
-            suggested_action="Use 'mrforge import bids <folder>' for now.",
-        )
+        # an existing dataset needs no review: it is checked, then copied (never overwriting)
+        log("Checking the BIDS dataset, then copying it into this workspace...")
+        done = import_bids(ws, source)
+        manifest = done.manifest
+        if done.is_new and args.get("started_by") and manifest.created_by is None:
+            manifest.created_by = args["started_by"]
+            save_manifest(ws, manifest)
+        return {
+            "import_id": manifest.id,
+            "import_ids": [manifest.id],
+            "group_size": 1,
+            "is_new": done.is_new,
+            "source_kind": "bids",
+            "failed_sources": [],
+            "subjects": done.summary.subjects,
+            "written": len(done.summary.written),
+            "in_place": len(done.summary.in_place),
+            "bids_report": format_bids_import(done),
+        }
     else:
         log("Reading the scanner files...")
         manifests, is_new = scan_group(

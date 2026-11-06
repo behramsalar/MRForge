@@ -137,3 +137,17 @@ def test_a_single_diffusion_volume_is_written_as_a_reverse_phase_encoding_image(
     assert (sub / "dwi" / "sub-001_dwi.nii.gz").is_file()  # no run number: only one real dwi
     epi = sub / "fmap" / "sub-001_dir-PA_epi.json"
     assert json.loads(epi.read_text())["IntendedFor"] == ["dwi/sub-001_dwi.nii.gz"]
+
+
+def test_a_bids_dataset_is_imported_from_the_same_entry_point(
+    ws: Workspace, tmp_path: Path
+) -> None:
+    from test_import_existing import build_source
+
+    source = build_source(tmp_path / "bidssrc", load_rules())
+    result = _scan(ws, {"source": str(source)}, lambda _m: None)
+    assert result["source_kind"] == "bids" and result["is_new"]
+    assert result["subjects"] == ["sub-001", "sub-002"]
+    assert (ws.root / "rawbids" / "sub-002" / "func").is_dir()
+    again = _scan(ws, {"source": str(source)}, lambda _m: None)
+    assert not again["is_new"] and again["import_id"] == result["import_id"]
