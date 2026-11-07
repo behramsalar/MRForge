@@ -220,7 +220,7 @@ def test_diffusion_steps_without_a_recording_name_are_matched_by_order(tmp_path:
         "name": "full-sub-001",
         "subject": "sub-001",
         "steps": [
-            {"id": f"dwi_eddy__dwi", "label": "dwi_eddy", "step": "dwi_eddy", "inputs": {"dwi": "d"}},
+            {"id": "dwi_eddy__dwi", "label": "dwi_eddy", "step": "dwi_eddy", "inputs": {"dwi": "d"}},
             *[
                 {"id": f"{n}__dwi", "label": n, "step": n, "inputs": {"dwi": "d"}}
                 for n in names
