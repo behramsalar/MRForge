@@ -63,6 +63,7 @@ export function DiffusionResultsTable({ ws }: { ws: string }) {
             <Table.Header>
               <Table.Row>
                 <Table.ColumnHeaderCell>Subject</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Regions</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>ALPS</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Left</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Right</Table.ColumnHeaderCell>
@@ -80,6 +81,9 @@ export function DiffusionResultsTable({ ws }: { ws: string }) {
                     {r.session ? ` ${r.session}` : ""}
                     {r.series ? ` (${r.series})` : ""}
                   </Table.RowHeaderCell>
+                  <Table.Cell>
+                    <Text size={type.help}>{r.regions}</Text>
+                  </Table.Cell>
                   <Table.Cell>
                     <Text weight="bold">{r.alps.toFixed(3)}</Text>
                   </Table.Cell>

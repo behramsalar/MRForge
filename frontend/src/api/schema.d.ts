@@ -1185,6 +1185,8 @@ export interface components {
             session: string | null;
             /** Series */
             series: string;
+            /** Regions */
+            regions: string;
             /** Record */
             record: string;
             /** Scanner */

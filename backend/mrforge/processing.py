@@ -37,6 +37,7 @@ from mrforge.pipeline import PipelineSpec, PipelineStep
 from mrforge.results import existing_cleaned, existing_functional
 from mrforge.resume import check_reusable
 from mrforge.runner.jobs import build_context
+from mrforge.steps.alps_rois import regions_tag, regions_text
 from mrforge.steps.dwi_to_template import DwiToTemplateParams, resolve_template
 from mrforge.steps.melodic import MIN_VOLUMES
 from mrforge.steps.resample_t1 import needs_resampling
@@ -806,12 +807,7 @@ class DiffusionStage(Stage):
                 "linear_fnirt": "linear then non-linear",
             }.get(o.registration, "")
         )
-        rois = {
-            "default": "packaged 2.5 mm spheres",
-            "legacy5": "packaged 5 mm boxes (older)",
-            "sphere": f"spheres of {o.roi_radius_mm:g} mm radius",
-            "custom": "your own four files",
-        }[o.roi_source]
+        rois = regions_text(o.roi_source, o.roi_radius_mm)
         settings = [
             PlanSetting(name="Noise removal", value="yes" if denoise else "no"),
             PlanSetting(name="Ringing removal", value="yes" if unring else "no"),
@@ -853,10 +849,15 @@ class DiffusionStage(Stage):
         cur = run.relpath
         done: list[str] = []
 
+        tag = regions_tag(o.roi_source, o.roi_radius_mm)
+
         def add(step: str, inputs: dict[str, Any], params: dict[str, Any] | None = None) -> str:
             sid = f"{step}__{slug}"
+            # Each set of regions keeps its own results and its own run record: the two steps
+            # that depend on the regions carry the set's tag in their label.
+            label = f"{step}_{tag}" if tag and step in ("alps_rois", "alps_index") else step
             steps.append(
-                PipelineStep(id=sid, label=step, step=step, inputs=inputs, params=params or {})
+                PipelineStep(id=sid, label=label, step=step, inputs=inputs, params=params or {})
             )
             return sid
 
@@ -954,7 +955,7 @@ class DiffusionStage(Stage):
             if roi_params["space"] == "template"
             else "native",
             "tensor transform": o.tensor_method if o.registration != "native" else "none",
-            "regions": o.roi_source,
+            "regions": regions_text(o.roi_source, o.roi_radius_mm),
         }
         add(
             "alps_index",

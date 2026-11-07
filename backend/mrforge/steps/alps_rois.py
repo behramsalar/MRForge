@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 from importlib import metadata
 from pathlib import Path
@@ -56,6 +57,35 @@ TEMPLATES = {  # key -> (file under FSLDIR, name used in result names)
     "jhu_t2": ("data/atlases/JHU/JHU-ICBM-T2-1mm.nii.gz", "JHUT21mm"),
 }
 JHU_FA = TEMPLATES["jhu_fa"][0]
+
+
+def regions_tag(source: str, radius_mm: float = 2.5) -> str:
+    """A short name for a set of regions, used in the labels of the two steps that depend on it
+    so that every set keeps its own results. The packaged 2.5 mm spheres have no tag (their
+    result names are the same as before region sets could be told apart)."""
+    if source == "legacy5":
+        return "legacy5"
+    if source == "sphere":
+        return "sphere" + f"{radius_mm:g}".replace(".", "p")
+    if source == "custom":
+        return "custom"
+    return ""
+
+
+def regions_text(source: str, radius_mm: float = 2.5) -> str:
+    """The set of regions in plain language (plan, results table, export)."""
+    return {
+        "default": "packaged 2.5 mm spheres",
+        "legacy5": "packaged 5 mm boxes (older)",
+        "sphere": f"spheres of {radius_mm:g} mm radius",
+        "custom": "your own four files",
+    }.get(source, source)
+
+
+def tagged_desc(step_name: str, label: str, base: str) -> str:
+    """``desc-`` value of a result: ``base`` plus the region-set tag carried by the step label
+    (``alps_rois_legacy5`` -> ``legacy5``)."""
+    return base + re.sub(r"[^A-Za-z0-9]", "", label.removeprefix(step_name))
 
 
 class AlpsRoisInput(BaseModel):
@@ -117,6 +147,9 @@ class AlpsRoisStep(Step[AlpsRoisInput, AlpsRoisParams, AlpsRoisOutput]):
     InputSpec, ParamSpec, OutputSpec = AlpsRoisInput, AlpsRoisParams, AlpsRoisOutput
     requires_fsl = True
     datatype = "dwi"
+
+    def desc(self, ctx: StepContext[AlpsRoisInput, AlpsRoisParams], base: str) -> str:
+        return tagged_desc(self.name, ctx.label, base)
 
     def expected_outputs(self, ctx: StepContext[AlpsRoisInput, AlpsRoisParams]) -> AlpsRoisOutput:
         space = space_label(ctx.params)

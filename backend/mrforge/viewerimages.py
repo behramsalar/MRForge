@@ -132,7 +132,9 @@ def _describe_diffusion(suffix: str, desc: str, space: str | None, rec: str) -> 
     if suffix == "MD":
         return Described(DWI, f"Mean diffusivity (MD){where}{rec}", "underlay", "gray", 11)
     if suffix == "dseg" and desc.startswith("ALPSrois"):
-        return Described(DWI, f"ALPS regions{where}{rec}", "overlay", "winter", 20)
+        tag = desc.removeprefix("ALPSrois")  # the set of regions ("legacy5", "sphere3p5", ...)
+        sets = f" ({tag})" if tag else ""
+        return Described(DWI, f"ALPS regions{sets}{where}{rec}", "overlay", "winter", 20)
     if suffix == "mask" and desc.startswith(("dtimask", "eddy", "topup")):
         return Described(DWI, f"Brain mask (diffusion){rec}", "overlay", "red", 21)
     if suffix == "dwi" and desc.startswith("eddy"):

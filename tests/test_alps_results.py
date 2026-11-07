@@ -40,14 +40,16 @@ def record(alps: float, notes: list[str] | None = None) -> dict:
 
 
 def put(ws: Workspace, subject: str, alps: float, *, session: str | None = None,
-        series: str = "", notes: list[str] | None = None, movement: float | None = None) -> None:  # fmt: skip
+        run: str | None = None, tag: str = "", regions: str = "packaged 2.5 mm spheres",
+        notes: list[str] | None = None, movement: float | None = None) -> None:  # fmt: skip
     folder = ws.derivatives_dir / subject / (session or "") / "dwi"
     folder.mkdir(parents=True, exist_ok=True)
-    tag = f"alpsalpsindex{series}" if series else "alps"
-    (folder / f"{subject}_desc-{tag}_alps.json").write_text(json.dumps(record(alps, notes)))
+    stem = f"{subject}_run-{run}" if run else subject
+    data = record(alps, notes)
+    data["settings"] = {**SETTINGS, "regions": regions}
+    (folder / f"{stem}_desc-alps{tag}_alps.json").write_text(json.dumps(data))
     if movement is not None:
-        mtag = f"dwimetricsdwiqc{series}" if series else "dwimetrics"
-        (folder / f"{subject}_desc-{mtag}_qc.json").write_text(
+        (folder / f"{stem}_desc-dwimetrics_qc.json").write_text(
             json.dumps({"mean_rms_previous_mm": movement})
         )
 
@@ -59,19 +61,41 @@ def ws(tmp_path: Path) -> Workspace:
 
 def test_one_row_per_series_with_numbers_straight_from_the_record(ws: Workspace) -> None:
     put(ws, "sub-002", 1.5)
-    put(ws, "sub-001", 1.2, session="ses-01", series="run1")
-    put(ws, "sub-001", 1.3, session="ses-01", series="run2")
+    put(ws, "sub-001", 1.2, session="ses-01", run="1")
+    put(ws, "sub-001", 1.3, session="ses-01", run="2")
     rows = alps_results.collect(ws)
     assert [(r.subject, r.session, r.series) for r in rows] == [
-        ("sub-001", "ses-01", "run1"),
-        ("sub-001", "ses-01", "run2"),
+        ("sub-001", "ses-01", "run-1"),
+        ("sub-001", "ses-01", "run-2"),
         ("sub-002", None, ""),
     ]
     assert rows[0].alps == 1.2 and rows[0].fa == 0.5 and rows[0].md == 0.0007 / 2 + 0.25
 
 
+def test_two_sets_of_regions_for_one_series_are_two_rows_with_the_right_motion(
+    ws: Workspace,
+) -> None:
+    put(ws, "sub-001", 1.5, movement=0.4)
+    put(ws, "sub-001", 1.1, tag="legacy5", regions="packaged 5 mm boxes (older)", movement=0.4)
+    by = {r.regions: r for r in alps_results.collect(ws)}
+    assert len(by) == 2
+    assert (
+        by["packaged 2.5 mm spheres"].alps == 1.5 and by["packaged 5 mm boxes (older)"].alps == 1.1
+    )
+    assert all(r.mean_movement_mm == 0.4 for r in by.values())  # both see the same series' motion
+    (_, xlsx) = alps_results.export(ws)
+    summary = list(load_workbook(xlsx)["Summary"].iter_rows(values_only=True))
+    assert summary[0][3] == "regions" and {r[3] for r in summary[1:]} == set(by)
+
+
+def test_results_made_before_region_sets_existed_get_a_readable_name(ws: Workspace) -> None:
+    put(ws, "sub-001", 1.5, regions="default")  # what the first version of the step recorded
+    (row,) = alps_results.collect(ws)
+    assert row.regions == "packaged 2.5 mm spheres"
+
+
 def test_flags_warn_and_never_exclude(ws: Workspace) -> None:
-    put(ws, "sub-001", 1.0, notes=["no distortion correction"], movement=2.5, series="a")
+    put(ws, "sub-001", 1.0, notes=["no distortion correction"], movement=2.5, run="1")
     put(ws, "sub-002", 1.0, movement=0.3)
     flagged, clean = alps_results.collect(ws)
     assert (
@@ -103,7 +127,7 @@ def test_export_writes_csv_and_a_workbook_that_reads_back_equal(ws: Workspace) -
         "Summary", "ROI diffusivities", "FA & MD", "Settings & versions", "Flags & notes", "About",
     ]  # fmt: skip
     summary = list(wb["Summary"].iter_rows(values_only=True))
-    assert summary[0][3] == "ALPS" and summary[1][3] == 1.23456789012  # a number, not text
+    assert summary[0][4] == "ALPS" and summary[1][4] == 1.23456789012  # a number, not text
     flags = [r for r in wb["Flags & notes"].iter_rows(min_row=2, values_only=True)]
     assert any("MRtrix3" in str(r[-1]) for r in flags)
     about = {r[0]: r[1] for r in wb["About"].iter_rows(min_row=2, values_only=True)}

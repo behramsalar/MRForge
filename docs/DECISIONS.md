@@ -209,3 +209,8 @@ Decisions: (1) ROI means stay at full precision by default (user, 2026-11-07); `
 ## 2026-11-07 — Stage 9i: no TOPUP without eddy (found by the end-to-end comparison)
 
 Decision: with eddy-current correction off, the diffusion stage does not run TOPUP and fits the tensor on the unwarped data with a mask made from the raw first b0 (`bet2`), exactly as `alps.sh -e 0` does (it prints "NO TOPUP, NO eddy correction"). The plan says so ("TOPUP is applied through eddy-current correction"). Why: the first end-to-end comparison on real data gave a 0.9 % different ALPS because MRForge used the TOPUP mask; after the change FA and tensor are identical to the script's.
+
+
+## 2026-11-07 — Region sets are kept side by side
+
+Decision (user): recalculating the ALPS index with other regions (older 5 mm set, a sphere radius, custom files) must not redo the earlier steps and must not replace the earlier result. Implementation: the tag of the region set goes into the labels of `alps_rois` and `alps_index` only, so those two steps get their own result names, run folders and resume records; the default 2.5 mm set keeps its old names. The results table and the CSV/Excel export gain a "regions" column and one row per series and set. Checked on real data: after a full run, a rerun with the older set ran only those two steps (jobs 11 and 12), and both results stayed (ALPS 1.582 with the packaged spheres, 1.424 with the older 5 mm set on the test subject). Limit: two different custom file sets share the tag "custom" and would replace each other.

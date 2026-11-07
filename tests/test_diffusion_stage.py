@@ -286,3 +286,31 @@ def test_in_a_batch_the_structural_route_skips_only_subjects_without_the_anatomi
     assert lines["sub-002"].can_start and len(specs) == 1
     default, _ = plan_batch(ws, BatchOptions(subjects=["sub-001", "sub-002"], stages=only))
     assert default.runnable == 2  # the default route needs no anatomical image
+
+
+def test_each_set_of_regions_has_its_own_labels_so_its_results_are_kept(ws: Workspace) -> None:
+    from mrforge.steps.alps_rois import tagged_desc
+
+    put_dwi(ws, "sub-001_dwi", AP)
+
+    def labels(**options: object) -> dict[str, str]:
+        _, spec = plan(ws, **options)
+        assert spec is not None
+        return {s.step: s.label or s.step for s in spec.steps}
+
+    default = labels()
+    assert default["alps_rois"] == "alps_rois" and default["alps_index"] == "alps_index"
+    legacy = labels(roi_source="legacy5")
+    assert (
+        legacy["alps_rois"] == "alps_rois_legacy5" and legacy["alps_index"] == "alps_index_legacy5"
+    )
+    assert legacy["dwi_eddy"] == "dwi_eddy"  # everything before the regions is shared
+    assert labels(roi_source="sphere", roi_radius_mm=3.5)["alps_index"] == "alps_index_sphere3p5"
+    assert tagged_desc("alps_index", "alps_index", "alps") == "alps"  # packaged set: as before
+    assert tagged_desc("alps_index", "alps_index_legacy5", "alps") == "alpslegacy5"
+    settings = {
+        k: next(s for s in plan(ws, roi_source=k)[1].steps if s.step == "alps_index")  # type: ignore[union-attr]
+        for k in ("default", "legacy5")
+    }
+    assert settings["default"].params["settings"]["regions"] == "packaged 2.5 mm spheres"
+    assert settings["legacy5"].params["settings"]["regions"] == "packaged 5 mm boxes (older)"
