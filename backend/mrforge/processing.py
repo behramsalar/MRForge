@@ -775,9 +775,15 @@ class DiffusionStage(Stage):
     ) -> tuple[PlanItem, list[str]]:
         o = ctx.opts.diffusion
         notes: list[str] = []
-        use_topup = o.topup and run.reverse is not None
+        # As in alps.sh: without eddy the TOPUP result is never applied to the data ("NO TOPUP, NO
+        # eddy correction"), so TOPUP is only run together with an eddy program.
+        use_topup = o.topup and run.reverse is not None and o.eddy != "none"
         if o.topup and run.reverse is None:
             notes.append(f"No distortion correction: {run.topup_note}.")
+        elif o.topup and o.eddy == "none":
+            notes.append(
+                "No distortion correction: TOPUP is applied through eddy-current correction."
+            )
         if (o.denoise or o.unring) and not have_mrtrix:
             notes.append("No noise or ringing removal: MRtrix3 is not installed.")
         if o.eddy == "none":
@@ -861,7 +867,7 @@ class DiffusionStage(Stage):
             cur = f"${{{add('dwi_unring', {'dwi': cur})}.dwi}}"
             done.append("Gibbs ringing removed")
         topup: str | None = None
-        if o.topup and run.reverse is not None:
+        if o.topup and run.reverse is not None and o.eddy != "none":
             inputs: dict[str, Any] = {
                 "dwi": cur,
                 "dwi_json": run.sidecar,

@@ -170,6 +170,20 @@ def test_skipping_eddy_is_a_recorded_choice(ws: Workspace) -> None:
     assert fit.inputs["dwi"] == "${dwi_unring__dwi.dwi}"
 
 
+def test_without_eddy_topup_is_left_out_as_in_the_script(ws: Workspace) -> None:
+    """alps.sh with -e 0 never applies TOPUP and takes the mask from the raw b0."""
+    put_dwi(ws, "sub-001_dwi", AP)
+    put_epi(ws, PA, intended="dwi/sub-001_dwi.nii.gz")
+    _, spec = plan(ws, eddy="none")
+    assert spec is not None
+    assert "dwi_topup" not in ids(spec)
+    fit = next(s for s in spec.steps if s.step == "dwi_dtifit")
+    assert "mask" not in fit.inputs  # the step makes it from the b0 itself
+    index = next(s for s in spec.steps if s.step == "alps_index")
+    assert index.params["settings"]["distortion correction"] == "none"
+    assert any("TOPUP is applied through eddy" in n for n in index.params["notes"])
+
+
 def test_the_structural_route_needs_the_image_and_picks_the_template(ws: Workspace) -> None:
     put_dwi(ws, "sub-001_dwi", AP)
     p, _ = plan(ws, structural="t1")

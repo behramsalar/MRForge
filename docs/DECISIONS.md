@@ -204,3 +204,8 @@ Decision: `DiffusionStage` (id `diffusion`) sits last in the stage registry, off
 ## 2026-11-07 — Stage 9h: results table and export
 
 Decisions: (1) ROI means stay at full precision by default (user, 2026-11-07); `round_like_script` remains an option. The CSV writes full precision too. (2) The table is built only from the recorded `alps.json` (plus `dwi_qc` motion and the researcher's QC decision); nothing is recomputed. (3) Flags (notes, small ROIs, mean movement above 1 mm: REVIEW(domain) proposal) warn only; excluded subjects stay in the table and the export unless the researcher ticks "Leave out subjects I excluded", and the workbook then names who was left out. (4) Export files: `reports/alps/alps_results_<timestamp>.csv` and `.xlsx` (new dependency `openpyxl`, dev stubs `types-openpyxl`); sheets Summary, ROI diffusivities, FA & MD, Settings & versions, Flags & notes, About (citation, ROI origin, deterministic methods paragraph).
+
+
+## 2026-11-07 — Stage 9i: no TOPUP without eddy (found by the end-to-end comparison)
+
+Decision: with eddy-current correction off, the diffusion stage does not run TOPUP and fits the tensor on the unwarped data with a mask made from the raw first b0 (`bet2`), exactly as `alps.sh -e 0` does (it prints "NO TOPUP, NO eddy correction"). The plan says so ("TOPUP is applied through eddy-current correction"). Why: the first end-to-end comparison on real data gave a 0.9 % different ALPS because MRForge used the TOPUP mask; after the change FA and tensor are identical to the script's.
