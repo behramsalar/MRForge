@@ -233,3 +233,56 @@ def test_two_philips_series_look_alike_unless_told(ws: Workspace) -> None:
 
 def test_module_is_the_one_the_stage_uses() -> None:
     assert processing.diffusion_runs is diffusion_module.diffusion_runs
+
+
+def test_a_batch_of_only_the_diffusion_stage_needs_no_anatomical_or_functional_data(
+    ws: Workspace,
+) -> None:
+    """The Diffusion page runs many subjects at once; the other stages are ticked off."""
+    from mrforge.processing import BatchOptions, plan_batch
+
+    put_dwi(ws, "sub-001_dwi", AP)
+    ws.get_or_create_subject("sub-002")
+    ws.get_or_create_subject("sub-003")
+    rel = "rawbids/sub-002/dwi/sub-002_dwi.nii.gz"
+    image(ws.root / rel, (4, 4, 4, 3))
+    (ws.root / rel.replace(".nii.gz", ".json")).write_text(json.dumps(AP))
+    (ws.root / rel.replace(".nii.gz", ".bval")).write_text("0 1000 1000\n")
+    (ws.root / rel.replace(".nii.gz", ".bvec")).write_text("0 1 0\n0 0 1\n0 0 0\n")
+    # sub-003 has a functional run only
+    image(ws.root / "rawbids/sub-003/func/sub-003_task-rest_bold.nii.gz", (4, 4, 4, 8))
+    only = {"anatomical": False, "functional": False, "standard_space": False, "diffusion": True}
+    batch, specs = plan_batch(
+        ws, BatchOptions(subjects=["sub-001", "sub-002", "sub-003"], stages=only)
+    )
+    lines = {s.subject: s for s in batch.subjects}
+    assert lines["sub-001"].can_start and lines["sub-002"].can_start  # no T1, no BOLD needed
+    assert not lines["sub-003"].can_start and lines["sub-003"].reason  # says why, others unharmed
+    assert batch.runnable == 2 and len(specs) == 2
+    assert {spec.subject for spec in specs} == {"sub-001", "sub-002"}
+
+
+def test_in_a_batch_the_structural_route_skips_only_subjects_without_the_anatomical_image(
+    ws: Workspace,
+) -> None:
+    """As in alps.sh: the T1/T2 is needed only for the structural route (-v), per subject."""
+    from mrforge.processing import BatchOptions, plan_batch
+
+    put_dwi(ws, "sub-001_dwi", AP)
+    ws.get_or_create_subject("sub-002")
+    rel = "rawbids/sub-002/dwi/sub-002_dwi.nii.gz"
+    image(ws.root / rel, (4, 4, 4, 3))
+    (ws.root / rel.replace(".nii.gz", ".json")).write_text(json.dumps(AP))
+    (ws.root / rel.replace(".nii.gz", ".bval")).write_text("0 1000 1000\n")
+    (ws.root / rel.replace(".nii.gz", ".bvec")).write_text("0 1 0\n0 0 1\n0 0 0\n")
+    image(ws.root / "rawbids/sub-002/anat/sub-002_T1w.nii.gz", (4, 4, 4))  # only sub-002 has a T1
+    only = {"anatomical": False, "functional": False, "standard_space": False, "diffusion": True}
+    structural = BatchOptions(
+        subjects=["sub-001", "sub-002"], stages=only, diffusion=DiffusionOptions(structural="t1")
+    )
+    batch, specs = plan_batch(ws, structural)
+    lines = {s.subject: s for s in batch.subjects}
+    assert not lines["sub-001"].can_start and lines["sub-001"].reason  # says why
+    assert lines["sub-002"].can_start and len(specs) == 1
+    default, _ = plan_batch(ws, BatchOptions(subjects=["sub-001", "sub-002"], stages=only))
+    assert default.runnable == 2  # the default route needs no anatomical image

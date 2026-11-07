@@ -30,8 +30,9 @@ export function ProcessPage({ ws, tab, state }: { ws: string; tab?: string; stat
           state={state}
           stage="diffusion"
           title="Diffusion (ALPS)"
-          description="Corrects a subject's diffusion scan, fits the diffusion tensor and computes the ALPS index (diffusion along perivascular spaces). It does not need the anatomical or functional stages."
-          hint="Choose a subject with a diffusion scan."
+          description="Corrects a subject's diffusion scan, fits the diffusion tensor and computes the ALPS index (diffusion along perivascular spaces). It does not need the anatomical or functional processing. A T1 or T2 image is needed only if you choose registration through the structural image."
+          hint="Choose one or more subjects with a diffusion scan."
+          multi
         />
         <DiffusionResultsTable ws={ws} />
       </Flex>

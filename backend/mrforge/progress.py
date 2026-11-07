@@ -170,7 +170,14 @@ def _matches(step: PipelineStep, job: Job) -> bool:
         return False
     slug = _slug(step.id)
     # A fieldmap belongs to the session, not to one recording, so its folder has no recording name.
-    return not slug or step.step == "fieldmap_prep" or (job.run_dir or "").endswith(f"_{slug}")
+    # A slug without "-" is the default name of a file with no BIDS entities ("dwi", "bold"):
+    # its step folders carry no recording suffix either, so such steps are told apart by order.
+    return (
+        not slug
+        or "-" not in slug
+        or step.step == "fieldmap_prep"
+        or (job.run_dir or "").endswith(f"_{slug}")
+    )
 
 
 def _state(job: Job) -> State:

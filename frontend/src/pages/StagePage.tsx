@@ -18,6 +18,7 @@ export function StagePage({
   title,
   description,
   hint = "Choose a subject. The earlier stages must be done already; their results are used as they are.",
+  multi = false,
 }: {
   ws: string;
   state: WorkspaceState | null;
@@ -25,12 +26,15 @@ export function StagePage({
   title: string;
   description: string;
   hint?: string;
+  multi?: boolean; // choose several subjects and run the stage for all of them with the same settings
 }) {
   const overview = useOverview(ws);
-  const [chosen, setChosen] = useState<string | undefined>();
+  const [chosenList, setChosen] = useState<string[]>([]);
   const [confirm, setConfirm] = useState(false);
   const rows = (overview.data?.subjects ?? []).filter((s) => s.n_files > 0);
-  const row = rows.find((s) => s.label === chosen);
+  const picked = rows.filter((s) => chosenList.includes(s.label));
+  const row = !multi ? picked[0] : undefined;
+  const several = multi && picked.length > 0;
   const busy = !!state?.operations.some((o) => o.status === "Queued" || o.status === "Running");
   return (
     <Flex direction="column" gap={space.section}>
@@ -43,7 +47,12 @@ export function StagePage({
           <Text size={type.help} color="gray">
             {hint}
           </Text>
-          <SubjectsTable subjects={rows} selected={chosen ? [chosen] : []} onSelect={(l) => setChosen(l[0])} />
+          <SubjectsTable
+            subjects={rows}
+            multi={multi}
+            selected={chosenList}
+            onSelect={(l) => setChosen(multi ? l : l.slice(0, 1))}
+          />
         </>
       )}
       {row && (
@@ -59,7 +68,34 @@ export function StagePage({
           </Flex>
         </Card>
       )}
+      {several && (
+        <Card size="3">
+          <Flex gap={space.group} align="center" wrap="wrap" justify="between">
+            <Flex direction="column" gap="1">
+              <Text weight="bold">
+                {picked.length} subject{picked.length === 1 ? "" : "s"} selected
+              </Text>
+              <Text size={type.help} color="gray">
+                The same settings are used for all of them. Subjects without the needed data are listed and skipped.
+              </Text>
+            </Flex>
+            <Button size="3" disabled={busy} onClick={() => setConfirm(true)}>
+              Run {title.replace(/\s*\(.*\)/, "").toLowerCase()} for {picked.length} subject{picked.length === 1 ? "" : "s"}…
+            </Button>
+          </Flex>
+        </Card>
+      )}
       {row && <ConfirmProcessDialog ws={ws} subject={row.label} open={confirm} onOpenChange={setConfirm} onlyStage={stage} />}
+      {several && (
+        <ConfirmProcessDialog
+          ws={ws}
+          subject={picked[0].label}
+          subjects={picked.map((s) => s.label)}
+          open={confirm}
+          onOpenChange={setConfirm}
+          onlyStage={stage}
+        />
+      )}
     </Flex>
   );
 }

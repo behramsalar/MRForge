@@ -210,3 +210,31 @@ def test_a_fieldmap_that_really_ran_is_not_shown_as_skipped(tmp_path: Path) -> N
     add_job(ws, sid, "fieldmap_prep", "Completed", "fieldmap_prep", "fieldmap_prep")
     add_job(ws, sid, "feat_preproc", "Running", "feat_preproc", "feat_preproc_task-rest")
     assert states(ws, op) == ["done", "done", "running"]
+
+
+def test_diffusion_steps_without_a_recording_name_are_matched_by_order(tmp_path: Path) -> None:
+    """A diffusion series called sub-001_dwi has no entities: its step folders have no suffix
+    (``_runs/dwi_eddy``), and the steps must still be counted as done or running."""
+    names = ["dwi_dtifit", "dwi_qc", "dwi_to_template", "alps_rois", "alps_index"]
+    spec = {
+        "name": "full-sub-001",
+        "subject": "sub-001",
+        "steps": [
+            {"id": "dwi_eddy__dwi", "label": "dwi_eddy", "step": "dwi_eddy", "inputs": {"dwi": "d"}},
+            *[
+                {"id": f"{n}__dwi", "label": n, "step": n, "inputs": {"dwi": "d"}}
+                for n in names
+            ],
+        ],
+    }  # fmt: skip
+    ws, op, sid = setup(tmp_path)
+    with ws.session() as s:
+        s.get(Operation, op.id).args = {"spec": spec}  # type: ignore[union-attr]
+    for n in ["dwi_eddy", "dwi_dtifit", "dwi_qc"]:
+        add_job(ws, sid, n, "Completed", n)
+    add_job(ws, sid, "dwi_to_template", "Running", "dwi_to_template")
+    p = operation_progress(ws, _refetch(ws, op))
+    assert [s.state for s in p.steps] == [
+        "done", "done", "done", "running", "waiting", "waiting",
+    ]  # fmt: skip
+    assert (p.current, p.done, p.total) == (3, 3, 6)
