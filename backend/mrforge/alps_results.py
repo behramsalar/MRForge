@@ -25,6 +25,8 @@ from openpyxl.utils import get_column_letter
 from pydantic import BaseModel
 
 from mrforge import qc_decisions
+from mrforge.bids import parse_bids_name
+from mrforge.steps.alps_rois import regions_text
 from mrforge.workspace import Workspace
 
 # REVIEW(domain): the same proposal as dwi_qc (mean volume-to-volume movement); a prompt to look,
@@ -57,7 +59,8 @@ class AlpsRow(BaseModel):
 
     subject: str
     session: str | None
-    series: str  # which diffusion series when a subject has several ("" if one)
+    series: str  # which diffusion series when a subject has several ("run-1", "" if one)
+    regions: str  # the set of regions the index was measured in
     record: str  # workspace-relative alps.json
     scanner: str
     alps_L: float
@@ -79,10 +82,12 @@ class AlpsRow(BaseModel):
     decision_who: str | None
 
 
-def _after(desc: str, *prefixes: str) -> str:
-    for prefix in prefixes:
-        desc = desc.removeprefix(prefix)
-    return desc
+def _recording(name: str) -> str:
+    """The BIDS name parts that tell diffusion series apart ("run-1", "acq-x"), else ""."""
+    entities = parse_bids_name(name)[0]
+    return "_".join(
+        f"{k}-{v}" for k, v in entities.items() if k not in ("sub", "ses", "desc", "space")
+    )
 
 
 def _desc(name: str) -> str:
@@ -106,8 +111,7 @@ def _location(ws: Workspace, record: Path) -> tuple[str, str | None]:
 
 def _movement(record: Path, series: str) -> float | None:
     for path in record.parent.glob("*_qc.json"):
-        desc = _desc(path.name)
-        if desc.startswith("dwimetrics") and _after(desc, "dwimetrics", "dwiqc") == series:
+        if _desc(path.name).startswith("dwimetrics") and _recording(path.name) == series:
             metrics = _read(path)
             value = metrics.get("mean_rms_previous_mm") if metrics else None
             return float(value) if isinstance(value, int | float) else None
@@ -124,7 +128,7 @@ def collect(ws: Workspace) -> list[AlpsRow]:
         if data is None or "alps" not in data:
             continue
         subject, session = _location(ws, path)
-        series = _after(_desc(path.name), "alps", "alpsindex")
+        series = _recording(path.name)
         movement = _movement(path, series)
         flags = [*map(str, data.get("checks", [])), *map(str, data.get("notes", []))]
         if movement is not None and movement > MOTION_WARNING_MM:
@@ -139,6 +143,8 @@ def collect(ws: Workspace) -> list[AlpsRow]:
                 subject=subject,
                 session=session,
                 series=series,
+                # results made before region sets were told apart store the source name ("default")
+                regions=regions_text(str(data.get("settings", {}).get("regions", "not recorded"))),
                 record=ws.relpath(path),
                 scanner=str(data.get("scanner", "")),
                 alps_L=data["alps_L"],
@@ -160,21 +166,22 @@ def collect(ws: Workspace) -> list[AlpsRow]:
                 decision_who=decision.who if decision else None,
             )
         )
-    rows.sort(key=lambda r: (r.subject, r.session or "", r.series))
+    rows.sort(key=lambda r: (r.subject, r.session or "", r.series, r.regions))
     return rows
 
 
 # -- export ----------------------------------------------------------------------------------
 
 SUMMARY_HEADER = [
-    "subject", "session", "series", "ALPS", "ALPS left", "ALPS right", "FA (mean of regions)",
-    "MD (mean of regions)", "mean movement (mm)", "QC decision", "QC reason", "flags",
+    "subject", "session", "series", "regions", "ALPS", "ALPS left", "ALPS right",
+    "FA (mean of regions)", "MD (mean of regions)", "mean movement (mm)",
+    "QC decision", "QC reason", "flags",
 ]  # fmt: skip
 
 
 def _summary_cells(r: AlpsRow) -> list[Any]:
     return [
-        r.subject, r.session or "", r.series, r.alps, r.alps_L, r.alps_R, r.fa, r.md,
+        r.subject, r.session or "", r.series, r.regions, r.alps, r.alps_L, r.alps_R, r.fa, r.md,
         r.mean_movement_mm, r.decision or "", r.decision_reason or "", "; ".join(r.flags),
     ]  # fmt: skip
 
@@ -245,13 +252,19 @@ def write_xlsx(rows: list[AlpsRow], path: Path, *, left_out: list[str], created:
             for cell in summary[i]:
                 cell.fill = flagged
 
-    ident = ["subject", "session", "series"]
+    ident = ["subject", "session", "series", "regions"]
     _sheet(
         wb,
         "ROI diffusivities",
         [*ident, *COMPONENT_KEYS],
         [
-            [r.subject, r.session or "", r.series, *[r.components[k] for k in COMPONENT_KEYS]]
+            [
+                r.subject,
+                r.session or "",
+                r.series,
+                r.regions,
+                *[r.components[k] for k in COMPONENT_KEYS],
+            ]
             for r in rows
         ],
         False,
@@ -264,7 +277,7 @@ def write_xlsx(rows: list[AlpsRow], path: Path, *, left_out: list[str], created:
         "FA & MD",
         famd_header,
         [
-            [r.subject, r.session or "", r.series]
+            [r.subject, r.session or "", r.series, r.regions]
             + [r.fa_rois[k] for k in ROI_KEYS]
             + [r.md_rois[k] for k in ROI_KEYS]
             for r in rows
@@ -278,7 +291,7 @@ def write_xlsx(rows: list[AlpsRow], path: Path, *, left_out: list[str], created:
         "Settings & versions",
         [*ident, "scanner", *keys, *vkeys, *[f"voxels {k}" for k in ROI_KEYS]],
         [
-            [r.subject, r.session or "", r.series, r.scanner]
+            [r.subject, r.session or "", r.series, r.regions, r.scanner]
             + [r.settings.get(k, "") for k in keys]
             + [r.versions.get(k, "") for k in vkeys]
             + [r.voxels.get(k, "") for k in ROI_KEYS]
@@ -291,7 +304,7 @@ def write_xlsx(rows: list[AlpsRow], path: Path, *, left_out: list[str], created:
         "Flags & notes",
         [*ident, "kind", "text"],
         [
-            [r.subject, r.session or "", r.series, "flag" if t in r.flags else "note", t]
+            [r.subject, r.session or "", r.series, r.regions, "flag" if t in r.flags else "note", t]
             for r in rows
             for t in dict.fromkeys([*r.flags, *r.notes])
         ],

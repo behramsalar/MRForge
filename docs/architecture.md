@@ -210,4 +210,5 @@ Port of the lab's `alps.sh` (G. Barisano, MIT). Each part is a separate `Step` (
 - **Results** (`alps_results.py`): the table is built only from the recorded `alps.json` files (plus the `dwi_qc` motion metric and the researcher's QC decision). `GET /alps-results`, `POST /alps-results/export` (`leave_out_excluded`), `GET /alps-results/exports`. The export writes `reports/alps/alps_results_<time>.csv` and `.xlsx`. Flags warn, never exclude.
 - **Optional dependency:** MRtrix3 (`mrtrix_env.py`: `MRFORGE_MRTRIX`, then PATH); shown in Settings, System and `mrforge doctor` as optional.
 - **REVIEW(domain):** see the list at the end of the Stage 9 entry in `PROGRESS.md`.
+- **Region sets side by side:** `alps_rois` and `alps_index` carry a tag of the chosen set in their step label (`alps_rois_legacy5`, `alps_index_sphere3p5`; the packaged 2.5 mm set has no tag and keeps the old names). That gives each set its own result files (`desc-alpslegacy5`), run record and resume state, while everything before the regions (denoise to registration) is shared and not repeated. The results table and export have one row per series and region set.
 

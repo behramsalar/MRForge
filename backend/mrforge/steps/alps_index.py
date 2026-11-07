@@ -35,6 +35,7 @@ from numpy.typing import NDArray
 from pydantic import BaseModel
 
 from mrforge.errors import StepError
+from mrforge.steps.alps_rois import tagged_desc
 from mrforge.steps.base import Problem, QCItem, Step, StepContext, StepResult
 from mrforge.steps.qcpics import known_slices, slice_row, slices_dir
 from mrforge.steps.registry import register_step
@@ -95,6 +96,9 @@ class AlpsIndexStep(Step[AlpsIndexInput, AlpsIndexParams, AlpsIndexOutput]):
     InputSpec, ParamSpec, OutputSpec = AlpsIndexInput, AlpsIndexParams, AlpsIndexOutput
     requires_fsl = True  # for the picture
     datatype = "dwi"
+
+    def desc(self, ctx: StepContext[AlpsIndexInput, AlpsIndexParams], base: str) -> str:
+        return tagged_desc(self.name, ctx.label, base)
 
     def expected_outputs(
         self, ctx: StepContext[AlpsIndexInput, AlpsIndexParams]
