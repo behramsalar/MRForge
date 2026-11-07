@@ -187,3 +187,25 @@ The user could not change an import once written (skipping a series or renaming 
 - Privacy (relaxes the 2026-10-04 CLI rule only where needed): the user's file names are still never stored. The scanner's own description from a sidecar is stored (it is already stored for DICOM); a file name is used only when it follows BIDS (task and suffix are kept), otherwise the file is called "NIfTI file N". This is why the CLI `import nifti` (explicit `--type`) is unchanged.
 - 2026-11-06 Single-volume diffusion images (a reverse phase-encoding b0, needed for TOPUP) are written to `fmap/sub-XXX_dir-PA_epi` (direction from the sidecar: j = PA, j- = AP, ...) with `IntendedFor` listing the multi-volume dwi runs, the standard BIDS place; they are not run-numbered into `dwi/`. Applies to DICOM and NIfTI imports. REVIEW(domain): the `dir` label mapping from `PhaseEncodingDirection`.
 - 2026-11-06 The single-volume diffusion image's `.bval`/`.bvec` (a single 0 / 0 0 0) are not written next to the `epi` file: the BIDS validator rejects them there (NOT_INCLUDED, checked). They remain in `imports/import-NNN/converted/`.
+
+## 2026-11-06 Stage 9: diffusion processing and the ALPS index (agreed with the user)
+- Why: the lab wants the DTI-ALPS index inside MRForge. Source: `alps.sh` by G. Barisano (MIT licence, citation requested: Liu, Barisano et al., Aging and Disease 2023). Diffusion processing was out of scope until now; the user gave the go-ahead (CLAUDE.md section 9 and the stage list amended).
+- The script writes CSV files, not Excel. Results: per-recording `alps.json` (source of truth) and script-compatible CSV files, a workspace results table, and an export as CSV and Excel built from the recorded numbers.
+- Registration options of the script are ported exactly; default = the script's default (JHU-FA linear, tensor moved with flirt; REVIEW(domain): flirt does not rotate the tensor, `vecreg` does).
+- MRtrix3 (`dwidenoise`, `mrdegibbs`) is optional: when it is not installed those steps are skipped, the pipeline still runs, and the applied mode is recorded and shown in the exports.
+- ROIs (four 2.5 mm spheres and the older 5 mm set in JHU-ICBM-FA-1mm space, MIT licence) are packaged with the app.
+
+
+## 2026-11-06 — Stage 9g: the diffusion stage
+
+Decision: `DiffusionStage` (id `diffusion`) sits last in the stage registry, off by default (long run, needs a diffusion image), one step chain per diffusion series (denoise, unring, topup, eddy, dtifit, qc, to-template, ROIs, index). Topup is planned only when a field map of type epi or a second diffusion series has the opposite phase-encoding direction; otherwise the plan says "no distortion correction". Defaults follow `alps.sh` (linear JHU-FA, tensor moved with flirt: REVIEW(domain)). Eddy threads come from the Settings resource policy unless set.
+
+
+## 2026-11-07 — Stage 9h: results table and export
+
+Decisions: (1) ROI means stay at full precision by default (user, 2026-11-07); `round_like_script` remains an option. The CSV writes full precision too. (2) The table is built only from the recorded `alps.json` (plus `dwi_qc` motion and the researcher's QC decision); nothing is recomputed. (3) Flags (notes, small ROIs, mean movement above 1 mm: REVIEW(domain) proposal) warn only; excluded subjects stay in the table and the export unless the researcher ticks "Leave out subjects I excluded", and the workbook then names who was left out. (4) Export files: `reports/alps/alps_results_<timestamp>.csv` and `.xlsx` (new dependency `openpyxl`, dev stubs `types-openpyxl`); sheets Summary, ROI diffusivities, FA & MD, Settings & versions, Flags & notes, About (citation, ROI origin, deterministic methods paragraph).
+
+
+## 2026-11-07 — Stage 9i: no TOPUP without eddy (found by the end-to-end comparison)
+
+Decision: with eddy-current correction off, the diffusion stage does not run TOPUP and fits the tensor on the unwarped data with a mask made from the raw first b0 (`bet2`), exactly as `alps.sh -e 0` does (it prints "NO TOPUP, NO eddy correction"). The plan says so ("TOPUP is applied through eddy-current correction"). Why: the first end-to-end comparison on real data gave a 0.9 % different ALPS because MRForge used the TOPUP mask; after the change FA and tensor are identical to the script's.

@@ -411,3 +411,70 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 ### NIFTI_WRONG_SHAPE / DWI_NEEDS_DIRECTIONS (shown as "CONVERSION_FAILED" in the web import)
 - **What happened:** A NIfTI file does not fit the type chosen for it (for example a T1 with many volumes, a BOLD image with one volume), or a diffusion image has no `.bval`/`.bvec` files next to it. Nothing was written to `rawbids/`.
 - **Suggested action:** Change the type of that file in the table, or skip it. A diffusion image with a single volume is fine (it is stored as a reverse phase-encoding image for TOPUP) as long as its `.bval` and `.bvec` exist.
+
+## Diffusion preparation (Stage 9c)
+
+### MRTRIX_MISSING
+- **What happened:** Denoising or ringing removal was asked for, but MRtrix3 (`dwidenoise`, `mrdegibbs`) is not installed.
+- **Probable cause:** MRtrix3 is not part of FSL; it is an optional extra.
+- **Suggested action:** Install MRtrix3 (Settings shows whether it is found), or leave these two steps out. In the full diffusion stage they are skipped automatically and the skip is recorded.
+
+### DWI_ENCODING_UNKNOWN
+- **What happened:** The metadata file (JSON) of a diffusion image does not give the phase-encoding direction or the total readout time.
+- **Probable cause:** The scanner or converter did not write them (Philips scanners need `PhaseEncodingAxis`; readout time is then assumed to be 0.1 s, as in the ALPS script).
+- **Suggested action:** Leave distortion correction (TOPUP) out, or add the missing values to the JSON file of the original import.
+
+### TOPUP_NOT_POSSIBLE
+- **What happened:** The two images do not fit TOPUP: their phase-encoding directions are not opposite, or one does not start with a b = 0 volume.
+- **Suggested action:** Leave distortion correction out, or import a reverse phase-encoding image. Two Philips images look alike (the axis has no sign); the option "second image is opposite" tells MRForge they are not.
+
+### TOPUP_CONFIG_MISSING
+- **What happened:** The image has an odd number of slices and FSL's `b02b0_1.cnf` was not found.
+- **Suggested action:** Check the FSL installation on the System page.
+
+## Diffusion: eddy-current correction and tensor fit (Stage 9d)
+
+### EDDY_PROGRAM_UNKNOWN
+- **What happened:** The eddy program name is not the name of a program in the FSL folder.
+- **Suggested action:** Choose `eddy_cpu`, `eddy`, `eddy_cuda` or `eddy_correct`.
+
+### EDDY_PROGRAM_MISSING
+- **What happened:** The chosen FSL program (for example `eddy_cuda`) was not found.
+- **Probable cause:** GPU versions of eddy exist only in the Linux builds of FSL and need an NVIDIA graphics card.
+- **Suggested action:** Choose `eddy_cpu`, or check the FSL installation on the System page.
+
+### EDDY_TOPUP_INCOMPLETE
+- **What happened:** Only some of the TOPUP results were given to eddy.
+- **Suggested action:** Give all of them (acquisition parameters, field coefficients, movement parameters, mask) or none; without TOPUP eddy runs without distortion correction and the result says so.
+
+### EDDY_OUTPUT_MISSING
+- **What happened:** eddy finished but did not write one of its result files.
+- **Probable cause:** eddy stopped early or the disk is full.
+- **Suggested action:** Open the raw log; try again with another eddy program.
+
+## Diffusion: template space (Stage 9e)
+
+### TEMPLATE_MISSING
+- **What happened:** The template image for registration was not found (a template you chose, or one of FSL's own).
+- **Suggested action:** Choose the template file again, or check the FSL installation on the System page.
+
+### TENSOR_NOT_SIX_VOLUMES
+- **What happened:** The diffusion tensor file does not have the 6 volumes a fitted tensor has.
+- **Probable cause:** It was not made by the tensor fit of this app, or the transformation to the template went wrong.
+- **Suggested action:** Run the tensor fit again, then this step.
+
+## Diffusion: regions of interest and the ALPS index (Stage 9b/9f)
+
+### ROI_GRID_MISMATCH
+- **What happened:** The regions of interest are not on the same grid as the FA map or the tensor.
+- **Probable cause:** The ROIs are drawn on the 1 mm template, but the diffusion maps are in another space (native space, or another template).
+- **Suggested action:** Analyse in template space (the maps are registered to the template first), or choose native space, where the ROIs are moved to the subject.
+
+### ROI_EMPTY
+- **What happened:** One of the four regions has no voxels.
+- **Probable cause:** The image does not cover that region, or the registration to the template failed.
+- **Suggested action:** Check the registration picture, then try another registration setting.
+
+### ROI_NEED_FOUR / ROI_TEMPLATE_MISSING
+- **What happened:** Custom regions need exactly four files (projection left, projection right, association left, association right), or the template file you chose was not found.
+- **Suggested action:** Choose the files again.

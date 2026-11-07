@@ -55,7 +55,11 @@ bash scripts/install_aroma.sh
 
 This downloads the reference implementation into `tools/ICA-AROMA` (a pinned version) and installs the one small Python package it needs. `mrforge doctor` then shows it as available, and the "ICA-AROMA proposes" options appear in the artifact-rejection dialog.
 
-## 5. Start the program
+## 5. Optional: MRtrix3 (diffusion)
+
+The diffusion stage uses MRtrix3 only for denoising (`dwidenoise`) and removing Gibbs ringing (`mrdegibbs`). Without it these two steps are skipped, the skip is written into the results and the export, and everything else still runs. Install MRtrix3 from <https://www.mrtrix.org/> so that both programs are on your `PATH` (or set `MRFORGE_MRTRIX` to the folder that holds them). `mrforge doctor` and the Settings page then show its version. The FSL diffusion tools (`topup`, `eddy`, `dtifit`, `vecreg`) come with FSL.
+
+## 6. Start the program
 
 ```bash
 mrforge serve
@@ -71,7 +75,7 @@ Options:
 
 Stop it with Ctrl+C. Jobs run in separate worker processes: if the server stops or the computer restarts, running jobs show as *Interrupted* and can be resumed.
 
-## 6. First use
+## 7. First use
 
 1. Create a workspace, then **Data → Import** and choose a folder or archive with DICOM files (or NIfTI / BIDS data).
 2. Check the table of detected series and fix any that are wrong or uncertain, then import.

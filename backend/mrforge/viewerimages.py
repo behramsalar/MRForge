@@ -15,7 +15,14 @@ from mrforge.niftiutil import image_info
 from mrforge.workspace import Workspace
 
 RAW, ANAT, FUNC, FMAP = "Raw data", "Anatomical results", "Functional results", "Fieldmap results"
-GROUP_ORDER = {RAW: 0, ANAT: 1, FUNC: 2, FMAP: 3}
+DWI = "Diffusion results"
+GROUP_ORDER = {RAW: 0, ANAT: 1, FUNC: 2, FMAP: 3, DWI: 4}
+SPACE_NAMES = {
+    "JHUFA1mm": "JHU FA template space",
+    "MNI152T1": "MNI T1 template space",
+    "JHUT21mm": "JHU T2 template space",
+    "template": "template space",
+}
 STANDARD = "MNI152NLin6Asym"
 PROBABILITY = {
     "GM": ("Grey matter probability", "green"),
@@ -63,6 +70,8 @@ def describe(path: Path, raw: bool) -> Described | None:
         return Described(RAW, name, "underlay", None, rank)
 
     # -- results ----------------------------------------------------------------------
+    if path.parent.name == "dwi":
+        return _describe_diffusion(suffix, desc or "", space, rec)
     anat = ANAT if _is_anat(path) else FUNC
 
     def result(
@@ -114,6 +123,28 @@ def describe(path: Path, raw: bool) -> Described | None:
     return result(anat, path.name.removesuffix(".nii.gz"), rank=99)
 
 
+def _describe_diffusion(suffix: str, desc: str, space: str | None, rec: str) -> Described | None:
+    """Results of the diffusion stage. The tensor (six volumes) and the single region masks are
+    not listed: the FA and MD maps and the labelled regions are what one looks at."""
+    where = f" ({SPACE_NAMES.get(space, space)})" if space and space != "native" else ""
+    if suffix == "FA":
+        return Described(DWI, f"FA map{where}{rec}", "underlay", "gray", 10)
+    if suffix == "MD":
+        return Described(DWI, f"Mean diffusivity (MD){where}{rec}", "underlay", "gray", 11)
+    if suffix == "dseg" and desc.startswith("ALPSrois"):
+        return Described(DWI, f"ALPS regions{where}{rec}", "overlay", "winter", 20)
+    if suffix == "mask" and desc.startswith(("dtimask", "eddy", "topup")):
+        return Described(DWI, f"Brain mask (diffusion){rec}", "overlay", "red", 21)
+    if suffix == "dwi" and desc.startswith("eddy"):
+        return Described(DWI, f"Diffusion, eddy-corrected{rec}", "underlay", None, 30)
+    if suffix == "dwi" and desc.startswith(("denoised", "unring")):
+        label = "denoised" if desc.startswith("denoised") else "ringing removed"
+        return Described(DWI, f"Diffusion, {label}{rec}", "underlay", None, 31)
+    if suffix == "b0" and desc == "topup":
+        return Described(DWI, f"b0, distortion-corrected (TOPUP){rec}", "underlay", None, 32)
+    return None
+
+
 def _is_anat(path: Path) -> bool:
     return path.parent.name == "anat"
 
@@ -132,7 +163,7 @@ def find_images(ws: Workspace, subject: str) -> list[FoundImage]:
         (p, True) for p in sorted((ws.root / "rawbids" / subject).glob("**/*.nii.gz"))
     ]
     base = ws.derivatives_dir / subject
-    for datatype in ("anat", "func", "fmap"):
+    for datatype in ("anat", "func", "fmap", "dwi"):
         candidates += [(p, False) for p in sorted(base.glob(f"**/{datatype}/*.nii.gz"))]
     found: list[FoundImage] = []
     for path, raw in candidates:

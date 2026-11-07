@@ -24,17 +24,20 @@ from pydantic import BaseModel, Field
 from mrforge.aroma_env import find_aroma
 from mrforge.bids import parse_bids_name
 from mrforge.datafiles import subject_data
+from mrforge.diffusion import DiffusionOptions, DiffusionRun, diffusion_runs
 from mrforge.functional import (
     anat_results,
     fieldmap_status,
     slice_timing_status,
 )
 from mrforge.icalabels import SUMMARY_SUFFIX, decision_path
+from mrforge.mrtrix_env import find_mrtrix
 from mrforge.niftiutil import image_info
 from mrforge.pipeline import PipelineSpec, PipelineStep
 from mrforge.results import existing_cleaned, existing_functional
 from mrforge.resume import check_reusable
 from mrforge.runner.jobs import build_context
+from mrforge.steps.dwi_to_template import DwiToTemplateParams, resolve_template
 from mrforge.steps.melodic import MIN_VOLUMES
 from mrforge.steps.resample_t1 import needs_resampling
 from mrforge.workspace import Workspace
@@ -78,6 +81,7 @@ class FullOptions(BaseModel):
     anatomical: AnatomicalOptions = AnatomicalOptions()
     functional: FunctionalOptions = FunctionalOptions()
     artifact: ArtifactOptions = ArtifactOptions()
+    diffusion: DiffusionOptions = DiffusionOptions()
 
 
 # -- the plan shown to the user ------------------------------------------------------------
@@ -105,6 +109,7 @@ class BatchOptions(BaseModel):
     anatomical: AnatomicalOptions = AnatomicalOptions()
     functional: FunctionalOptions = FunctionalOptions()
     artifact: ArtifactOptions = ArtifactOptions()
+    diffusion: DiffusionOptions = DiffusionOptions()
     preset: str | None = None  # name of the preset the choices came from (recorded only)
 
     def for_subject(self, label: str) -> FullOptions:
@@ -114,6 +119,7 @@ class BatchOptions(BaseModel):
             anatomical=self.anatomical,
             functional=self.functional,
             artifact=self.artifact,
+            diffusion=self.diffusion,
             preset=self.preset,
         )
 
@@ -704,6 +710,268 @@ class StandardSpaceStage(Stage):
         return stage
 
 
+def template_key(o: DiffusionOptions) -> str:
+    """The template the maps are moved to: the choice, else by the structural image, else the
+    JHU FA template (as in the script)."""
+    weight: Literal["t1", "t2"] = "t2" if o.structural == "t2" else "t1"
+    return resolve_template(
+        DwiToTemplateParams(template=o.template, struct_weight=weight), o.structural != "none"
+    )
+
+
+def _eddy_label(program: str) -> str:
+    return {"eddy_cpu": "eddy_cpu (CPU)", "eddy_correct": "eddy_correct (older, simple)"}.get(
+        program, program
+    )
+
+
+class DiffusionStage(Stage):
+    id = "diffusion"
+    label = "Diffusion (ALPS)"
+    description = (
+        "Prepares each diffusion series (noise and ringing removal if MRtrix3 is installed, "
+        "distortion and eddy-current correction), fits the diffusion tensor and computes the "
+        "ALPS index (diffusion along perivascular spaces) from four regions of interest."
+    )
+    default_enabled = False  # long (eddy takes hours) and only for subjects with diffusion data
+
+    def plan(self, ctx: PlanContext, enabled: bool) -> StagePlan:
+        opts = ctx.opts.diffusion
+        stage = self.blank(enabled)
+        runs = diffusion_runs(ctx.ws, ctx.subject, opts.second_is_opposite)
+        if not runs:
+            stage.can_run, stage.reason = False, "This subject has no diffusion image."
+            return stage
+        structurals = [
+            f
+            for f in subject_data(ctx.ws, ctx.subject).files
+            if f.datatype == "anat" and f.suffix == {"t1": "T1w", "t2": "T2w"}.get(opts.structural)
+        ]
+        if opts.structural != "none" and not structurals:
+            stage.can_run = False
+            stage.reason = (
+                f"There is no {opts.structural.upper()} image for the structural registration. "
+                "Choose a registration without it."
+            )
+        if opts.roi_source == "custom" and len(opts.custom_rois) != 4:
+            stage.can_run = False
+            stage.reason = "Custom regions need four files (projection and association, L and R)."
+        mrtrix = find_mrtrix()
+        for number, run in enumerate(runs, 1):
+            slug = recording_slug(run.relpath, "dwi")
+            item, notes = self._item(ctx, run, slug, number, mrtrix is not None)
+            stage.items.append(item)
+            if run.problem:
+                stage.can_run, stage.reason = False, f"{item.title}: {run.problem}"
+            if not (enabled and stage.can_run):
+                continue
+            self._add_steps(ctx, run, slug, notes, mrtrix is not None, structurals)
+        if enabled and stage.can_run:
+            ctx.ready.add(self.id)
+        return stage
+
+    def _item(
+        self, ctx: PlanContext, run: DiffusionRun, slug: str, number: int, have_mrtrix: bool
+    ) -> tuple[PlanItem, list[str]]:
+        o = ctx.opts.diffusion
+        notes: list[str] = []
+        # As in alps.sh: without eddy the TOPUP result is never applied to the data ("NO TOPUP, NO
+        # eddy correction"), so TOPUP is only run together with an eddy program.
+        use_topup = o.topup and run.reverse is not None and o.eddy != "none"
+        if o.topup and run.reverse is None:
+            notes.append(f"No distortion correction: {run.topup_note}.")
+        elif o.topup and o.eddy == "none":
+            notes.append(
+                "No distortion correction: TOPUP is applied through eddy-current correction."
+            )
+        if (o.denoise or o.unring) and not have_mrtrix:
+            notes.append("No noise or ringing removal: MRtrix3 is not installed.")
+        if o.eddy == "none":
+            notes.append("No eddy-current or motion correction (left out on purpose).")
+        denoise = o.denoise and have_mrtrix
+        unring = o.unring and have_mrtrix
+        key = None if o.registration == "native" else template_key(o)
+        space = {
+            None: "the person's own space (native)",
+            "jhu_fa": "JHU-ICBM FA template",
+            "mni_t1": "MNI152 T1 template (through the T1)",
+            "jhu_t2": "JHU-ICBM T2 template (through the T2)",
+        }[key if key in ("jhu_fa", "mni_t1", "jhu_t2") else None]
+        how = (
+            f"through the {o.structural.upper()}"
+            if o.structural != "none"
+            else {
+                "linear": "linear",
+                "fnirt": "non-linear",
+                "linear_fnirt": "linear then non-linear",
+            }.get(o.registration, "")
+        )
+        rois = {
+            "default": "packaged 2.5 mm spheres",
+            "legacy5": "packaged 5 mm boxes (older)",
+            "sphere": f"spheres of {o.roi_radius_mm:g} mm radius",
+            "custom": "your own four files",
+        }[o.roi_source]
+        settings = [
+            PlanSetting(name="Noise removal", value="yes" if denoise else "no"),
+            PlanSetting(name="Ringing removal", value="yes" if unring else "no"),
+            PlanSetting(
+                name="Distortion correction",
+                value=f"TOPUP with the {run.reverse_from}" if use_topup else "no",
+            ),
+            PlanSetting(
+                name="Eddy-current correction",
+                value="no" if o.eddy == "none" else _eddy_label(o.eddy),
+            ),
+            PlanSetting(name="Space", value=space + (f", {how}" if how else "")),
+            PlanSetting(name="Regions", value=rois),
+        ]
+        if o.registration != "native":
+            settings.append(
+                PlanSetting(
+                    name="Tensor moved with",
+                    value="flirt (script default)" if o.tensor_method == "flirt" else "vecreg",
+                )
+            )
+        title = f"Series {slug.replace('_', ' ')}" if slug != "dwi" else "Diffusion series"
+        if number > 1 and slug == "dwi":
+            title = f"Diffusion series {number}"
+        return PlanItem(title=title, note=" ".join(notes) or None, settings=settings), notes
+
+    def _add_steps(
+        self,
+        ctx: PlanContext,
+        run: DiffusionRun,
+        slug: str,
+        notes: list[str],
+        have_mrtrix: bool,
+        structurals: list[Any],
+    ) -> None:
+        o = ctx.opts.diffusion
+        steps = ctx.steps
+        assert run.bval and run.bvec and run.sidecar
+        cur = run.relpath
+        done: list[str] = []
+
+        def add(step: str, inputs: dict[str, Any], params: dict[str, Any] | None = None) -> str:
+            sid = f"{step}__{slug}"
+            steps.append(
+                PipelineStep(id=sid, label=step, step=step, inputs=inputs, params=params or {})
+            )
+            return sid
+
+        if o.denoise and have_mrtrix:
+            cur = f"${{{add('dwi_denoise', {'dwi': cur})}.dwi}}"
+            done.append("denoised")
+        if o.unring and have_mrtrix:
+            cur = f"${{{add('dwi_unring', {'dwi': cur})}.dwi}}"
+            done.append("Gibbs ringing removed")
+        topup: str | None = None
+        if o.topup and run.reverse is not None and o.eddy != "none":
+            inputs: dict[str, Any] = {
+                "dwi": cur,
+                "dwi_json": run.sidecar,
+                "dwi_bval": run.bval,
+                "reverse": run.reverse,
+            }
+            if run.reverse_json:
+                inputs["reverse_json"] = run.reverse_json
+            if run.reverse_bval:
+                inputs["reverse_bval"] = run.reverse_bval
+            topup = add("dwi_topup", inputs, {"second_is_opposite": o.second_is_opposite})
+        bval, bvec, mask = run.bval, run.bvec, None
+        eddy: str | None = None
+        if o.eddy != "none":
+            inputs = {"dwi": cur, "bval": run.bval, "bvec": run.bvec, "dwi_json": run.sidecar}
+            if topup:
+                inputs |= {
+                    "topup_acqparams": f"${{{topup}.acqparams}}",
+                    "topup_fieldcoef": f"${{{topup}.fieldcoef}}",
+                    "topup_movpar": f"${{{topup}.movpar}}",
+                    "topup_mask": f"${{{topup}.mask}}",
+                }
+            params: dict[str, Any] = {"program": o.eddy}
+            if o.eddy_threads:
+                params["threads"] = o.eddy_threads
+            eddy = add("dwi_eddy", inputs, params)
+            cur, bval, bvec, mask = (f"${{{eddy}.{k}}}" for k in ("dwi", "bval", "bvec", "mask"))
+        elif topup:
+            mask = f"${{{topup}.mask}}"
+        fit_inputs: dict[str, Any] = {"dwi": cur, "bval": bval, "bvec": bvec}
+        if mask:
+            fit_inputs["mask"] = mask
+        fit = add("dwi_dtifit", fit_inputs)
+        qc_inputs: dict[str, Any] = {"fa": f"${{{fit}.fa}}", "mask": f"${{{fit}.mask}}"}
+        if eddy and o.eddy != "eddy_correct":
+            qc_inputs |= {
+                "movement_rms": f"${{{eddy}.movement_rms}}",
+                "restricted_rms": f"${{{eddy}.restricted_rms}}",
+                "outlier_report": f"${{{eddy}.outlier_report}}",
+            }
+        add("dwi_qc", qc_inputs)
+
+        fa, md, tensor = (f"${{{fit}.{k}}}" for k in ("fa", "md", "tensor"))
+        has_struct = o.structural != "none"
+        roi_params: dict[str, Any] = {
+            "source": o.roi_source,
+            "radius_mm": o.roi_radius_mm,
+            "space": "native",
+            "template": "jhu_fa",
+        }
+        if o.registration != "native":
+            reg_inputs: dict[str, Any] = {
+                "fa": fa,
+                "md": md,
+                "tensor": tensor,
+                "mask": f"${{{fit}.mask}}",
+            }
+            if has_struct:
+                reg_inputs["struct"] = structurals[0].relpath
+                if topup:
+                    reg_inputs["b0"] = f"${{{topup}.b0}}"
+            params = {
+                "registration": o.registration,
+                "template": o.template,
+                "struct_weight": o.structural if has_struct else "t1",
+                "tensor_method": o.tensor_method,
+            }
+            reg = add("dwi_to_template", reg_inputs, params)
+            fa, md, tensor = (f"${{{reg}.{k}}}" for k in ("fa", "md", "tensor"))
+            roi_params["space"] = "template"
+            roi_params["template"] = template_key(o)
+        roi_inputs: dict[str, Any] = {"fa": fa}
+        if o.roi_source == "custom":
+            roi_inputs["custom_rois"] = o.custom_rois
+        rois = add("alps_rois", roi_inputs, roi_params)
+        settings = {
+            "preprocessing": ", ".join(done) or "none",
+            "distortion correction": "TOPUP" if topup else "none",
+            "eddy": o.eddy,
+            "registration": "native"
+            if o.registration == "native"
+            else (f"structural ({o.structural.upper()})" if has_struct else o.registration),
+            "template": str(roi_params["template"])
+            if roi_params["space"] == "template"
+            else "native",
+            "tensor transform": o.tensor_method if o.registration != "native" else "none",
+            "regions": o.roi_source,
+        }
+        add(
+            "alps_index",
+            {
+                "tensor": tensor,
+                "fa": fa,
+                "md": md,
+                "proj_l": f"${{{rois}.proj_l}}",
+                "proj_r": f"${{{rois}.proj_r}}",
+                "assoc_l": f"${{{rois}.assoc_l}}",
+                "assoc_r": f"${{{rois}.assoc_r}}",
+                "dwi_json": run.sidecar,
+            },
+            {"round_like_script": o.round_like_script, "settings": settings, "notes": notes},
+        )
+
+
 # The order of the stages is the order of the pipeline. Stages that clean the data (artifact
 # rejection, WM/CSF regression) belong between Functional and Standard space; stages that use
 # the finished data (ROI-to-ROI correlation) after it.
@@ -712,6 +980,7 @@ STAGES: list[Stage] = [
     FunctionalStage(),
     ArtifactStage(),
     StandardSpaceStage(),
+    DiffusionStage(),
 ]
 
 

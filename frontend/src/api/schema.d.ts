@@ -876,6 +876,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/alps-results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Alps Table
+         * @description One row per diffusion series with an ALPS result, from the recorded alps.json files.
+         */
+        get: operations["alps_table_api_workspaces__ws_id__alps_results_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/alps-results/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Alps Export
+         * @description Save the table as CSV and Excel in reports/alps/.
+         */
+        post: operations["alps_export_api_workspaces__ws_id__alps_results_export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/alps-results/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Alps Exports
+         * @description The saved ALPS tables, newest first.
+         */
+        get: operations["alps_exports_api_workspaces__ws_id__alps_results_exports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/subjects/{label}/images": {
         parameters: {
             query?: never;
@@ -1114,6 +1174,68 @@ export interface components {
             /** Started By */
             started_by: string | null;
         };
+        /**
+         * AlpsRow
+         * @description One diffusion series of one subject (and session).
+         */
+        AlpsRow: {
+            /** Subject */
+            subject: string;
+            /** Session */
+            session: string | null;
+            /** Series */
+            series: string;
+            /** Record */
+            record: string;
+            /** Scanner */
+            scanner: string;
+            /** Alps L */
+            alps_L: number;
+            /** Alps R */
+            alps_R: number;
+            /** Alps */
+            alps: number;
+            /** Fa */
+            fa: number;
+            /** Md */
+            md: number;
+            /** Components */
+            components: {
+                [key: string]: number;
+            };
+            /** Fa Rois */
+            fa_rois: {
+                [key: string]: number;
+            };
+            /** Md Rois */
+            md_rois: {
+                [key: string]: number;
+            };
+            /** Voxels */
+            voxels: {
+                [key: string]: number;
+            };
+            /** Settings */
+            settings: {
+                [key: string]: string;
+            };
+            /** Versions */
+            versions: {
+                [key: string]: string;
+            };
+            /** Notes */
+            notes: string[];
+            /** Flags */
+            flags: string[];
+            /** Mean Movement Mm */
+            mean_movement_mm: number | null;
+            /** Decision */
+            decision: string | null;
+            /** Decision Reason */
+            decision_reason: string | null;
+            /** Decision Who */
+            decision_who: string | null;
+        };
         /** AnatRequest */
         AnatRequest: {
             /** Subject */
@@ -1221,6 +1343,24 @@ export interface components {
              *     }
              */
             artifact: components["schemas"]["ArtifactOptions"];
+            /**
+             * @default {
+             *       "denoise": true,
+             *       "unring": true,
+             *       "topup": true,
+             *       "second_is_opposite": false,
+             *       "eddy": "eddy_cpu",
+             *       "registration": "linear",
+             *       "structural": "none",
+             *       "template": "default",
+             *       "tensor_method": "flirt",
+             *       "roi_source": "default",
+             *       "roi_radius_mm": 2.5,
+             *       "custom_rois": [],
+             *       "round_like_script": false
+             *     }
+             */
+            diffusion: components["schemas"]["DiffusionOptions"];
             /** Preset */
             preset?: string | null;
         };
@@ -1275,6 +1415,84 @@ export interface components {
             groups: {
                 [key: string]: string[];
             };
+        };
+        /**
+         * DiffusionOptions
+         * @description The choices of the diffusion stage. Defaults are those of ``alps.sh`` unless noted.
+         */
+        DiffusionOptions: {
+            /**
+             * Denoise
+             * @default true
+             */
+            denoise: boolean;
+            /**
+             * Unring
+             * @default true
+             */
+            unring: boolean;
+            /**
+             * Topup
+             * @default true
+             */
+            topup: boolean;
+            /**
+             * Second Is Opposite
+             * @default false
+             */
+            second_is_opposite: boolean;
+            /**
+             * Eddy
+             * @default eddy_cpu
+             */
+            eddy: string;
+            /** Eddy Threads */
+            eddy_threads?: number | null;
+            /**
+             * Registration
+             * @default linear
+             * @enum {string}
+             */
+            registration: "native" | "linear" | "fnirt" | "linear_fnirt";
+            /**
+             * Structural
+             * @default none
+             * @enum {string}
+             */
+            structural: "none" | "t1" | "t2";
+            /**
+             * Template
+             * @default default
+             * @enum {string}
+             */
+            template: "default" | "jhu_fa" | "mni_t1" | "jhu_t2";
+            /**
+             * Tensor Method
+             * @default flirt
+             * @enum {string}
+             */
+            tensor_method: "flirt" | "vecreg";
+            /**
+             * Roi Source
+             * @default default
+             * @enum {string}
+             */
+            roi_source: "default" | "legacy5" | "sphere" | "custom";
+            /**
+             * Roi Radius Mm
+             * @default 2.5
+             */
+            roi_radius_mm: number;
+            /**
+             * Custom Rois
+             * @default []
+             */
+            custom_rois: string[];
+            /**
+             * Round Like Script
+             * @default false
+             */
+            round_like_script: boolean;
         };
         /**
          * ErrorBody
@@ -1371,6 +1589,24 @@ export interface components {
              *     }
              */
             artifact: components["schemas"]["ArtifactOptions"];
+            /**
+             * @default {
+             *       "denoise": true,
+             *       "unring": true,
+             *       "topup": true,
+             *       "second_is_opposite": false,
+             *       "eddy": "eddy_cpu",
+             *       "registration": "linear",
+             *       "structural": "none",
+             *       "template": "default",
+             *       "tensor_method": "flirt",
+             *       "roi_source": "default",
+             *       "roi_radius_mm": 2.5,
+             *       "custom_rois": [],
+             *       "round_like_script": false
+             *     }
+             */
+            diffusion: components["schemas"]["DiffusionOptions"];
         };
         /** FullPlan */
         FullPlan: {
@@ -1967,6 +2203,24 @@ export interface components {
              *     }
              */
             artifact: components["schemas"]["ArtifactOptions"];
+            /**
+             * @default {
+             *       "denoise": true,
+             *       "unring": true,
+             *       "topup": true,
+             *       "second_is_opposite": false,
+             *       "eddy": "eddy_cpu",
+             *       "registration": "linear",
+             *       "structural": "none",
+             *       "template": "default",
+             *       "tensor_method": "flirt",
+             *       "roi_source": "default",
+             *       "roi_radius_mm": 2.5,
+             *       "custom_rois": [],
+             *       "round_like_script": false
+             *     }
+             */
+            diffusion: components["schemas"]["DiffusionOptions"];
         };
         /** PresetOptions */
         "PresetOptions-Output": {
@@ -2003,6 +2257,24 @@ export interface components {
              *     }
              */
             artifact: components["schemas"]["ArtifactOptions"];
+            /**
+             * @default {
+             *       "denoise": true,
+             *       "unring": true,
+             *       "topup": true,
+             *       "second_is_opposite": false,
+             *       "eddy": "eddy_cpu",
+             *       "registration": "linear",
+             *       "structural": "none",
+             *       "template": "default",
+             *       "tensor_method": "flirt",
+             *       "roi_source": "default",
+             *       "roi_radius_mm": 2.5,
+             *       "custom_rois": [],
+             *       "round_like_script": false
+             *     }
+             */
+            diffusion: components["schemas"]["DiffusionOptions"];
         };
         /** PresetRequest */
         PresetRequest: {
@@ -4472,6 +4744,101 @@ export interface operations {
             query?: {
                 subject?: string | null;
             };
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportExport"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    alps_table_api_workspaces__ws_id__alps_results_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlpsRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    alps_export_api_workspaces__ws_id__alps_results_export_post: {
+        parameters: {
+            query?: {
+                leave_out_excluded?: boolean;
+            };
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportExport"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    alps_exports_api_workspaces__ws_id__alps_results_exports_get: {
+        parameters: {
+            query?: never;
             header?: never;
             path: {
                 ws_id: string;

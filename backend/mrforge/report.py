@@ -36,6 +36,21 @@ SECTIONS: list[tuple[str, str, list[str]]] = [
         ["melodic", "aroma_classify", "ica_labels", "regfilt"],
     ),
     ("standard", "Standard space", ["func_to_mni"]),
+    (
+        "diffusion",
+        "Diffusion processing and the ALPS index",
+        [
+            "dwi_denoise",
+            "dwi_unring",
+            "dwi_topup",
+            "dwi_eddy",
+            "dwi_dtifit",
+            "dwi_qc",
+            "dwi_to_template",
+            "alps_rois",
+            "alps_index",
+        ],
+    ),
 ]
 STEP_TITLES = {
     "resample_t1": "Resampling of the T1 to 1 mm",
@@ -49,6 +64,15 @@ STEP_TITLES = {
     "ica_labels": "Component labels (your decision)",
     "regfilt": "Noise removal",
     "func_to_mni": "Alignment to standard space",
+    "dwi_denoise": "Noise removal (MRtrix3 dwidenoise)",
+    "dwi_unring": "Gibbs ringing removal (MRtrix3 mrdegibbs)",
+    "dwi_topup": "Distortion estimate (TOPUP)",
+    "dwi_eddy": "Eddy-current and motion correction",
+    "dwi_dtifit": "Diffusion tensor fit (dtifit)",
+    "dwi_qc": "Diffusion quality checks",
+    "dwi_to_template": "Alignment to a template",
+    "alps_rois": "ALPS regions of interest",
+    "alps_index": "ALPS index",
 }
 
 

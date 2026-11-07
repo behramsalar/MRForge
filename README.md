@@ -12,6 +12,7 @@ A web application that guides researchers through MRI/fMRI analysis with tools t
 - **Artifact rejection**: MELODIC, a component review screen (signal / noise / uncertain), `fsl_regfilt`, and optional ICA-AROMA.
 - **Standard (MNI) space** in a single resampling step.
 - **Full processing** of one subject or a batch, with presets, resource limits so the computer stays usable, and resume after a crash or restart.
+- **Diffusion and the ALPS index**: a port of `alps.sh` as separate steps (optional MRtrix3 denoising, TOPUP, eddy, `dtifit`, registration to a template, the four regions, ALPS per side), with a results table and CSV and Excel export.
 - **Quality decisions** (accept / review / exclude with a reason) that only the researcher makes; the app flags, it never excludes.
 - **Reports** per subject (in the app and as a saved HTML file), a command history with exact commands, and a system page that checks the installed tools.
 - A built-in **viewer** (NiiVue) for the images and overlays.

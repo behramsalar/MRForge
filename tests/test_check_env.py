@@ -66,3 +66,56 @@ def test_the_system_route_reports_every_check_and_readiness(
     names = [c["name"] for c in body["checks"]]
     assert "Python" in names and "dcm2niix" in names and "Free disk" in names
     assert body["ready"] == all(c["status"] != "FAIL" for c in body["checks"])
+
+
+def _fake_tool(folder: Path, name: str, version_line: str = "") -> None:
+    folder.mkdir(parents=True, exist_ok=True)
+    exe = folder / name
+    exe.write_text(f"#!/bin/sh\necho '{version_line}'\n")
+    exe.chmod(0o755)
+
+
+def test_mrtrix3_is_found_on_the_path_or_through_the_variable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from mrforge.mrtrix_env import find_mrtrix
+
+    bin_dir = tmp_path / "mrtrix" / "bin"
+    for tool in ("dwidenoise", "mrdegibbs"):
+        _fake_tool(bin_dir, tool, "== dwidenoise 3.0.8 ==")
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    assert find_mrtrix() is None
+    monkeypatch.setenv("MRFORGE_MRTRIX", str(bin_dir))
+    found = find_mrtrix()
+    assert found is not None and found.version == "3.0.8"
+    monkeypatch.delenv("MRFORGE_MRTRIX")
+    monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin:/bin")
+    assert find_mrtrix() is not None
+
+
+def test_mrtrix3_needs_both_programs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from mrforge.mrtrix_env import find_mrtrix
+
+    _fake_tool(tmp_path / "bin", "dwidenoise")
+    monkeypatch.setenv("PATH", f"{tmp_path / 'bin'}:/usr/bin:/bin")
+    assert find_mrtrix() is None
+
+
+def test_missing_mrtrix3_is_optional_not_a_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    from mrforge import system_check as sc
+
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    monkeypatch.delenv("MRFORGE_MRTRIX", raising=False)
+    check = sc._with_fix(sc.check_mrtrix())
+    assert check.status == sc.OPTIONAL and "skipped" in check.detail and check.fix
+    assert sc.exit_code([check]) == 0
+
+
+def test_diffusion_tools_check_lists_what_is_missing(tmp_path: Path) -> None:
+    from mrforge import system_check as sc
+
+    fsl = tmp_path / "fsl"
+    for name in ("topup", "dtifit"):
+        _fake_tool(fsl / "bin", name)
+    check = sc.check_fsl_diffusion({"FSLDIR": str(fsl), "PATH": "/nonexistent"})
+    assert check.status == sc.OPTIONAL and "eddy" in check.detail and "bet2" in check.detail

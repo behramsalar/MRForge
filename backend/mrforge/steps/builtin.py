@@ -1,8 +1,15 @@
 """Importing this module registers every built-in step."""
 
 from mrforge.steps import (  # noqa: F401
+    alps_index,
+    alps_rois,
     aroma_classify,
     bet,
+    dwi_dti,
+    dwi_eddy,
+    dwi_mrtrix,
+    dwi_to_template,
+    dwi_topup,
     fake,
     feat_preproc,
     fieldmap_prep,

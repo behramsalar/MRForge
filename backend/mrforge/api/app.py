@@ -23,6 +23,10 @@ from sqlalchemy import select
 from sse_starlette.sse import EventSourceResponse
 
 from mrforge import __version__, accounts, presets, qc_decisions, resources
+from mrforge.alps_results import AlpsRow
+from mrforge.alps_results import collect as alps_collect
+from mrforge.alps_results import export as alps_export_files
+from mrforge.alps_results import list_exports as alps_list_exports
 from mrforge.analysis_ready import ReadyReport
 from mrforge.analysis_ready import refresh as refresh_analysis_ready
 from mrforge.api import schemas as S
@@ -44,6 +48,7 @@ from mrforge.importing.scan import TAR_ENDINGS, set_labels
 from mrforge.importing.sourcedata import removal_plan
 from mrforge.importing.undo import undo_plan
 from mrforge.models import Job, JobStatus, Subject
+from mrforge.mrtrix_env import find_mrtrix
 from mrforge.niftiutil import image_info
 from mrforge.operations import (
     active_operation,
@@ -280,6 +285,8 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
             tools["bids-validator"] = None
         aroma = find_aroma()
         tools["ica-aroma"] = aroma.version if aroma else None
+        mrtrix = find_mrtrix()
+        tools["mrtrix3"] = mrtrix.version if mrtrix else None
         free = total = None
         try:
             usage = shutil.disk_usage(root if root.is_dir() else root.parent)
@@ -1081,6 +1088,28 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         if subject is not None and not SAFE_NAME.fullmatch(subject):
             raise StepError("UNKNOWN_SUBJECT", "There is no such subject.")
         return [export_info(ws_id, ws, p) for p in list_exports(ws, subject)]
+
+    # -- diffusion results (ALPS) ---------------------------------------------------------------
+
+    @app.get("/api/workspaces/{ws_id}/alps-results", response_model=list[AlpsRow])
+    def alps_table(ws_id: str) -> list[AlpsRow]:
+        """One row per diffusion series with an ALPS result, from the recorded alps.json files."""
+        return alps_collect(ws_of(ws_id))
+
+    @app.post("/api/workspaces/{ws_id}/alps-results/export", response_model=list[S.ReportExport])
+    def alps_export(ws_id: str, leave_out_excluded: bool = False) -> list[S.ReportExport]:
+        """Save the table as CSV and Excel in reports/alps/."""
+        ws = ws_of(ws_id)
+        return [
+            export_info(ws_id, ws, p)
+            for p in alps_export_files(ws, leave_out_excluded=leave_out_excluded)
+        ]
+
+    @app.get("/api/workspaces/{ws_id}/alps-results/exports", response_model=list[S.ReportExport])
+    def alps_exports(ws_id: str) -> list[S.ReportExport]:
+        """The saved ALPS tables, newest first."""
+        ws = ws_of(ws_id)
+        return [export_info(ws_id, ws, p) for p in alps_list_exports(ws)]
 
     # -- viewer -------------------------------------------------------------------------------
 

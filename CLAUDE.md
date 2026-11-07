@@ -369,6 +369,20 @@ Added after Stage 6 from the user's interface review (2026-10-07), so that Stage
 - A colleague who didn't build the app can understand what was done to a subject from the report alone.
 - Tag the release (`v0.1`) after the user accepts.
 
+### Stage 9 — Diffusion processing and the ALPS index
+
+Port of the lab's `alps.sh` (G. Barisano, MIT; computes the diffusion-along-perivascular-spaces index). Plan and decisions: `docs/DECISIONS.md` (2026-11-06). Each part is its own `Step` (principle 2); MRtrix3 is an optional dependency (denoising and ringing removal are skipped when it is missing, and the skip is recorded).
+
+**Build**
+- 9a MRtrix3 detection (`mrtrix_env.py`, System/Settings, optional) and FSL diffusion-tool checks | 9b packaged ALPS ROIs and `alps_rois` | 9c `dwi_denoise`, `dwi_unring`, `dwi_topup` | 9d `dwi_eddy`, `dwi_dtifit`, `dwi_qc` | 9e `dwi_to_template` (native, linear, fnirt, linear+fnirt, T1/T2-guided; tensor with flirt/applywarp or vecreg) | 9f `alps_index` (script-compatible CSV files plus `alps.json`) | 9g `DiffusionStage` in the stage registry, dialog card, page, report section, viewer overlays | 9h workspace results table with CSV and Excel export | 9i docs, end-to-end check.
+
+**Manual test checklist** (at the stage end)
+1. Settings shows MRtrix3 (or "not installed (optional)"); the System page shows the FSL diffusion tools.
+2. Run the Diffusion stage from the dialog on a subject with a diffusion image and a reverse phase-encoding b0; compare with a manual `alps.sh` run on the same data (same ALPS values within the stated eddy tolerance).
+3. Hide MRtrix3 from the PATH: the stage still runs, says denoising was skipped, and the export flags it.
+4. Kill and restart mid-eddy: the pipeline resumes at eddy, earlier steps are not repeated.
+5. Export the results table as CSV and Excel and check every number against `alps.json` and the logs.
+
 ### Later (do not start without an explicit go-ahead)
 
 Each follows the same pattern: backend step with tests and a comparison against manual FSL, quick check, then its screen in the agreed design, then a manual test checklist.
@@ -381,7 +395,7 @@ Each follows the same pattern: backend step with tests and a comparison against 
 
 ## 9. Out of scope until told otherwise
 
-- Group-level statistics, task fMRI first-level analysis, diffusion processing.
+- Group-level statistics, task fMRI first-level analysis, and diffusion processing beyond the ALPS pipeline of Stage 9 (tractography, multi-shell models; the user's go-ahead for Stage 9 is recorded in `docs/DECISIONS.md`).
 - Celery, PostgreSQL, multi-node compute, and login/authentication (passwords, sessions, permissions). Light researcher profiles (a name picked on a shared computer, no password, used to tag and resume one's own work) are allowed since the UI overhaul; see `docs/DECISIONS.md`.
 - Any LLM-written scientific text.
 - Automatic subject exclusion.

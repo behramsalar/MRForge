@@ -17,12 +17,14 @@ export function StagePage({
   stage,
   title,
   description,
+  hint = "Choose a subject. The earlier stages must be done already; their results are used as they are.",
 }: {
   ws: string;
   state: WorkspaceState | null;
   stage: string;
   title: string;
   description: string;
+  hint?: string;
 }) {
   const overview = useOverview(ws);
   const [chosen, setChosen] = useState<string | undefined>();
@@ -39,7 +41,7 @@ export function StagePage({
       {rows.length > 0 && (
         <>
           <Text size={type.help} color="gray">
-            Choose a subject. The earlier stages must be done already; their results are used as they are.
+            {hint}
           </Text>
           <SubjectsTable subjects={rows} selected={chosen ? [chosen] : []} onSelect={(l) => setChosen(l[0])} />
         </>
@@ -52,7 +54,7 @@ export function StagePage({
               <StageChips stages={row.stages} />
             </Flex>
             <Button size="3" disabled={busy} onClick={() => setConfirm(true)}>
-              Run {title.toLowerCase()} for {row.label}…
+              Run {title.replace(/\s*\(.*\)/, "").toLowerCase()} for {row.label}…
             </Button>
           </Flex>
         </Card>

@@ -7,7 +7,7 @@ import numpy as np
 from fastapi.testclient import TestClient
 
 from mrforge.api.app import create_app
-from mrforge.viewerimages import ANAT, FMAP, FUNC, RAW, find_images
+from mrforge.viewerimages import ANAT, DWI, FMAP, FUNC, RAW, find_images
 from mrforge.workspace import Workspace
 
 D = "derivatives/mrforge/sub-001"
@@ -108,3 +108,32 @@ def test_route_returns_files_the_viewer_can_load(tmp_path: Path, monkeypatch) ->
         item["group"] == "Raw data" and item["name"] == "T1 (original)" and item["size_bytes"] > 0
     )
     assert client.get(item["url"]).status_code == 200  # served, from an allowed folder
+
+
+def test_diffusion_results_are_a_group_with_plain_names(tmp_path: Path) -> None:
+    ws = build(tmp_path)
+    for rel in (
+        "sub-001_desc-dti_FA.nii.gz",
+        "sub-001_desc-dti_MD.nii.gz",
+        "sub-001_space-JHUFA1mm_desc-dti_FA.nii.gz",
+        "sub-001_space-JHUFA1mm_desc-ALPSrois_dseg.nii.gz",
+        "sub-001_desc-dtimask_mask.nii.gz",
+        "sub-001_desc-eddy_dwi.nii.gz",
+        # not listed: the tensor, the single region masks, and transforms
+        "sub-001_desc-dti_tensor.nii.gz",
+        "sub-001_space-JHUFA1mm_desc-LSCR_mask.nii.gz",
+    ):
+        image(ws, f"{D}/dwi/{rel}", (4, 4, 4))
+    found = {
+        (f.described.group, f.described.name, f.described.role)
+        for f in find_images(ws, "sub-001")
+        if f.described.group == DWI
+    }
+    assert found == {
+        (DWI, "FA map", "underlay"),
+        (DWI, "Mean diffusivity (MD)", "underlay"),
+        (DWI, "FA map (JHU FA template space)", "underlay"),
+        (DWI, "ALPS regions (JHU FA template space)", "overlay"),
+        (DWI, "Brain mask (diffusion)", "overlay"),
+        (DWI, "Diffusion, eddy-corrected", "underlay"),
+    }
