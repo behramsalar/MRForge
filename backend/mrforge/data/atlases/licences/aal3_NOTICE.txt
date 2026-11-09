@@ -4,10 +4,12 @@ Reference: Rolls, E. T., Huang, C. C., Lin, C. P., Feng, J., & Joliot, M. (2020)
 Automated anatomical labelling atlas 3. NeuroImage, 206, 116189.
 https://doi.org/10.1016/j.neuroimage.2019.116189
 
-Licence: the GIN page states that the "GNU General Public Licence" was added in the
-readme of release 3v2. That readme is not part of the copy of the atlas used here, so the
-licence text itself (and its version) was not read. TO VERIFY before this app is shared
-outside the lab: obtain the readme from the AAL3v2 download and put its licence text here.
+Licence: GNU General Public Licence (GPL), as stated on the GIN download page (confirmed
+by the project owner, 2026-11-09). The page does not name the version (2 or 3). The full
+licence text is not copied here; it is available at https://www.gnu.org/licenses/. The
+atlas files are redistributed unchanged in content, with the source named above. Note: GPL
+applies to this atlas data; if MRForge is distributed outside the lab, keep this notice with
+the atlas files and check how the GPL relates to the rest of the app's licence.
 
 The volume values are the authors' own (2 mm MNI volume); only the file data type and
 header codes were changed, and labels.csv was added (see the atlas folder README).
