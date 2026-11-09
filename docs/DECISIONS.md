@@ -226,3 +226,7 @@ Go-ahead: the user asked for ROI time-series extraction and ROI-to-ROI correlati
 - Basic matrix view is part of this stage (10h); the richer version is "later".
 - Licences found online (the atlas folders contain none): Schaefer, CBIG repository, MIT; Tian, "Melbourne Subcortex Atlas License", free use and redistribution, citation required; AAL3, GNU GPL as named on the GIN page for release 3v2 (the licence text itself was not read); Brainnetome, Brainnetome Center terms on its download page: non-commercial, attribution and share-alike, commercial use needs a licence request. Decision on bundling: see the entry below once the user has answered.
 
+
+## 2026-11-09 — Stage 10b: which atlases are bundled (user decision)
+
+Bundled: Schaefer 100 (7 and 17 networks), Schaefer + Tian S1 to S4 (both network versions) and AAL3, 11 atlases in all (about 1 MB: `volume.nii.gz` and `labels.csv`, no originals), with the licence texts in `data/atlases/licences/`. **Brainnetome is not bundled** (non-commercial, attribution and share-alike terms); it can be added later from a local folder. Open point: the AAL3 licence is stated as GPL on the GIN page, but the readme with the licence text is not in the lab's copy; `aal3_NOTICE.txt` says so and must be completed before the app is shared outside the lab. Plain-language caveats (AAL3 on Colin27; combined atlases built by the lab, 74-voxel overlap) are in `atlases.json` and shown in the dialog.
