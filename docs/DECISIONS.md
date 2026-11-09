@@ -271,3 +271,6 @@ Bundled: Schaefer 100 (7 and 17 networks), Schaefer + Tian S1 to S4 (both networ
 - `func_qc` (version 3): new optional inputs `bold` and `brain_mask`; a plot `desc-globalsignal_qc.png` and a `global_signal` block in the metrics (percent from the run's median per volume, largest change, volumes beyond the threshold). Flag only; REVIEW(domain): `global_signal_threshold_pct` = 3 %. Existing func_qc runs rerun once (new inputs); it takes seconds.
 - `roi_correlation` (version 2): `shared_signal_share` (largest eigenvalue of the correlation matrix over the number of regions) in the record, a QC item and a flag in the results table and matrix view; REVIEW(domain): `shared_signal_flag` = 0.6. On the real recording 0.94 (flagged) and 0.42 after dropping 40 volumes (not flagged). Records from before this change have no value and no flag.
 - Nothing is excluded or corrected by these flags (principle 6). Not done: removing the shared signal (global-signal / WM-CSF regression is a later preprocessing step).
+
+## 2026-11-09 — Only `func/` is sorted into subfolders (user decision)
+`anat/` keeps its structure because other functions expect it; `dwi/` stays flat because diffusion is only used for the ALPS index. `layout.SORTED_DATATYPES` stays `("func",)`; revisit only on the user's request.

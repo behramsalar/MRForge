@@ -5,7 +5,8 @@ The ``func`` folder of a processed subject held ~33 files per recording. Results
 kind into subfolders. One pure function decides, from the file name alone, so new steps get
 the layout for free and the migration of old workspaces uses exactly the same rule.
 
-Only ``func`` is sorted for now; ``anat`` and ``dwi`` keep their flat layout (decision pending).
+Only ``func`` is sorted. ``anat`` and ``dwi`` keep their flat layout (user decision, 2026-11-09:
+other functions expect the ``anat`` structure, and ``dwi`` is only used for the ALPS index).
 """
 
 from __future__ import annotations
