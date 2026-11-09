@@ -1,6 +1,6 @@
 """The ROI time series and correlation matrices of a workspace: one table, and an index file.
 
-Every number comes from the records the steps wrote (``..._desc-roi.json`` of
+Every number comes from the records the steps wrote (``..._roi.json`` of
 ``roi_timeseries`` and ``..._relmat.json`` of ``roi_correlation``); nothing is recomputed here
 (principle 7). The index file lists, for each participant, recording and atlas, the full path of
 every file, so that the researcher can arrange the matrices into groups for their own study (the
@@ -94,7 +94,7 @@ def collect(ws: Workspace) -> list[RoiRow]:
         if missing:
             flags.append(f"missing files: {', '.join(missing)}")
         if not roi:
-            flags.append("the extraction record (desc-roi.json) is missing")
+            flags.append("the extraction record (…_roi.json) is missing")
         low = int(roi.get("n_low_coverage", 0))
         empty = int(info.get("n_regions_without_values", 0))
         if low:
@@ -132,6 +132,88 @@ def collect(ws: Workspace) -> list[RoiRow]:
         )
     rows.sort(key=lambda r: (r.subject, r.session or "", r.recording, r.atlas))
     return rows
+
+
+# -- one matrix, for the viewer ------------------------------------------------------------------
+
+
+class RoiMatrixRegion(BaseModel):
+    name: str
+    network: str  # "" when the atlas has none
+    hemisphere: str  # L, R or M
+    coverage: float | None  # share of the region's voxels with signal
+    low_coverage: bool
+    empty: bool  # no voxel with signal: its row and column are empty
+
+
+class RoiMatrix(BaseModel):
+    """Both matrices of one recording and atlas, as written by ``roi_correlation``. Missing
+    values ('nan' in the files) are ``None``. Regions are in the order of the files."""
+
+    subject: str
+    session: str | None
+    recording: str
+    atlas: str
+    atlas_name: str
+    regions: list[RoiMatrixRegion]
+    r: list[list[float | None]]
+    z: list[list[float | None]]
+    flags: list[str]
+
+
+def _grid(path: Path) -> list[list[float | None]]:
+    import numpy as np
+
+    m = np.loadtxt(path, ndmin=2)
+    return [[None if np.isnan(v) else round(float(v), 5) for v in row] for row in m]
+
+
+def matrix(
+    ws: Workspace, subject: str, session: str | None, recording: str, atlas: str
+) -> RoiMatrix | None:
+    """The matrices of one result, or ``None`` when there is no such result."""
+    from mrforge import atlases
+
+    for row in collect(ws):
+        if (row.subject, row.session, row.recording, row.atlas) != (
+            subject,
+            session or None,
+            recording,
+            atlas,
+        ):
+            continue
+        roi = _read(ws.abspath(row.files["roi"])) or {}
+        info = _read(ws.abspath(row.files["info"])) or {}
+        by_name = {r["name"]: r for r in roi.get("regions", [])}
+        try:
+            catalog = {r.clean_name: r for r in atlases.regions(atlas)}
+        except atlases.AtlasError:
+            catalog = {}
+        regions = []
+        for name in info.get("regions", []):
+            found, known = by_name.get(name, {}), catalog.get(name)
+            regions.append(
+                RoiMatrixRegion(
+                    name=name,
+                    network=str(found.get("network") or (known.network if known else "")),
+                    hemisphere=known.hemisphere if known else name.split("_", 1)[0][:1],
+                    coverage=found.get("coverage"),
+                    low_coverage=bool(found.get("low_coverage", False)),
+                    empty=bool(found.get("empty", False)),
+                )
+            )
+        return RoiMatrix(
+            subject=row.subject,
+            session=row.session,
+            recording=row.recording,
+            atlas=row.atlas,
+            atlas_name=row.atlas_name,
+            regions=regions,
+            r=_grid(ws.abspath(row.files["pearson"])),
+            z=_grid(ws.abspath(row.files["fisherz"])),
+            flags=row.flags,
+        )
+    return None
 
 
 # -- the index file ----------------------------------------------------------------------------

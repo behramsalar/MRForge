@@ -75,10 +75,11 @@ from mrforge.provenance import read_provenance
 from mrforge.qc_decisions import MotionThresholds, QcDecisionEntry
 from mrforge.report import SubjectReport, build_report
 from mrforge.report_html import export_report, list_exports
-from mrforge.roi_results import RoiRow
+from mrforge.roi_results import RoiMatrix, RoiRow
 from mrforge.roi_results import collect as roi_collect
 from mrforge.roi_results import export as roi_export_files
 from mrforge.roi_results import list_exports as roi_list_exports
+from mrforge.roi_results import matrix as roi_matrix_of
 from mrforge.runner.jobs import get_job, list_jobs, process_alive, recover_stale_jobs
 from mrforge.steps.resample_t1 import needs_resampling
 from mrforge.viewerimages import find_images
@@ -1127,6 +1128,20 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
     def roi_table(ws_id: str) -> list[RoiRow]:
         """One row per recording and atlas with a correlation result, from the recorded files."""
         return roi_collect(ws_of(ws_id))
+
+    @app.get("/api/workspaces/{ws_id}/roi-matrix", response_model=RoiMatrix)
+    def roi_matrix(
+        ws_id: str, subject: str, atlas: str, recording: str = "", session: str | None = None
+    ) -> RoiMatrix:
+        """Both matrices (r and Fisher z) of one result, with region names and coverage."""
+        found = roi_matrix_of(ws_of(ws_id), subject, session, recording, atlas)
+        if found is None:
+            raise StepError(
+                "NOT_FOUND",
+                "There is no connectivity result for this subject, recording and atlas.",
+                suggested_action="Run the Connectivity stage for it first.",
+            )
+        return found
 
     @app.post("/api/workspaces/{ws_id}/roi-results/export", response_model=list[S.ReportExport])
     def roi_export(ws_id: str, leave_out_excluded: bool = False) -> list[S.ReportExport]:

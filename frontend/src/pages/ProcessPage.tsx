@@ -1,4 +1,5 @@
 import { Flex } from "@radix-ui/themes";
+import { ConnectivityMatrixView } from "../components/ConnectivityMatrixView";
 import { ConnectivityResultsTable } from "../components/ConnectivityResultsTable";
 import { DiffusionResultsTable } from "../components/DiffusionResultsTable";
 import { space } from "../theme/tokens";
@@ -36,6 +37,7 @@ export function ProcessPage({ ws, tab, state }: { ws: string; tab?: string; stat
           multi
         />
         <ConnectivityResultsTable ws={ws} />
+        <ConnectivityMatrixView ws={ws} />
       </Flex>
     );
   }

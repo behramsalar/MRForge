@@ -3,7 +3,7 @@
 Pearson correlation between the mean time series of every pair of regions, and its Fisher z
 transform. Pure numpy; no FSL. The two matrices are written as plain numbers only (N x N, no
 name row or column, ``%.8f``), the format NBS-type tools read directly; the order of the regions
-is that of the time-series header and of the ``desc-roi.json`` next to it.
+is that of the time-series header and of the ``..._roi.json`` next to it.
 
 Choices (the lab's own scripts compute the same, with two differences noted here):
 - A region whose time series is missing (no voxel with signal) or constant gets NaN in its row

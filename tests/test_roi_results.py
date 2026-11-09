@@ -180,3 +180,37 @@ def test_the_routes(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-unt
     assert len(exported) == 1 and exported[0]["name"].endswith(".csv")
     assert client.get(exported[0]["url"]).status_code == 200  # served by the file route
     assert [e["name"] for e in client.get(f"{base}/exports").json()] == [exported[0]["name"]]
+
+
+def test_the_matrix_of_one_result_has_names_flags_and_gaps(ws: Workspace) -> None:
+    make_result(ws, "sub-001", empty=True)
+    m = roi_results.matrix(ws, "sub-001", None, "task-rest", "schaefer100n7")
+    assert m is not None
+    assert [r.name for r in m.regions] == ["L_A", "L_B", "R_A", "R_B"]
+    assert [r.hemisphere for r in m.regions] == ["L", "L", "R", "R"]
+    assert len(m.r) == len(m.z) == 4 and all(len(row) == 4 for row in m.r)
+    assert m.r[0][0] == 1.0 and m.z[0][0] == 0.0  # r keeps 1 on the diagonal, z has 0
+    assert all(v is None for v in m.r[2]) and all(row[2] is None for row in m.r)  # nan region
+    assert m.r[0][1] == m.r[1][0] and m.r[0][1] is not None  # symmetric
+
+
+def test_no_matrix_for_an_unknown_result(ws: Workspace) -> None:
+    make_result(ws, "sub-001")
+    assert roi_results.matrix(ws, "sub-009", None, "task-rest", "schaefer100n7") is None
+    assert roi_results.matrix(ws, "sub-001", None, "task-rest", "aal3v2") is None
+
+
+def test_the_matrix_route(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setenv("HOME", str(tmp_path))
+    client = TestClient(create_app(tmp_path / "workspaces"))
+    ws_id = client.post("/api/workspaces", json={"name": "w"}).json()["id"]
+    folder = tmp_path / "workspaces" / ws_id
+    if not folder.exists():
+        pytest.skip("cannot locate the workspace folder of the API test")
+    url = f"/api/workspaces/{ws_id}/roi-matrix"
+    q = {"subject": "sub-001", "atlas": "schaefer100n7", "recording": "task-rest"}
+    assert client.get(url, params=q).status_code == 404  # nothing yet
+    make_result(Workspace.open(folder), "sub-001")
+    body = client.get(url, params=q).json()
+    assert body["atlas"] == "schaefer100n7" and len(body["r"]) == 4
+    assert body["regions"][0]["name"] == "L_A"

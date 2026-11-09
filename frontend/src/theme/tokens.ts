@@ -109,3 +109,19 @@ export const stageLabel: Record<string, string> = {
  * One accent (Forge amber) for everything interactive or decorative; green / amber / red /
  * orange / blue / gray only ever mean a state. No per-area colours: they fought the accent.
  */
+
+/**
+ * Colour scale of the connectivity matrices: a data scale, not a state. Blue is a negative
+ * value, white zero, red a positive value; the diagonal and missing values are drawn neutral.
+ * The range is fixed per statistic so two matrices can be compared by eye.
+ */
+export const matrixScale = {
+  negative: [33, 102, 172],
+  zero: [247, 247, 247],
+  positive: [178, 24, 43],
+  diagonal: [200, 200, 200],
+  missing: [225, 225, 225],
+  boundary: "rgba(0, 0, 0, 0.45)",
+  flag: "rgba(0, 0, 0, 0.35)", // hatching of regions with little signal
+  range: { r: 1, z: 2 }, // REVIEW(domain): symmetric limits of the colour scale
+} as const;

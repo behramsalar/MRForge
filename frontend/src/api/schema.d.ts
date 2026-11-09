@@ -976,6 +976,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{ws_id}/roi-matrix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Roi Matrix
+         * @description Both matrices (r and Fisher z) of one result, with region names and coverage.
+         */
+        get: operations["roi_matrix_api_workspaces__ws_id__roi_matrix_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/roi-results/export": {
         parameters: {
             query?: never;
@@ -2871,6 +2891,46 @@ export interface components {
             since: string;
             /** Page */
             page: string;
+        };
+        /**
+         * RoiMatrix
+         * @description Both matrices of one recording and atlas, as written by ``roi_correlation``. Missing
+         *     values ('nan' in the files) are ``None``. Regions are in the order of the files.
+         */
+        RoiMatrix: {
+            /** Subject */
+            subject: string;
+            /** Session */
+            session: string | null;
+            /** Recording */
+            recording: string;
+            /** Atlas */
+            atlas: string;
+            /** Atlas Name */
+            atlas_name: string;
+            /** Regions */
+            regions: components["schemas"]["RoiMatrixRegion"][];
+            /** R */
+            r: (number | null)[][];
+            /** Z */
+            z: (number | null)[][];
+            /** Flags */
+            flags: string[];
+        };
+        /** RoiMatrixRegion */
+        RoiMatrixRegion: {
+            /** Name */
+            name: string;
+            /** Network */
+            network: string;
+            /** Hemisphere */
+            hemisphere: string;
+            /** Coverage */
+            coverage: number | null;
+            /** Low Coverage */
+            low_coverage: boolean;
+            /** Empty */
+            empty: boolean;
         };
         /**
          * RoiRow
@@ -5117,6 +5177,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RoiRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    roi_matrix_api_workspaces__ws_id__roi_matrix_get: {
+        parameters: {
+            query: {
+                subject: string;
+                atlas: string;
+                recording?: string;
+                session?: string | null;
+            };
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoiMatrix"];
                 };
             };
             /** @description Validation Error */
