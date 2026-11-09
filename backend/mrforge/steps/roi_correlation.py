@@ -42,6 +42,12 @@ class RoiCorrelationParams(BaseModel):
     fisher_clip: float = FISHER_CLIP
     z_diagonal: float = 0.0  # REVIEW(domain): see the module text
     min_volumes: int = 3  # fewer volumes than this: no correlation (as in the scripts)
+    # REVIEW(domain): the share of all variance between regions that one shared signal explains
+    # (largest eigenvalue of the correlation matrix divided by the number of regions). Above
+    # this, the result is flagged (never excluded): the matrix then mostly shows one common
+    # signal, such as a jump or dip of the whole brain, a large global fluctuation or motion.
+    # Resting-state matrices of clean data usually stay well below it.
+    shared_signal_flag: float = 0.6
 
 
 class RoiCorrelationOutput(BaseModel):
@@ -78,6 +84,29 @@ def pearson(values: np.ndarray[Any, Any], min_volumes: int = 3) -> np.ndarray[An
     return r
 
 
+def shared_signal_share(r: np.ndarray[Any, Any]) -> float | None:
+    """The share of variance of the first principal component of the correlation matrix over
+    the regions that have values, or None when fewer than two have."""
+    ok = ~np.isnan(np.diag(r))
+    if ok.sum() < 2:
+        return None
+    sub = r[np.ix_(ok, ok)]
+    return float(np.linalg.eigvalsh(sub)[-1] / sub.shape[0])
+
+
+def shared_signal_warning(info: dict[str, Any]) -> str | None:
+    """Plain-language flag when one shared signal dominates the matrix (never excludes)."""
+    share, limit = info.get("shared_signal_share"), info.get("shared_signal_flag")
+    if share is None or limit is None or share < limit:
+        return None
+    return (
+        f"One shared signal explains {share * 100:.0f} % of the variance between regions "
+        f"(flag from {limit * 100:.0f} %). The matrix then mostly shows that common signal. "
+        "Look at the whole-brain signal plot of the run (a jump or dip, often at the start), "
+        "at head motion, and consider discarding more initial volumes."
+    )
+
+
 def fisher_z(
     r: np.ndarray[Any, Any], clip: float = FISHER_CLIP, diagonal: float = 0.0
 ) -> np.ndarray[Any, Any]:
@@ -97,7 +126,7 @@ def write_matrix(path: Path, matrix: np.ndarray[Any, Any]) -> None:
 @register_step
 class RoiCorrelationStep(Step[RoiCorrelationInput, RoiCorrelationParams, RoiCorrelationOutput]):
     name = "roi_correlation"
-    version = "1"
+    version = "2"  # 2: shared-signal share in the record and a flag
     InputSpec, ParamSpec, OutputSpec = (
         RoiCorrelationInput,
         RoiCorrelationParams,
@@ -173,6 +202,8 @@ class RoiCorrelationStep(Step[RoiCorrelationInput, RoiCorrelationParams, RoiCorr
             "n_pairs_clipped": int((np.abs(r[off]) > p.fisher_clip).sum() // 2),
             "mean_r": float(r[off].mean()) if off.any() else None,
             "mean_z": float(z[off].mean()) if off.any() else None,
+            "shared_signal_share": shared_signal_share(r),
+            "shared_signal_flag": p.shared_signal_flag,
         }
         (ctx.output_dir / out.info).write_text(json.dumps(info, indent=2) + "\n")
         return StepResult()
@@ -220,5 +251,13 @@ class RoiCorrelationStep(Step[RoiCorrelationInput, RoiCorrelationParams, RoiCorr
                 name="Mean correlation between regions (r)",
                 kind="metric",
                 value=None if info["mean_r"] is None else f"{info['mean_r']:.3f}",
+            ),
+            QCItem(
+                name="Variance explained by one shared signal",
+                kind="metric",
+                value=None
+                if info["shared_signal_share"] is None
+                else f"{info['shared_signal_share'] * 100:.0f} %",
+                warning=shared_signal_warning(info),
             ),
         ]

@@ -166,3 +166,27 @@ def test_a_tiny_or_unreadable_file_is_explained(tmp_path: Path):
     assert out.action == Action.FAILED and "TIMESERIES_TOO_SHORT" in out.reason
     (ws.root / TS).write_text("a\tb\nx\ty\n")
     assert "TIMESERIES_UNREADABLE" in run_it(ws).reason
+
+
+def test_shared_signal_share_is_the_first_component_of_the_correlation_matrix() -> None:
+    from mrforge.steps.roi_correlation import shared_signal_share
+
+    rng = np.random.default_rng(0)
+    independent = pearson(rng.normal(size=(300, 20)))
+    common = rng.normal(size=(300, 1)) * 5 + rng.normal(size=(300, 20))
+    assert shared_signal_share(independent) < 0.25  # type: ignore[operator]
+    assert shared_signal_share(pearson(common)) > 0.9  # type: ignore[operator]
+    assert shared_signal_share(np.full((3, 3), np.nan)) is None
+    # a region without values is left out of the share, not counted as zero
+    with_gap = pearson(np.column_stack([common, np.full(300, np.nan)]))
+    assert shared_signal_share(with_gap) > 0.9  # type: ignore[operator]
+
+
+def test_the_flag_says_what_to_look_at_and_only_flags() -> None:
+    from mrforge.steps.roi_correlation import shared_signal_warning
+
+    assert shared_signal_warning({"shared_signal_share": 0.4, "shared_signal_flag": 0.6}) is None
+    assert shared_signal_warning({"shared_signal_share": None, "shared_signal_flag": 0.6}) is None
+    text = shared_signal_warning({"shared_signal_share": 0.94, "shared_signal_flag": 0.6})
+    assert text and "94 %" in text and "initial volumes" in text
+    assert shared_signal_warning({}) is None  # records from before this check: no flag

@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from mrforge import qc_decisions
 from mrforge.bids import parse_bids_name
+from mrforge.steps.roi_correlation import shared_signal_warning
 from mrforge.workspace import Workspace
 
 R_SUFFIX = "_stat-pearsoncorrelation_relmat"
@@ -100,6 +101,9 @@ def collect(ws: Workspace) -> list[RoiRow]:
         if low:
             share = float(roi.get("min_coverage", 0.5)) * 100
             flags.append(f"{low} region(s) have under {share:g}% of their voxels with signal")
+        warning = shared_signal_warning(info)
+        if warning:
+            flags.append(warning)
         if empty:
             flags.append(f"{empty} region(s) have no usable signal ('nan' in the matrices)")
         decision = qc_decisions.current(ws, subject)

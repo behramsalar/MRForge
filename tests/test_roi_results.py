@@ -214,3 +214,15 @@ def test_the_matrix_route(tmp_path: Path, monkeypatch) -> None:  # type: ignore[
     body = client.get(url, params=q).json()
     assert body["atlas"] == "schaefer100n7" and len(body["r"]) == 4
     assert body["regions"][0]["name"] == "L_A"
+
+
+def test_a_dominant_shared_signal_is_flagged_in_the_table(ws: Workspace) -> None:
+    stem = make_result(ws, "sub-001")
+    info = ws.derivatives_dir / "sub-001/func/connectivity/schaefer100n7"
+    path = info / f"{stem}_stat-pearsoncorrelation_relmat.json"
+    record = json.loads(path.read_text())
+    record.update({"shared_signal_share": 0.94, "shared_signal_flag": 0.6})
+    path.write_text(json.dumps(record))
+    (row,) = roi_results.collect(ws)
+    assert any("shared signal explains 94 %" in f for f in row.flags)
+    assert row.decision is None  # a flag is not a decision
