@@ -21,8 +21,10 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from mrforge import atlases
 from mrforge.aroma_env import find_aroma
 from mrforge.bids import parse_bids_name
+from mrforge.connectivity import ConnectivityOptions
 from mrforge.datafiles import subject_data
 from mrforge.diffusion import DiffusionOptions, DiffusionRun, diffusion_runs
 from mrforge.functional import (
@@ -34,7 +36,7 @@ from mrforge.icalabels import SUMMARY_SUFFIX, decision_path
 from mrforge.mrtrix_env import find_mrtrix
 from mrforge.niftiutil import image_info
 from mrforge.pipeline import PipelineSpec, PipelineStep
-from mrforge.results import existing_cleaned, existing_functional
+from mrforge.results import existing_cleaned, existing_functional, existing_standard
 from mrforge.resume import check_reusable
 from mrforge.runner.jobs import build_context
 from mrforge.steps.alps_rois import regions_tag, regions_text
@@ -82,6 +84,7 @@ class FullOptions(BaseModel):
     anatomical: AnatomicalOptions = AnatomicalOptions()
     functional: FunctionalOptions = FunctionalOptions()
     artifact: ArtifactOptions = ArtifactOptions()
+    connectivity: ConnectivityOptions = ConnectivityOptions()
     diffusion: DiffusionOptions = DiffusionOptions()
 
 
@@ -110,6 +113,7 @@ class BatchOptions(BaseModel):
     anatomical: AnatomicalOptions = AnatomicalOptions()
     functional: FunctionalOptions = FunctionalOptions()
     artifact: ArtifactOptions = ArtifactOptions()
+    connectivity: ConnectivityOptions = ConnectivityOptions()
     diffusion: DiffusionOptions = DiffusionOptions()
     preset: str | None = None  # name of the preset the choices came from (recorded only)
 
@@ -120,6 +124,7 @@ class BatchOptions(BaseModel):
             anatomical=self.anatomical,
             functional=self.functional,
             artifact=self.artifact,
+            connectivity=self.connectivity,
             diffusion=self.diffusion,
             preset=self.preset,
         )
@@ -711,6 +716,107 @@ class StandardSpaceStage(Stage):
         return stage
 
 
+class ConnectivityStage(Stage):
+    id = "connectivity"
+    label = "Connectivity (ROI to ROI)"
+    description = (
+        "Takes the average signal of every region of the chosen atlases from each functional "
+        "run in standard space (the cleaned data if artifact rejection was done) and correlates "
+        "all pairs of regions: one table of correlations per run and atlas, ready for further "
+        "analysis."
+    )
+    default_enabled = False  # needs standard-space data; the atlases are chosen by the user
+
+    def plan(self, ctx: PlanContext, enabled: bool) -> StagePlan:
+        opts = ctx.opts.connectivity
+        stage = self.blank(enabled)
+        known = {a.id: a for a in atlases.list_atlases()}
+        chosen = [a for a in opts.atlases if a in known]
+        if not opts.atlases:
+            stage.can_run, stage.reason = False, "Choose at least one atlas."
+        elif len(chosen) != len(opts.atlases):
+            bad = ", ".join(a for a in opts.atlases if a not in known)
+            stage.can_run, stage.reason = False, f"Unknown atlas: {bad}."
+        slugs = list(ctx.runs)
+        if not slugs:
+            stage.can_run = False
+            stage.reason = (
+                "This subject has no functional run with results in standard space. Process the "
+                "functional data and include Standard space first."
+            )
+        average = (
+            "voxels with signal only" if opts.only_voxels_with_signal else "every voxel of a region"
+        )
+        for slug in slugs:
+            planned = "standard_space" in ctx.ready  # made in this very pipeline
+            source: dict[str, str] | None = None
+            if planned:
+                source = {
+                    "bold": f"${{func_to_mni__{slug}.bold_mni}}",
+                    "brain_mask": f"${{func_to_mni__{slug}.brain_mask_mni}}",
+                }
+            elif not ctx.bold.get(slug, "${").startswith("${"):
+                source = existing_standard(
+                    ctx.ws, ctx.subject, ctx.bold[slug], ctx.brain_mask.get(slug)
+                )
+            data = (
+                _which_data(ctx.bold.get(slug, "")) + ", in standard space"
+                if source
+                else "standard-space data (not made yet)"
+            )
+            stage.items.append(
+                PlanItem(
+                    title=f"Run {slug.replace('_', ' ')}",
+                    note=None if source else "Standard space has not been done for this run.",
+                    settings=[
+                        PlanSetting(name="Data", value=data),
+                        PlanSetting(
+                            name="Atlases", value=", ".join(known[a].name for a in chosen) or "none"
+                        ),
+                        PlanSetting(name="Averaging", value=average),
+                        PlanSetting(name="Correlation", value="Pearson (and Fisher z)"),
+                    ],
+                )
+            )
+            if source is None:
+                stage.can_run = False
+                stage.reason = (
+                    f"Run {slug.replace('_', ' ')} has no result in standard space yet. Include "
+                    "the Standard space stage, or run it first."
+                )
+            if not (enabled and stage.can_run):
+                continue
+            assert source is not None
+            for atlas in chosen:
+                ts_id = f"roi_timeseries_{atlas}__{slug}"
+                inputs: dict[str, Any] = {"bold": source["bold"]}
+                if "brain_mask" in source:
+                    inputs["brain_mask"] = source["brain_mask"]
+                ctx.steps.append(
+                    PipelineStep(
+                        id=ts_id,
+                        label=f"roi_timeseries_{atlas}",
+                        step="roi_timeseries",
+                        inputs=inputs,
+                        params={
+                            "atlas": atlas,
+                            "only_voxels_with_signal": opts.only_voxels_with_signal,
+                        },
+                    )
+                )
+                ctx.steps.append(
+                    PipelineStep(
+                        id=f"roi_correlation_{atlas}__{slug}",
+                        label=f"roi_correlation_{atlas}",
+                        step="roi_correlation",
+                        inputs={"timeseries": f"${{{ts_id}.timeseries}}"},
+                    )
+                )
+        if enabled and stage.can_run:
+            ctx.ready.add(self.id)
+        return stage
+
+
 def template_key(o: DiffusionOptions) -> str:
     """The template the maps are moved to: the choice, else by the structural image, else the
     JHU FA template (as in the script)."""
@@ -975,12 +1081,13 @@ class DiffusionStage(Stage):
 
 # The order of the stages is the order of the pipeline. Stages that clean the data (artifact
 # rejection, WM/CSF regression) belong between Functional and Standard space; stages that use
-# the finished data (ROI-to-ROI correlation) after it.
+# the finished data (ROI-to-ROI correlation, diffusion) after it.
 STAGES: list[Stage] = [
     AnatomicalStage(),
     FunctionalStage(),
     ArtifactStage(),
     StandardSpaceStage(),
+    ConnectivityStage(),
     DiffusionStage(),
 ]
 

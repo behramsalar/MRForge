@@ -15,6 +15,7 @@ import re
 from pydantic import BaseModel
 
 from mrforge.config import load_config, save_config
+from mrforge.connectivity import ConnectivityOptions
 from mrforge.diffusion import DiffusionOptions
 from mrforge.errors import StepError
 from mrforge.processing import AnatomicalOptions, ArtifactOptions, FunctionalOptions
@@ -25,6 +26,7 @@ class PresetOptions(BaseModel):
     anatomical: AnatomicalOptions = AnatomicalOptions()
     functional: FunctionalOptions = FunctionalOptions()
     artifact: ArtifactOptions = ArtifactOptions()
+    connectivity: ConnectivityOptions = ConnectivityOptions()
     diffusion: DiffusionOptions = DiffusionOptions()
 
 

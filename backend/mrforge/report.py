@@ -36,6 +36,7 @@ SECTIONS: list[tuple[str, str, list[str]]] = [
         ["melodic", "aroma_classify", "ica_labels", "regfilt"],
     ),
     ("standard", "Standard space", ["func_to_mni"]),
+    ("connectivity", "Connectivity (ROI to ROI)", ["roi_timeseries", "roi_correlation"]),
     (
         "diffusion",
         "Diffusion processing and the ALPS index",
@@ -64,6 +65,8 @@ STEP_TITLES = {
     "ica_labels": "Component labels (your decision)",
     "regfilt": "Noise removal",
     "func_to_mni": "Alignment to standard space",
+    "roi_timeseries": "Average signal of each atlas region",
+    "roi_correlation": "Correlations between regions",
     "dwi_denoise": "Noise removal (MRtrix3 dwidenoise)",
     "dwi_unring": "Gibbs ringing removal (MRtrix3 mrdegibbs)",
     "dwi_topup": "Distortion estimate (TOPUP)",

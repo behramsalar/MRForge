@@ -43,3 +43,22 @@ def existing_cleaned(ws: Workspace, subject: str, raw_bold: str) -> str | None:
     out, folder = _outputs(ws, "regfilt", subject, dummy, "regfilt")
     path = f"{folder}/{out.cleaned_bold}"
     return path if ws.abspath(path).is_file() else None
+
+
+def existing_standard(
+    ws: Workspace, subject: str, bold_rel: str, brain_mask_rel: str | None
+) -> dict[str, str] | None:
+    """The standard-space image of one recording (and its brain mask), made from ``bold_rel``
+    by the standard-space step, or None if it has not been made. The names come from the step
+    itself: the image is named for the data that went in (denoised or preprocessed)."""
+    dummy = {
+        "bold": bold_rel,
+        "to_t1_affine": bold_rel,
+        "t1_to_mni_warp": bold_rel,
+        "brain_mask": brain_mask_rel,
+    }
+    out, folder = _outputs(ws, "func_to_mni", subject, dummy, "func_to_mni")  # type: ignore[arg-type]
+    found = {"bold": f"{folder}/{out.bold_mni}"}
+    if out.brain_mask_mni:
+        found["brain_mask"] = f"{folder}/{out.brain_mask_mni}"
+    return found if all(ws.abspath(p).is_file() for p in found.values()) else None

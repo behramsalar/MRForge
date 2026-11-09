@@ -29,7 +29,7 @@ PROBABILITY = {
     "WM": ("White matter probability", "blue"),
     "CSF": ("CSF probability", "cool"),
 }
-SKIP_ENTITIES = {"sub", "ses", "space", "desc", "label", "from", "to", "mode"}
+SKIP_ENTITIES = {"sub", "ses", "space", "desc", "label", "from", "to", "mode", "seg"}
 
 
 @dataclass(frozen=True)
@@ -44,6 +44,15 @@ class Described:
 def _recording(entities: dict[str, str]) -> str:
     text = " ".join(f"{k}-{v}" for k, v in entities.items() if k not in SKIP_ENTITIES)
     return f" ({text})" if text else ""
+
+
+def _atlas_name(atlas_id: str) -> str:
+    from mrforge import atlases
+
+    try:
+        return atlases.get_atlas(atlas_id).name
+    except atlases.AtlasError:
+        return atlas_id
 
 
 def describe(path: Path, raw: bool) -> Described | None:
@@ -93,6 +102,9 @@ def describe(path: Path, raw: bool) -> Described | None:
     if suffix == "mask" and not space:
         name = "Brain mask (bet)" if desc == "bet" else "Brain mask"
         return result(anat, name + (rec if anat == FUNC else ""), "overlay", "red", 10)
+    if suffix == "dseg" and e.get("seg"):
+        atlas = _atlas_name(e["seg"])
+        return result(FUNC, f"Atlas: {atlas}, regions with signal{rec}", "overlay", "winter", 42)
     if suffix == "dseg":
         name = (
             "Deep brain structures"

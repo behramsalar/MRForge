@@ -88,6 +88,7 @@ def test_the_standard_stages_in_order() -> None:
         "functional",
         "artifact_rejection",
         "standard_space",
+        "connectivity",
         "diffusion",
     ]
 
@@ -100,6 +101,7 @@ def test_default_plan_covers_everything_and_is_a_valid_pipeline(tmp_path: Path) 
         ("functional", True, True),
         ("artifact_rejection", False, False),  # off by default; this 8-volume run is too short
         ("standard_space", True, True),
+        ("connectivity", False, True),  # off by default; can run after Standard space
         ("diffusion", False, False),  # off by default; this subject has no diffusion image
     ]
     assert ids(spec)[0] == "fsl_anat" and ids(spec)[-1].startswith("func_to_mni__")
@@ -248,6 +250,7 @@ def test_the_plan_route_and_a_refusal_when_nothing_can_run(client: TestClient) -
         "functional",
         "artifact_rejection",
         "standard_space",
+        "connectivity",
         "diffusion",
     ]
     refused = client.post(f"/api/workspaces/{ws_id}/process", json={"subject": "sub-001"})
