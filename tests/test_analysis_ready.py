@@ -43,7 +43,8 @@ def processed(ws: Workspace, subject: str, smoothing: float = 5.0, denoised: boo
     bold_in = f"{f}/{subject}_{rec}_desc-{data}_bold.nii.gz"
     if denoised:
         step_record(ws, subject, "regfilt", rec, {"aggressive": False}, [], [bold_in])
-        labels = ws.root / f"{f}/{subject}_{rec}_desc-icalabels_labels.json"
+        labels = ws.root / f"{f}/ica/{subject}_{rec}_desc-icalabels_labels.json"
+        labels.parent.mkdir(parents=True, exist_ok=True)
         labels.write_text(json.dumps({"source": "aroma" if aroma else "manual", "decided_by": "ICA-AROMA (automatic)" if aroma else "Jane",
                                       "uncertain_treated_as": "signal"}))  # fmt: skip
     step_record(ws, subject, "func_to_mni", rec, {"resolution_mm": 2, "interpolation": "spline"},

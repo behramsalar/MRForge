@@ -66,7 +66,7 @@ def collect(ws: Workspace) -> list[RoiRow]:
     from mrforge import atlases
 
     rows: list[RoiRow] = []
-    for info_path in sorted(ws.derivatives_dir.glob(f"sub-*/**/func/*{R_SUFFIX}.json")):
+    for info_path in sorted(ws.derivatives_dir.glob(f"sub-*/**/func/**/*{R_SUFFIX}.json")):
         if "_runs" in info_path.parts:
             continue
         info = _read(info_path)

@@ -87,7 +87,7 @@ def test_automatic_mode_uses_the_classification_without_waiting(tmp_path: Path) 
     }  # type: ignore[arg-type]
     assert outcomes == {"labels": Action.RAN, "after": Action.RAN}
     result = json.loads(
-        next((ws.root / "derivatives/mrforge/sub-001/func").glob("*_labels.json")).read_text()
+        next((ws.root / "derivatives/mrforge/sub-001/func").rglob("*_labels.json")).read_text()
     )
     assert result["noise_components"] == [1, 3] and result["source"] == "aroma"
     assert "ICA-AROMA" in result["decided_by"] and "automatic" in result["decided_by"]

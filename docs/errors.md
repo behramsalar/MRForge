@@ -43,6 +43,11 @@ Codes are stable identifiers: add new ones, do not rename existing ones.
 - **Probable cause:** The process was killed, for example by a user or the system.
 - **Suggested action:** Resume the pipeline to run this step again.
 
+### WORKSPACE_LAYOUT_OLD
+- **What happened:** Work was refused because the workspace keeps its results in the older, flat folder layout.
+- **Probable cause:** The workspace was made before results were sorted into subfolders (qc, ica, transforms, feat, connectivity). Steps would look for finished results in the subfolders, find nothing and run everything again.
+- **Suggested action:** Run `mrforge workspace migrate <workspace folder>` once. Nothing is recomputed; files are only moved.
+
 ### INTERRUPTED
 - **What happened:** A job was marked Running but its worker process no longer exists.
 - **Probable cause:** The program was killed or the computer restarted.

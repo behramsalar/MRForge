@@ -34,7 +34,8 @@ def make_result(
 ) -> str:
     """A time series and its extraction record as roi_timeseries writes them, then the real
     roi_correlation step on top of them."""
-    folder = func_dir(ws, sub, ses)
+    func = func_dir(ws, sub, ses)
+    folder = f"{func}/connectivity/{atlas}"
     sesname = f"_{ses}" if ses else ""
     stem = f"{sub}{sesname}_{run}_{SPACE}_seg-{atlas}"
     (ws.root / folder).mkdir(parents=True, exist_ok=True)
@@ -56,7 +57,7 @@ def make_result(
             }
         )
     )
-    source = f"{folder}/{sub}{sesname}_{run}_{SPACE}_desc-{desc}_bold.nii.gz"
+    source = f"{func}/{sub}{sesname}_{run}_{SPACE}_desc-{desc}_bold.nii.gz"
     ts_rel = f"{folder}/{stem}_timeseries.tsv"
     outcome = run_step(
         ws, LocalJobQueue(ws), "roi_correlation", sub, {"timeseries": ts_rel}, {},
@@ -116,7 +117,14 @@ def test_flags_warn_but_nothing_is_left_out(ws: Workspace) -> None:
 
 def test_a_missing_file_is_flagged_not_hidden(ws: Workspace) -> None:
     stem = make_result(ws, "sub-001")
-    (ws.derivatives_dir / "sub-001" / "func" / f"{stem}_stat-fisherz_relmat.txt").unlink()
+    (
+        ws.derivatives_dir
+        / "sub-001"
+        / "func"
+        / "connectivity"
+        / "schaefer100n7"
+        / f"{stem}_stat-fisherz_relmat.txt"
+    ).unlink()
     (row,) = roi_results.collect(ws)
     assert any("missing files: fisherz" in f for f in row.flags)
 

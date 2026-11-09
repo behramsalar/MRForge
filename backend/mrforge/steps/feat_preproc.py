@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 
 from mrforge.bids import split_extension
 from mrforge.errors import StepError
+from mrforge.layout import placed
 from mrforge.niftiutil import image_info, is_readable_nifti
 from mrforge.steps.base import Problem, Step, StepContext, StepResult
 from mrforge.steps.feat_design import BIDS_TO_FEAT_DIRECTION, FeatDesign, write_design
@@ -90,7 +91,7 @@ def slice_timing_fractions(times_s: list[float], tr_s: float) -> list[float]:
 
 def native_folder_name(bold_relpath: str) -> str:
     """FEAT's own folder: the BOLD name without extension, plus '.feat'."""
-    return split_extension(bold_relpath.rsplit("/", 1)[-1])[0] + ".feat"
+    return placed(split_extension(bold_relpath.rsplit("/", 1)[-1])[0] + ".feat", "func")
 
 
 # Known FEAT failure messages -> plain language. The first match wins.
@@ -450,6 +451,7 @@ class FeatPreprocStep(Step[FeatPreprocInput, FeatPreprocParams, FeatPreprocOutpu
             raise _explain_failure(made, ctx.workspace.abspath(record.stderr_log))
         native = ctx.output_dir / native_folder_name(ctx.inputs.bold)
         shutil.copy2(design_path, made / "design_mrforge.fsf")
+        native.parent.mkdir(parents=True, exist_ok=True)
         os.replace(made, native)
         self._publish(ctx, native)
         shutil.rmtree(work, ignore_errors=True)

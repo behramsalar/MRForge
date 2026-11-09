@@ -70,7 +70,7 @@ def problems(
 
 
 def test_native_folder_is_named_after_the_input() -> None:
-    assert native_folder_name(BOLD) == "sub-001_task-rest_bold.feat"
+    assert native_folder_name(BOLD) == "feat/sub-001_task-rest_bold.feat"
 
 
 def test_bold_alone_is_valid(tmp_path: Path) -> None:
@@ -137,7 +137,7 @@ def test_expected_outputs_depend_on_what_is_done(tmp_path: Path) -> None:
     registered = step.expected_outputs(ctx)
     assert (
         registered.to_t1_affine
-        == "sub-001_task-rest_from-boldref_to-T1w_mode-image_desc-affine_xfm.mat"
+        == "transforms/sub-001_task-rest_from-boldref_to-T1w_mode-image_desc-affine_xfm.mat"
     )
     assert registered.to_t1_warp is None
     step, ctx = build_context(
@@ -163,7 +163,7 @@ def test_known_feat_failures_are_translated(tmp_path: Path) -> None:
 def test_leftover_feat_folder_is_removed_before_a_run(tmp_path: Path) -> None:
     ws = make_ws(tmp_path)
     step, ctx = build_context(ws, "feat_preproc", "sub-001", None, {"bold": BOLD}, {})
-    leftover = ctx.output_dir / "sub-001_task-rest_bold.feat"
+    leftover = ctx.output_dir / "feat" / "sub-001_task-rest_bold.feat"
     leftover.mkdir(parents=True)
     (leftover / "partial").write_text("x")
     step.prepare(ctx)

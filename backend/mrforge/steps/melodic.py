@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 from mrforge.bids import split_extension
 from mrforge.errors import StepError
 from mrforge.hashing import file_sha256
+from mrforge.layout import placed
 from mrforge.niftiutil import image_info, is_readable_nifti
 from mrforge.steps.base import Problem, QCItem, Step, StepContext, StepResult
 from mrforge.steps.icapics import draw_component, draw_planes, draw_plots, peak_voxel
@@ -58,7 +59,7 @@ class MelodicOutput(BaseModel):
 
 def native_folder_name(bold_relpath: str) -> str:
     """MELODIC's own folder: the image name without extension, plus '.ica'."""
-    return split_extension(bold_relpath.rsplit("/", 1)[-1])[0] + ".ica"
+    return placed(split_extension(bold_relpath.rsplit("/", 1)[-1])[0] + ".ica", "func")
 
 
 def picture_name(number: int) -> str:
@@ -136,6 +137,7 @@ class MelodicStep(Step[MelodicInput, MelodicParams, MelodicOutput]):
 
     def run(self, ctx: StepContext[MelodicInput, MelodicParams]) -> StepResult:
         native = ctx.output_dir / native_folder_name(ctx.inputs.bold)
+        native.parent.mkdir(parents=True, exist_ok=True)
         tr = image_info(ctx.input_path(ctx.inputs.bold))[1][3]
         argv = [
             "melodic",

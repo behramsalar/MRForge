@@ -299,5 +299,5 @@ def test_a_pipeline_of_the_stage_reruns_only_the_new_atlas(tmp_path: Path) -> No
     }
     assert {v for k, v in both.items() if k.endswith("schaefer100n17")} == {Action.RAN}
     func = ws.derivatives_dir / "sub-001" / "func"
-    names = sorted(x.name for x in func.glob("*relmat.txt"))
+    names = sorted(x.name for x in func.rglob("*relmat.txt"))
     assert len(names) == 4 and sum("schaefer100n17" in n for n in names) == 2

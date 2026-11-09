@@ -125,16 +125,17 @@ def test_step_makes_pictures_numbers_and_records_qc(
     outcome = run_step(ws, LocalJobQueue(ws), "func_qc", "sub-001", inputs, {})
     assert outcome.action == Action.RAN, outcome.reason
     func = ws.derivatives_dir / "sub-001" / "func"
-    names = {p.name for p in func.glob("*_qc.*")}
+    qc_dir = func / "qc"  # sorted into a subfolder (layout.py)
+    names = {p.name for p in qc_dir.glob("*_qc.*")}
     expected = {
         "sub-001_task-rest_desc-motion_qc.png",
         "sub-001_task-rest_desc-registration_qc.png",
         "sub-001_task-rest_desc-metrics_qc.json",
     } | ({"sub-001_task-rest_desc-unwarping_qc.png"} if unwarped else set())
     assert names == expected
-    for png in func.glob("*_qc.png"):
+    for png in qc_dir.glob("*_qc.png"):
         assert png.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n" and png.stat().st_size > 1000
-    metrics = json.loads((func / "sub-001_task-rest_desc-metrics_qc.json").read_text())
+    metrics = json.loads((qc_dir / "sub-001_task-rest_desc-metrics_qc.json").read_text())
     assert metrics["fd_max_mm"] == pytest.approx(0.1) and math.isclose(
         metrics["fd_mean_mm"], 0.5 / 6
     )
@@ -144,7 +145,7 @@ def test_step_makes_pictures_numbers_and_records_qc(
     assert prov is not None
     qc = {item.name: item for item in prov.qc}
     assert qc["Largest framewise displacement (mm)"].value == pytest.approx(0.1)
-    assert qc["Head motion"].path == "sub-001_task-rest_desc-motion_qc.png"
+    assert qc["Head motion"].path == "qc/sub-001_task-rest_desc-motion_qc.png"
     assert ("Distortion correction (before above, after below)" in qc) == unwarped
     # the single slices of the registration picture are kept and listed (12 per row, 2 rows)
     reg = qc["Registration to the T1"]

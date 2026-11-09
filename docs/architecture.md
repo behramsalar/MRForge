@@ -28,12 +28,15 @@ UI (React)  ->  API (FastAPI)  ->  Services  ->  Step objects  ->  Job runner  -
         sub-XXX/[ses-YY/]anat/      # results with BIDS names, e.g. sub-001_desc-brain_mask.nii.gz
             sub-XXX_T1w.anat/       # native fsl_anat folder, named after the input image
             _runs/<label>/          # one folder per step run: provenance.json, logs/stdout.log, stderr.log
-        sub-XXX/[ses-YY/]func/      # (later stages)
+        sub-XXX/[ses-YY/]func/      # the results people open (bold, masks, boldref), plus sorted subfolders:
+            qc/  ica/  transforms/  feat/  connectivity/<atlas>/    # see layout.py (rule below)
     imports/import-NNN/manifest.json   # scan results, user decisions, conversion provenance
     reports/
 ```
 
 Rules: `sourcedata/` and `rawbids/` are never modified after creation. All results go under `derivatives/`. A workspace with one scan is simply `sub-001`.
+
+**Sorted subfolders (func).** `layout.subfolder_for(name, datatype)` decides from the file name alone where a result goes: `*_qc.*`, `*_qc_slices/` and the motion series to `qc/`; components, labels, AROMA and noise-removal files and `*.ica` to `ica/`; `*_xfm.*` to `transforms/`; `*.feat` to `feat/`; every file with a `seg-<atlas>` entity to `connectivity/<atlas>/`; everything else stays in the datatype folder. `StepContext.bids_name()` applies it, so a step's declared output is simply `qc/sub-..._qc.png` and nothing else in a step changes. Only `func` is sorted; `anat` and `dwi` stay flat. `workspace.json` carries `layout_version` (2); older workspaces are moved by `mrforge workspace migrate` (`migrate_layout.py`: files are renamed, recorded paths, hashes of rewritten result files and the database follow; nothing is recomputed) and starting work in an unmigrated workspace is refused with `WORKSPACE_LAYOUT_OLD`.
 
 **Naming.** Result files follow BIDS derivatives naming: entities taken from the input file (`sub`, `ses`, `acq`, `run`, ...) plus `space-`, `desc-`, `label-`, `from-`/`to-`/`mode-` as needed, then a suffix (`T1w`, `mask`, `dseg`, `probseg`, `xfm`). The BIDS-named results of a step are hard links to (or copies of) the tool's native files, so the native folder stays intact for FSL tools that expect it. Each step declares its BIDS datatype folder (`anat`, `func`, ...). The per-step record (`_runs/<label>/`) is MRForge-specific and listed in `.bidsignore`.
 

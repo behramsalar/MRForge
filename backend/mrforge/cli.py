@@ -164,15 +164,29 @@ def workspace_migrate(
         bool, typer.Option("--dry-run", help="Only list what would change.")
     ] = False,
 ) -> None:
-    """Rename results made before the new naming (nothing is recomputed)."""
+    """Bring an older workspace up to date: new result names, then the sorted subfolders
+    (nothing is recomputed; files are only renamed and moved)."""
+    from mrforge import migrate_layout
     from mrforge.migrate_names import migrate
 
-    result = migrate(Workspace.open(path), dry_run=dry_run)
+    ws = Workspace.open(path)
+    result = migrate(ws, dry_run=dry_run)
     for old, new in result.renames.items():
         typer.echo(f"{'would rename' if dry_run else 'renamed'}: {old}\n          to: {new}")
     typer.echo(
         f"{len(result.renames)} file(s), {len(result.records)} step record(s) "
         + ("would change." if dry_run else f"updated. Database copy: {result.backup}")
+    )
+    moved = migrate_layout.migrate(ws, dry_run=dry_run)
+    for old, new in moved.renames.items():
+        typer.echo(f"{'would move' if dry_run else 'moved'}: {old}\n        to: {new}")
+    typer.echo(
+        f"{len(moved.renames)} result(s) "
+        + (
+            "would be sorted into subfolders."
+            if dry_run
+            else f"sorted. Database copy: {moved.backup}"
+        )
     )
 
 

@@ -18,7 +18,7 @@ from mrforge.workspace import Workspace
 
 D = "derivatives/mrforge/sub-001/func"
 STEM = "sub-001_task-rest_space-MNI152NLin6Asym_seg-schaefer100n7"
-TS = f"{D}/{STEM}_timeseries.tsv"
+TS = f"{D}/connectivity/schaefer100n7/{STEM}_timeseries.tsv"
 
 
 def lab_safe_corrcoef(X: np.ndarray) -> np.ndarray:  # copied from the lab script (reference)
@@ -135,7 +135,7 @@ def test_step_writes_named_matrices_and_a_record_and_is_reused(tmp_path: Path):
     header = make_ts(ws, x)
     outcome = run_it(ws)
     assert outcome.action == Action.RAN, outcome.reason
-    func = ws.derivatives_dir / "sub-001" / "func"
+    func = ws.derivatives_dir / "sub-001" / "func" / "connectivity" / "schaefer100n7"
     r_file = func / f"{STEM}_stat-pearsoncorrelation_relmat.txt"
     z_file = func / f"{STEM}_stat-fisherz_relmat.txt"
     assert r_file.exists() and z_file.exists()

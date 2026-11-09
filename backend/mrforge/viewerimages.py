@@ -179,6 +179,8 @@ def find_images(ws: Workspace, subject: str) -> list[FoundImage]:
     base = ws.derivatives_dir / subject
     for datatype in ("anat", "func", "fmap", "dwi"):
         candidates += [(p, False) for p in sorted(base.glob(f"**/{datatype}/*.nii.gz"))]
+    # atlas pictures of the connectivity stage sit one level down (layout.py)
+    candidates += [(p, False) for p in sorted(base.glob("**/func/connectivity/*/*.nii.gz"))]
     found: list[FoundImage] = []
     for path, raw in candidates:
         described = describe(path, raw)

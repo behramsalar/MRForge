@@ -16,7 +16,7 @@ PLANES = {"x": "sagittal", "y": "coronal", "z": "axial"}
 
 def slices_dir(ctx: StepContext[Any, Any], joined: str) -> Path:
     """Where the single slices of a joined picture are kept (next to it, named after it)."""
-    return ctx.output_dir / f"{Path(joined).stem}_slices"
+    return (ctx.output_dir / joined).parent / f"{Path(joined).stem}_slices"
 
 
 def known_slices(ctx: StepContext[Any, Any], folder: Path, layer: str) -> list[SliceRef]:

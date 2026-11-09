@@ -108,7 +108,7 @@ def test_output_names(tmp_path: Path):
     step, ctx = build_context(ws, "roi_timeseries", "sub-001", None, {"bold": BOLD}, {})
     out = step.expected_outputs(ctx)
     assert out.timeseries == (
-        "sub-001_task-rest_space-MNI152NLin6Asym_seg-schaefer100n7_timeseries.tsv"
+        "connectivity/schaefer100n7/sub-001_task-rest_space-MNI152NLin6Asym_seg-schaefer100n7_timeseries.tsv"
     )
     assert out.roi_info.endswith("seg-schaefer100n7_roi.json")
     assert out.atlas_used.endswith("seg-schaefer100n7_dseg.nii.gz")
@@ -165,7 +165,7 @@ def test_signal_only_means_equal_the_true_series_and_the_report_is_honest(
 
     outcome = run_it(ws)
     assert outcome.action == Action.RAN, outcome.reason
-    func = ws.derivatives_dir / "sub-001" / "func"
+    func = ws.derivatives_dir / "sub-001" / "func" / "connectivity" / "schaefer100n7"
     stem = "sub-001_task-rest_space-MNI152NLin6Asym_seg-schaefer100n7"
     lines = (func / f"{stem}_timeseries.tsv").read_text().splitlines()
     header = lines[0].split("\t")
@@ -200,7 +200,7 @@ def test_averaging_every_voxel_matches_the_lab_script_exactly(fsl: FslInstall, t
     ws = Workspace.create(tmp_path / "ws")
     save_bold(ws, data, affine)
     assert run_it(ws, only_voxels_with_signal=False).action == Action.RAN
-    func = ws.derivatives_dir / "sub-001" / "func"
+    func = ws.derivatives_dir / "sub-001" / "func" / "connectivity" / "schaefer100n7"
     tsv = func / "sub-001_task-rest_space-MNI152NLin6Asym_seg-schaefer100n7_timeseries.tsv"
     got = np.loadtxt(tsv, skiprows=1)
     for j, r in enumerate(atlases.regions("schaefer100n7")):
@@ -218,7 +218,7 @@ def test_aal3_label_gaps_keep_columns_aligned(fsl: FslInstall, tmp_path: Path):
     assert run_it(ws, atlas="aal3v2").action == Action.RAN
     tsv = (
         ws.derivatives_dir
-        / "sub-001/func/sub-001_task-rest_space-MNI152NLin6Asym_seg-aal3v2_timeseries.tsv"
+        / "sub-001/func/connectivity/aal3v2/sub-001_task-rest_space-MNI152NLin6Asym_seg-aal3v2_timeseries.tsv"
     )
     got = np.loadtxt(tsv, skiprows=1)
     regions = atlases.regions("aal3v2")
@@ -240,8 +240,8 @@ def test_changing_the_atlas_reruns_only_that_run(fsl: FslInstall, tmp_path: Path
     again = run_step(ws, LocalJobQueue(ws), "roi_timeseries", "sub-001", {"bold": BOLD}, {},
                      label="roi_timeseries_schaefer100n7")  # fmt: skip
     assert again.action == Action.REUSED
-    func = ws.derivatives_dir / "sub-001" / "func"
-    assert len(list(func.glob("*_timeseries.tsv"))) == 2  # both atlases kept side by side
+    func = ws.derivatives_dir / "sub-001" / "func" / "connectivity" / "schaefer100n7"
+    assert len(list((func.parent).rglob("*_timeseries.tsv"))) == 2  # both atlases kept side by side
 
 
 @pytest.mark.fsl
@@ -265,7 +265,7 @@ def test_the_brain_mask_tells_brain_from_noise_where_every_voxel_varies(
     nib.save(nib.Nifti1Image(brain, affine), path)
 
     assert run_it(ws, mask=True).action == Action.RAN
-    func = ws.derivatives_dir / "sub-001" / "func"
+    func = ws.derivatives_dir / "sub-001" / "func" / "connectivity" / "schaefer100n7"
     stem = "sub-001_task-rest_space-MNI152NLin6Asym_seg-schaefer100n7"
     got = np.loadtxt(func / f"{stem}_timeseries.tsv", skiprows=1)
     j = [r.label for r in atlases.regions("schaefer100n7")].index(region)
