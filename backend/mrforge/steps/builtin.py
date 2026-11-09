@@ -20,4 +20,6 @@ from mrforge.steps import (  # noqa: F401
     melodic,
     regfilt,
     resample_t1,
+    roi_correlation,
+    roi_timeseries,
 )
