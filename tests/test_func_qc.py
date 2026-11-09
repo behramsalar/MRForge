@@ -210,4 +210,4 @@ def test_step_makes_pictures_numbers_and_records_qc(
     if unwarped:
         assert len(qc["Distortion correction (before above, after below)"].slices) == 24
     again = run_step(ws, LocalJobQueue(ws), "func_qc", "sub-001", inputs, {})
-    assert again.action == Action.REUSED
+    assert again.action == Action.REUSED, again.reason

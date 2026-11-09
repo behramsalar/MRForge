@@ -483,3 +483,43 @@ Errors from the API arrive as JSON with `code`, `message`, `probable_cause`, `su
 ### ROI_NEED_FOUR / ROI_TEMPLATE_MISSING
 - **What happened:** Custom regions need exactly four files (projection left, projection right, association left, association right), or the template file you chose was not found.
 - **Suggested action:** Choose the files again.
+
+## ROI time series and correlation matrices (Stage 10)
+
+### ATLAS_UNKNOWN
+- **What happened:** The chosen atlas is not one of the atlases bundled with the app.
+- **Probable cause:** An old setting or a misspelt atlas name.
+- **Suggested action:** Choose an atlas from the list (Settings or the processing dialog).
+
+### BOLD_NOT_4D
+- **What happened:** The functional image is not a time series (4D image).
+- **Probable cause:** A single volume or a mask was given instead of the data.
+- **Suggested action:** Choose the standard-space functional result of the run.
+
+### NOT_ON_MNI_2MM_GRID
+- **What happened:** The image is not on the grid the atlases use (FSL MNI152, 2 mm, 91 x 109 x 91).
+- **Probable cause:** The image is not in standard space, or standard space was made at 1 mm or in another template.
+- **Suggested action:** Run "Standard space" with a 2 mm grid, then try again.
+
+### MASK_GRID_DIFFERS
+- **What happened:** The brain mask is not on the same grid as the functional image.
+- **Probable cause:** The mask belongs to another run or another standard space.
+- **Suggested action:** Use the brain mask written by the standard-space step.
+
+### NO_SIGNAL_IN_ATLAS
+- **What happened:** None of the atlas regions contains a voxel with signal.
+- **Probable cause:** The image is empty in the area of the atlas, or it is not aligned to standard space.
+- **Suggested action:** Open the standard-space result in the viewer and check it.
+
+### ROI_RESULT_UNEXPECTED / MATRIX_UNEXPECTED
+- **What happened:** A tool or calculation finished with a result of the wrong size (time-series columns not matching the regions, or a matrix that is not symmetric N x N).
+- **Suggested action:** Open the raw log, then run the step again.
+
+### TIMESERIES_UNREADABLE / TIMESERIES_TOO_SHORT
+- **What happened:** The correlation step could not use the time-series file (damaged, fewer than 2 regions, or fewer volumes than the minimum).
+- **Suggested action:** Run the time-series extraction again on the full run.
+
+### INPUT_NOT_NIFTI
+- **What happened:** An input image could not be read.
+- **Probable cause:** The file is damaged or incomplete.
+- **Suggested action:** Run the step that makes it again.
