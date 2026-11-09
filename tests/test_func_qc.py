@@ -15,8 +15,10 @@ from mrforge.provenance import read_provenance
 from mrforge.runner.local import LocalJobQueue
 from mrforge.steps import builtin  # noqa: F401
 from mrforge.steps.func_qc import (
+    draw_global_signal_plot,
     draw_motion_plot,
     framewise_displacement,
+    global_signal,
     motion_metrics,
     read_motion,
 )
@@ -75,6 +77,41 @@ def test_motion_plot_is_a_png(tmp_path: Path) -> None:
     assert out.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
 
 
+def synthetic_run(levels: list[float]) -> np.ndarray:
+    """A 4D run: a bright block whose brightness is ``levels`` per volume (1.0 = baseline)."""
+    data = np.zeros((6, 6, 4, len(levels)), dtype="float32")
+    data[1:5, 1:5, 1:3, :] = 1000.0
+    return data * np.array(levels, dtype="float32")
+
+
+def test_global_signal_is_percent_from_the_median() -> None:
+    info = global_signal(synthetic_run([1, 1, 1, 1.05, 1, 0.9, 1]), None, 3.0)
+    assert info["max_abs_pct"] == pytest.approx(10.0, abs=0.01)
+    assert info["n_beyond"] == 2 and (info["first_beyond"], info["last_beyond"]) == (4, 6)
+    assert info["series_pct"][3] == pytest.approx(5.0, abs=0.01)  # type: ignore[index]
+
+
+def test_a_steady_run_raises_no_flag() -> None:
+    info = global_signal(synthetic_run([1, 1.004, 0.997, 1.002, 1, 0.995]), None, 3.0)
+    assert info["n_beyond"] == 0 and info["first_beyond"] is None
+    assert info["max_abs_pct"] < 1.0
+
+
+def test_only_the_mask_counts_when_one_is_given() -> None:
+    data = synthetic_run([1, 1, 1, 1])
+    data[0, 0, 0, :] = [100, 5000, 100, 100]  # a noisy voxel outside the brain
+    mask = np.zeros(data.shape[:3], dtype=bool)
+    mask[1:5, 1:5, 1:3] = True
+    assert global_signal(data, mask, 3.0)["n_beyond"] == 0
+    assert global_signal(data, None, 3.0)["n_beyond"] > 0  # without a mask the noisy voxel rules
+
+
+def test_global_signal_plot_is_a_png(tmp_path: Path) -> None:
+    out = tmp_path / "g.png"
+    draw_global_signal_plot(global_signal(synthetic_run([1, 1, 0.9, 1]), None, 3.0), out)
+    assert out.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
 # -- real FSL (slicer, pngappend, fslmaths) with a synthetic phantom -----------------------------
 
 
@@ -99,11 +136,21 @@ def build_workspace(tmp_path: Path, unwarped: bool) -> tuple[Workspace, dict[str
         "t1_head": f"{d}/anat/sub-001_desc-biascorr_T1w.nii.gz",
         "t1_seg": f"{d}/anat/sub-001_dseg.nii.gz",
     }
+    inputs["bold"] = f"{d}/func/sub-001_task-rest_desc-preproc_bold.nii.gz"
+    inputs["brain_mask"] = f"{d}/func/sub-001_task-rest_desc-brain_mask.nii.gz"
     if unwarped:
         inputs["boldref_distorted_t1"] = (
             f"{d}/func/sub-001_task-rest_space-T1w_desc-distorted_boldref.nii.gz"
         )
-    images = {"boldref_t1": head, "t1_head": head, "t1_seg": seg, "boldref_distorted_t1": head}
+    levels = np.array([1.0, 1.0, 1.06, 1.0, 1.0, 1.0], dtype="float32")  # one brighter volume
+    images = {
+        "boldref_t1": head,
+        "t1_head": head,
+        "t1_seg": seg,
+        "boldref_distorted_t1": head,
+        "bold": head[..., None] * levels,
+        "brain_mask": (head > 0).astype("float32"),
+    }
     for key, rel in inputs.items():
         path = ws.root / rel
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -131,6 +178,7 @@ def test_step_makes_pictures_numbers_and_records_qc(
         "sub-001_task-rest_desc-motion_qc.png",
         "sub-001_task-rest_desc-registration_qc.png",
         "sub-001_task-rest_desc-metrics_qc.json",
+        "sub-001_task-rest_desc-globalsignal_qc.png",
     } | ({"sub-001_task-rest_desc-unwarping_qc.png"} if unwarped else set())
     assert names == expected
     for png in qc_dir.glob("*_qc.png"):
@@ -145,6 +193,12 @@ def test_step_makes_pictures_numbers_and_records_qc(
     assert prov is not None
     qc = {item.name: item for item in prov.qc}
     assert qc["Largest framewise displacement (mm)"].value == pytest.approx(0.1)
+    gs = qc["Largest change of the whole-brain signal (% from the run's median)"]
+    assert (
+        gs.value == pytest.approx(6.0, abs=0.01) and gs.warning and "volumes 3 to 3" in gs.warning
+    )
+    assert qc["Whole-brain signal"].path == "qc/sub-001_task-rest_desc-globalsignal_qc.png"
+    assert metrics["global_signal"]["n_beyond"] == 1
     assert qc["Head motion"].path == "qc/sub-001_task-rest_desc-motion_qc.png"
     assert ("Distortion correction (before above, after below)" in qc) == unwarped
     # the single slices of the registration picture are kept and listed (12 per row, 2 rows)

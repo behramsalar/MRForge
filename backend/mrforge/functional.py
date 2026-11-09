@@ -275,6 +275,8 @@ def build_pipeline(ws: Workspace, opts: FunctionalOptions) -> PipelineSpec:
         "t1_head": anat["t1_head"],
         "t1_seg": anat["t1_seg"],
     }
+    qc_inputs["bold"] = "${feat_preproc.preproc_bold}"
+    qc_inputs["brain_mask"] = "${feat_preproc.brain_mask}"
     if opts.use_fieldmap:
         qc_inputs["boldref_distorted_t1"] = "${feat_preproc.boldref_distorted_t1}"
     add("func_qc", qc_inputs)

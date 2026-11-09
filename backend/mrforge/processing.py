@@ -478,6 +478,8 @@ class FunctionalStage(Stage):
                 "t1_head": ctx.anat["t1_head"],
                 "t1_seg": ctx.anat["t1_seg"],
             }
+            qc_inputs["bold"] = f"${{{feat_id}.preproc_bold}}"
+            qc_inputs["brain_mask"] = f"${{{feat_id}.brain_mask}}"
             if use_fmap:
                 qc_inputs["boldref_distorted_t1"] = f"${{{feat_id}.boldref_distorted_t1}}"
             ctx.steps.append(
