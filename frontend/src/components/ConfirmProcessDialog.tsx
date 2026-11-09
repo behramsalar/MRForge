@@ -1,5 +1,5 @@
 import { Badge, Button, Callout, Card, Checkbox, Dialog, Flex, RadioGroup, Select, Switch, Text, TextArea, TextField } from "@radix-ui/themes";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { api } from "../api/client";
 import { ApiError, call } from "../api/call";
@@ -70,7 +70,7 @@ function StageCard({
               Done earlier: not repeated if unchanged
             </Badge>
           )}
-          {settings && stage.can_run && (
+          {settings && (stage.can_run || open) && (
             <Button
               size="1"
               variant="ghost"
@@ -103,7 +103,7 @@ function StageCard({
             ))}
           </Flex>
         )}
-        {settings && stage.can_run && open && (
+        {settings && (stage.can_run || open) && open && (
           <Flex direction="column" gap={space.group} pt="2" style={{ borderTop: "1px solid var(--gray-a5)" }}>
             {settings}
           </Flex>
@@ -201,6 +201,7 @@ export function ConfirmProcessDialog({
   const plan = useQuery({
     queryKey: ["ws", ws, "plan", batch ? JSON.stringify(batchRequest) : JSON.stringify(request)],
     enabled: open,
+    placeholderData: keepPreviousData, // keep the list on screen (and its scroll position) while a changed choice is re-planned
     queryFn: async () => {
       if (batch) {
         const b = await call(api.POST("/api/workspaces/{ws_id}/process/plan-batch", { params: { path: { ws_id: ws } }, body: batchRequest }));
