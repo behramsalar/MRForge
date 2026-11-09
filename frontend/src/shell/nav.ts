@@ -34,13 +34,14 @@ export const WORKSPACE_NAV: NavItem[] = [
     icon: MixerHorizontalIcon,
     // Everything under Process is visible in the sidebar. Pipelines is one page that lists
     // all pipelines and presets as cards (so new ones never lengthen the sidebar); single
-    // steps are listed one by one. Analysis (ROI-to-ROI, diffusion) becomes its own group.
+    // steps are listed one by one. Connectivity (ROI to ROI) is the first of the analyses.
     children: [
       { id: "pipelines", label: "Pipelines" },
       { id: "anat", label: "Anatomical", section: "Single steps" },
       { id: "func", label: "Preprocessing", section: "Functional" },
       { id: "ica", label: "Artifact rejection" },
       { id: "mni", label: "Standard space" },
+      { id: "conn", label: "Connectivity (ROI to ROI)", section: "Analysis" },
       { id: "dwi", label: "Diffusion (ALPS)", section: "Diffusion" },
     ],
   },

@@ -30,6 +30,19 @@ class AtlasInfo(BaseModel):
     caveat: str = ""  # text, empty when none
 
 
+class AtlasFamily(BaseModel):
+    id: str
+    name: str
+    kind: str
+
+
+class AtlasCatalog(BaseModel):
+    """What the dialog shows: the atlases, grouped by family."""
+
+    families: list[AtlasFamily]
+    atlases: list[AtlasInfo]
+
+
 class Region(BaseModel):
     label: int  # value in the volume
     name: str  # the authors' name
@@ -47,8 +60,10 @@ def _manifest() -> dict[str, Any]:
     return cast(dict[str, Any], json.loads((DATA / "atlases.json").read_text()))
 
 
-def families() -> list[dict[str, str]]:
-    return list(_manifest()["families"])
+def catalog() -> AtlasCatalog:
+    return AtlasCatalog(
+        families=[AtlasFamily(**f) for f in _manifest()["families"]], atlases=list_atlases()
+    )
 
 
 def list_atlases() -> list[AtlasInfo]:

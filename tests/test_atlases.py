@@ -72,3 +72,21 @@ def test_caveats_and_licences_are_listed():
 
     for name in ("schaefer2018_CBIG_LICENSE.md", "tian2020_license.txt", "aal3_NOTICE.txt"):
         assert (Path(atlases.DATA) / "licences" / name).exists()
+
+
+def test_the_catalog_groups_every_atlas_into_a_family():
+    catalog = atlases.catalog()
+    families = {f.id for f in catalog.families}
+    assert families == {"schaefer", "schaefer_tian", "aal3"}
+    assert len(catalog.atlases) == 11 and all(a.family in families for a in catalog.atlases)
+
+
+def test_the_catalog_route(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from mrforge.api.app import create_app
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    body = TestClient(create_app(tmp_path / "w")).get("/api/atlases").json()
+    assert [a["id"] for a in body["atlases"]][0] == "schaefer100n7"
+    assert body["atlases"][-1]["caveat"].startswith("AAL was drawn")

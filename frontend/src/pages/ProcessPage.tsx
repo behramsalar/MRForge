@@ -1,4 +1,5 @@
 import { Flex } from "@radix-ui/themes";
+import { ConnectivityResultsTable } from "../components/ConnectivityResultsTable";
 import { DiffusionResultsTable } from "../components/DiffusionResultsTable";
 import { space } from "../theme/tokens";
 import type { WorkspaceState } from "../api/types";
@@ -20,6 +21,22 @@ export function ProcessPage({ ws, tab, state }: { ws: string; tab?: string; stat
         title="Standard space"
         description="Moves a subject's functional runs into standard (MNI) space, using the cleaned data when there is any."
       />
+    );
+  }
+  if (tab === "conn") {
+    return (
+      <Flex direction="column" gap={space.section}>
+        <StagePage
+          ws={ws}
+          state={state}
+          stage="connectivity"
+          title="Connectivity (ROI to ROI)"
+          description="Extracts the average time series of every region of the chosen atlases from a subject's standard-space functional data (the cleaned data when there is any) and computes the correlation matrices (Pearson r and Fisher z)."
+          hint="Choose one or more subjects that have a functional run in standard space."
+          multi
+        />
+        <ConnectivityResultsTable ws={ws} />
+      </Flex>
     );
   }
   if (tab === "dwi") {

@@ -25,7 +25,7 @@ import { crumbs, defaultChild } from "./nav";
 describe("sidebar tree", () => {
   it("shows every kind of processing under Process in the sidebar", () => {
     const process = WORKSPACE_NAV.find((n) => n.id === "process");
-    expect(process?.children?.map((c) => c.id)).toEqual(["pipelines", "anat", "func", "ica", "mni", "dwi"]);
+    expect(process?.children?.map((c) => c.id)).toEqual(["pipelines", "anat", "func", "ica", "mni", "conn", "dwi"]);
     expect(defaultChild("process")).toBe("pipelines");
     expect(defaultChild("viewer")).toBeUndefined();
   });

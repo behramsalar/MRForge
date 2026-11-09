@@ -23,6 +23,7 @@ from sqlalchemy import select
 from sse_starlette.sse import EventSourceResponse
 
 from mrforge import __version__, accounts, presets, qc_decisions, resources
+from mrforge import atlases as atlas_module
 from mrforge.alps_results import AlpsRow
 from mrforge.alps_results import collect as alps_collect
 from mrforge.alps_results import export as alps_export_files
@@ -74,6 +75,10 @@ from mrforge.provenance import read_provenance
 from mrforge.qc_decisions import MotionThresholds, QcDecisionEntry
 from mrforge.report import SubjectReport, build_report
 from mrforge.report_html import export_report, list_exports
+from mrforge.roi_results import RoiRow
+from mrforge.roi_results import collect as roi_collect
+from mrforge.roi_results import export as roi_export_files
+from mrforge.roi_results import list_exports as roi_list_exports
 from mrforge.runner.jobs import get_job, list_jobs, process_alive, recover_stale_jobs
 from mrforge.steps.resample_t1 import needs_resampling
 from mrforge.viewerimages import find_images
@@ -1110,6 +1115,33 @@ def create_app(workspaces_root: Path | None = None) -> FastAPI:
         """The saved ALPS tables, newest first."""
         ws = ws_of(ws_id)
         return [export_info(ws_id, ws, p) for p in alps_list_exports(ws)]
+
+    # -- connectivity results (ROI time series and matrices) ------------------------------------
+
+    @app.get("/api/atlases", response_model=atlas_module.AtlasCatalog)
+    def atlas_catalog() -> atlas_module.AtlasCatalog:
+        """The atlases bundled with the app (for the choice in the connectivity stage)."""
+        return atlas_module.catalog()
+
+    @app.get("/api/workspaces/{ws_id}/roi-results", response_model=list[RoiRow])
+    def roi_table(ws_id: str) -> list[RoiRow]:
+        """One row per recording and atlas with a correlation result, from the recorded files."""
+        return roi_collect(ws_of(ws_id))
+
+    @app.post("/api/workspaces/{ws_id}/roi-results/export", response_model=list[S.ReportExport])
+    def roi_export(ws_id: str, leave_out_excluded: bool = False) -> list[S.ReportExport]:
+        """Save the index (full paths of every participant's matrices) in reports/roi/."""
+        ws = ws_of(ws_id)
+        return [
+            export_info(ws_id, ws, p)
+            for p in roi_export_files(ws, leave_out_excluded=leave_out_excluded)
+        ]
+
+    @app.get("/api/workspaces/{ws_id}/roi-results/exports", response_model=list[S.ReportExport])
+    def roi_exports(ws_id: str) -> list[S.ReportExport]:
+        """The saved index files, newest first."""
+        ws = ws_of(ws_id)
+        return [export_info(ws_id, ws, p) for p in roi_list_exports(ws)]
 
     # -- viewer -------------------------------------------------------------------------------
 
