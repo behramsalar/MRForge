@@ -936,6 +936,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/atlases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Atlas Catalog
+         * @description The atlases bundled with the app (for the choice in the connectivity stage).
+         */
+        get: operations["atlas_catalog_api_atlases_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/roi-results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Roi Table
+         * @description One row per recording and atlas with a correlation result, from the recorded files.
+         */
+        get: operations["roi_table_api_workspaces__ws_id__roi_results_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/roi-matrix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Roi Matrix
+         * @description Both matrices (r and Fisher z) of one result, with region names and coverage.
+         */
+        get: operations["roi_matrix_api_workspaces__ws_id__roi_matrix_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/roi-results/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Roi Export
+         * @description Save the index (full paths of every participant's matrices) in reports/roi/.
+         */
+        post: operations["roi_export_api_workspaces__ws_id__roi_results_export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{ws_id}/roi-results/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Roi Exports
+         * @description The saved index files, newest first.
+         */
+        get: operations["roi_exports_api_workspaces__ws_id__roi_results_exports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{ws_id}/subjects/{label}/images": {
         parameters: {
             query?: never;
@@ -1306,6 +1406,48 @@ export interface components {
             mode: "manual" | "aroma_review" | "aroma_auto";
         };
         /**
+         * AtlasCatalog
+         * @description What the dialog shows: the atlases, grouped by family.
+         */
+        AtlasCatalog: {
+            /** Families */
+            families: components["schemas"]["AtlasFamily"][];
+            /** Atlases */
+            atlases: components["schemas"]["AtlasInfo"][];
+        };
+        /** AtlasFamily */
+        AtlasFamily: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Kind */
+            kind: string;
+        };
+        /** AtlasInfo */
+        AtlasInfo: {
+            /** Id */
+            id: string;
+            /** Family */
+            family: string;
+            /** Name */
+            name: string;
+            /** Regions */
+            regions: number;
+            /** Licence */
+            licence: string;
+            /**
+             * Citation
+             * @default
+             */
+            citation: string;
+            /**
+             * Caveat
+             * @default
+             */
+            caveat: string;
+        };
+        /**
          * BatchOptions
          * @description The same choices as for one subject, applied to several.
          */
@@ -1345,6 +1487,15 @@ export interface components {
              *     }
              */
             artifact: components["schemas"]["ArtifactOptions"];
+            /**
+             * @default {
+             *       "atlases": [
+             *         "schaefer100n7"
+             *       ],
+             *       "only_voxels_with_signal": true
+             *     }
+             */
+            connectivity: components["schemas"]["ConnectivityOptions"];
             /**
              * @default {
              *       "denoise": true,
@@ -1389,6 +1540,16 @@ export interface components {
             steps: number;
             /** Reason */
             reason?: string | null;
+        };
+        /** ConnectivityOptions */
+        ConnectivityOptions: {
+            /** Atlases */
+            atlases?: string[];
+            /**
+             * Only Voxels With Signal
+             * @default true
+             */
+            only_voxels_with_signal: boolean;
         };
         /** DataFile */
         DataFile: {
@@ -1591,6 +1752,15 @@ export interface components {
              *     }
              */
             artifact: components["schemas"]["ArtifactOptions"];
+            /**
+             * @default {
+             *       "atlases": [
+             *         "schaefer100n7"
+             *       ],
+             *       "only_voxels_with_signal": true
+             *     }
+             */
+            connectivity: components["schemas"]["ConnectivityOptions"];
             /**
              * @default {
              *       "denoise": true,
@@ -2207,6 +2377,15 @@ export interface components {
             artifact: components["schemas"]["ArtifactOptions"];
             /**
              * @default {
+             *       "atlases": [
+             *         "schaefer100n7"
+             *       ],
+             *       "only_voxels_with_signal": true
+             *     }
+             */
+            connectivity: components["schemas"]["ConnectivityOptions"];
+            /**
+             * @default {
              *       "denoise": true,
              *       "unring": true,
              *       "topup": true,
@@ -2259,6 +2438,15 @@ export interface components {
              *     }
              */
             artifact: components["schemas"]["ArtifactOptions"];
+            /**
+             * @default {
+             *       "atlases": [
+             *         "schaefer100n7"
+             *       ],
+             *       "only_voxels_with_signal": true
+             *     }
+             */
+            connectivity: components["schemas"]["ConnectivityOptions"];
             /**
              * @default {
              *       "denoise": true,
@@ -2703,6 +2891,88 @@ export interface components {
             since: string;
             /** Page */
             page: string;
+        };
+        /**
+         * RoiMatrix
+         * @description Both matrices of one recording and atlas, as written by ``roi_correlation``. Missing
+         *     values ('nan' in the files) are ``None``. Regions are in the order of the files.
+         */
+        RoiMatrix: {
+            /** Subject */
+            subject: string;
+            /** Session */
+            session: string | null;
+            /** Recording */
+            recording: string;
+            /** Atlas */
+            atlas: string;
+            /** Atlas Name */
+            atlas_name: string;
+            /** Regions */
+            regions: components["schemas"]["RoiMatrixRegion"][];
+            /** R */
+            r: (number | null)[][];
+            /** Z */
+            z: (number | null)[][];
+            /** Flags */
+            flags: string[];
+        };
+        /** RoiMatrixRegion */
+        RoiMatrixRegion: {
+            /** Name */
+            name: string;
+            /** Network */
+            network: string;
+            /** Hemisphere */
+            hemisphere: string;
+            /** Coverage */
+            coverage: number | null;
+            /** Low Coverage */
+            low_coverage: boolean;
+            /** Empty */
+            empty: boolean;
+        };
+        /**
+         * RoiRow
+         * @description One recording of one subject (and session) for one atlas.
+         */
+        RoiRow: {
+            /** Subject */
+            subject: string;
+            /** Session */
+            session: string | null;
+            /** Recording */
+            recording: string;
+            /** Atlas */
+            atlas: string;
+            /** Atlas Name */
+            atlas_name: string;
+            /** Regions */
+            regions: number;
+            /** Volumes */
+            volumes: number;
+            /** Data */
+            data: string;
+            /** Averaging */
+            averaging: string;
+            /** Mean Coverage */
+            mean_coverage: number | null;
+            /** Regions Low Coverage */
+            regions_low_coverage: number;
+            /** Regions Without Values */
+            regions_without_values: number;
+            /** Flags */
+            flags: string[];
+            /** Decision */
+            decision: string | null;
+            /** Decision Reason */
+            decision_reason: string | null;
+            /** Decision Who */
+            decision_who: string | null;
+            /** Files */
+            files: {
+                [key: string]: string;
+            };
         };
         /** RunStatus */
         RunStatus: {
@@ -4839,6 +5109,157 @@ export interface operations {
         };
     };
     alps_exports_api_workspaces__ws_id__alps_results_exports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportExport"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    atlas_catalog_api_atlases_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AtlasCatalog"];
+                };
+            };
+        };
+    };
+    roi_table_api_workspaces__ws_id__roi_results_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoiRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    roi_matrix_api_workspaces__ws_id__roi_matrix_get: {
+        parameters: {
+            query: {
+                subject: string;
+                atlas: string;
+                recording?: string;
+                session?: string | null;
+            };
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoiMatrix"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    roi_export_api_workspaces__ws_id__roi_results_export_post: {
+        parameters: {
+            query?: {
+                leave_out_excluded?: boolean;
+            };
+            header?: never;
+            path: {
+                ws_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportExport"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    roi_exports_api_workspaces__ws_id__roi_results_exports_get: {
         parameters: {
             query?: never;
             header?: never;

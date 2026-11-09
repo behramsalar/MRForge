@@ -21,6 +21,7 @@ const STAGE_ACTIONS: Record<string, { stage: string; look?: [string, string?]; l
   preprocessing: { stage: "functional", look: ["process", "func"], lookLabel: "Open the page" },
   artifact_rejection: { stage: "artifact_rejection", look: ["process", "ica"], lookLabel: "Open the review" },
   standard_space: { stage: "standard_space", look: ["process", "mni"], lookLabel: "Open the page" },
+  connectivity: { stage: "connectivity", look: ["process", "conn"], lookLabel: "Open the page" },
   diffusion: { stage: "diffusion", look: ["process", "dwi"], lookLabel: "Open the page" },
 };
 

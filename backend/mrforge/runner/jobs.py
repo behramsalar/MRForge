@@ -15,6 +15,7 @@ from sqlalchemy import select
 
 from mrforge.bids import parse_bids_name
 from mrforge.errors import StepError
+from mrforge.migrate_layout import require_current_layout
 from mrforge.models import Job, JobStatus
 from mrforge.steps.base import Step, StepContext
 from mrforge.steps.registry import get_step
@@ -119,6 +120,7 @@ def create_job(
     started_by: str | None = None,
 ) -> int:
     """Validate inputs/params against the step's specs and queue a job. Returns the job id."""
+    require_current_layout(ws)
     step, inputs_dict, params_dict = normalise_specs(step_name, inputs, params)
     subject_id = ws.get_or_create_subject(subject)
     output_rel, run_rel = job_dirs(

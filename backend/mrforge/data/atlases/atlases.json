@@ -1,0 +1,31 @@
+{
+  "_note": "One entry per bundled atlas. All volumes are int16 on the FSL MNI152 2 mm grid (91 x 109 x 91), voxel value = label, 0 = background. Pair a volume only with the labels.csv in its own folder.",
+  "grid": {"shape": [91, 109, 91], "voxel_mm": 2.0},
+  "licences": {
+    "schaefer": {"name": "MIT (CBIG)", "file": "licences/schaefer2018_CBIG_LICENSE.md"},
+    "tian": {"name": "Melbourne Subcortex Atlas License", "file": "licences/tian2020_license.txt"},
+    "aal3": {"name": "GNU General Public Licence (as stated by GIN; licence text to be verified)", "file": "licences/aal3_NOTICE.txt"}
+  },
+  "families": [
+    {"id": "schaefer", "name": "Schaefer 2018 (100 parcels)", "kind": "Cortex, functional"},
+    {"id": "schaefer_tian", "name": "Schaefer 2018 (100 parcels) + Tian 2020 subcortex", "kind": "Cortex and subcortex, functional"},
+    {"id": "aal3", "name": "AAL3", "kind": "Whole brain, anatomical"}
+  ],
+  "atlases": [
+    {"id": "schaefer100n7", "family": "schaefer", "name": "Schaefer 100 parcels, 7 networks", "regions": 100, "licence": "schaefer", "citation": "Schaefer A, et al. (2018). Local-global parcellation of the human cerebral cortex from intrinsic functional connectivity MRI. Cerebral Cortex 28(9):3095-3114."},
+    {"id": "schaefer100n17", "family": "schaefer", "name": "Schaefer 100 parcels, 17 networks", "regions": 100, "licence": "schaefer", "citation": "Schaefer A, et al. (2018). Local-global parcellation of the human cerebral cortex from intrinsic functional connectivity MRI. Cerebral Cortex 28(9):3095-3114."},
+    {"id": "schaefer100n7tianS1", "family": "schaefer_tian", "name": "Schaefer 100 (7 networks) + Tian S1", "regions": 116, "licence": "schaefer+tian", "caveat": "combined"},
+    {"id": "schaefer100n7tianS2", "family": "schaefer_tian", "name": "Schaefer 100 (7 networks) + Tian S2", "regions": 132, "licence": "schaefer+tian", "caveat": "combined"},
+    {"id": "schaefer100n7tianS3", "family": "schaefer_tian", "name": "Schaefer 100 (7 networks) + Tian S3", "regions": 150, "licence": "schaefer+tian", "caveat": "combined"},
+    {"id": "schaefer100n7tianS4", "family": "schaefer_tian", "name": "Schaefer 100 (7 networks) + Tian S4", "regions": 154, "licence": "schaefer+tian", "caveat": "combined"},
+    {"id": "schaefer100n17tianS1", "family": "schaefer_tian", "name": "Schaefer 100 (17 networks) + Tian S1", "regions": 116, "licence": "schaefer+tian", "caveat": "combined"},
+    {"id": "schaefer100n17tianS2", "family": "schaefer_tian", "name": "Schaefer 100 (17 networks) + Tian S2", "regions": 132, "licence": "schaefer+tian", "caveat": "combined"},
+    {"id": "schaefer100n17tianS3", "family": "schaefer_tian", "name": "Schaefer 100 (17 networks) + Tian S3", "regions": 150, "licence": "schaefer+tian", "caveat": "combined"},
+    {"id": "schaefer100n17tianS4", "family": "schaefer_tian", "name": "Schaefer 100 (17 networks) + Tian S4", "regions": 154, "licence": "schaefer+tian", "caveat": "combined"},
+    {"id": "aal3v2", "family": "aal3", "name": "AAL3 (version 3v2)", "regions": 166, "licence": "aal3", "caveat": "aal3", "citation": "Rolls ET, Huang CC, Lin CP, Feng J, Joliot M (2020). Automated anatomical labelling atlas 3. NeuroImage 206:116189."}
+  ],
+  "caveats": {
+    "combined": "Built by the lab, not an official release: Schaefer regions keep labels 1 to 100, Tian regions are numbered 100 + their own label (right hemisphere first). The two atlases overlap in 74 voxels, which were given to the Tian region. Cite Schaefer et al. (2018) and Tian et al. (2020, Nature Neuroscience, doi 10.1038/s41593-020-00711-6).",
+    "aal3": "AAL was drawn on a single-subject MNI brain (Colin27), not the MNI152 average; it is commonly used with MNI152 data without warping. Label values have gaps (35 and 36 are unused)."
+  }
+}

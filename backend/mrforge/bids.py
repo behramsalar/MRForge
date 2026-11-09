@@ -15,7 +15,7 @@ from pathlib import Path
 ENTITY_ORDER = (
     "sub", "ses", "sample", "task", "acq", "ce", "trc", "rec", "dir", "run", "mod", "echo",
     "flip", "inv", "mt", "part", "proc", "hemi", "space", "split", "recording", "chunk",
-    "atlas", "res", "den", "from", "to", "mode", "label", "desc",
+    "atlas", "seg", "res", "den", "from", "to", "mode", "label", "stat", "desc",
 )  # fmt: skip
 
 # Entities describing what was done to an image; they are not inherited from an input name.

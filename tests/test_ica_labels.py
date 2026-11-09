@@ -17,7 +17,7 @@ from mrforge.steps import builtin  # noqa: F401
 from mrforge.workspace import Workspace
 
 D = "derivatives/mrforge/sub-001/func"
-SUMMARY = f"{D}/sub-001_task-rest_desc-melodic_components.json"
+SUMMARY = f"{D}/ica/sub-001_task-rest_desc-melodic_components.json"
 N = 4
 
 
@@ -88,7 +88,7 @@ def test_a_complete_decision_lets_the_pipeline_continue_and_is_recorded(tmp_path
     run(ws)
     write_labels(ws, SUMMARY, all_labelled(), "Jane Smith", complete=True)
     assert run(ws) == {"labels": Action.RAN, "after": Action.RAN}
-    result = json.loads(next((ws.root / D).glob("*_labels.json")).read_text())
+    result = json.loads(next((ws.root / D).rglob("*_labels.json")).read_text())
     assert result["noise_components"] == [2]  # "uncertain" is kept by default
     assert result["decided_by"] == "Jane Smith" and result["counts"]["uncertain"] == 1
     assert run(ws) == {"labels": Action.REUSED, "after": Action.REUSED}  # resume: nothing redone

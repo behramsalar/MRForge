@@ -77,7 +77,7 @@ def _settings(runs: Path, recording: str, bold_input: str) -> tuple[dict[str, st
         )
         out["Registration"] = str(p.get("registration_dof"))
     if "desc-denoised" in bold_input.rsplit("/", 1)[-1]:
-        labels = next(iter(sorted(runs.parent.glob(f"*{recording}*_labels.json"))), None)
+        labels = next(iter(sorted(runs.parent.glob(f"ica/*{recording}*_labels.json"))), None)
         info: dict[str, Any] = {}
         if labels:
             try:

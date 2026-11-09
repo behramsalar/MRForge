@@ -1,5 +1,5 @@
 import { Badge, Button, Callout, Card, Checkbox, Dialog, Flex, RadioGroup, Select, Switch, Text, TextArea, TextField } from "@radix-ui/themes";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { api } from "../api/client";
 import { ApiError, call } from "../api/call";
@@ -7,7 +7,7 @@ import type { FullOptions, Preset, StagePlan } from "../api/types";
 import { space, type } from "../theme/tokens";
 import { ErrorCallout } from "./ErrorCallout";
 
-const STAGE_IDS = ["anatomical", "functional", "artifact_rejection", "standard_space", "diffusion"];
+const STAGE_IDS = ["anatomical", "functional", "artifact_rejection", "standard_space", "connectivity", "diffusion"];
 
 const DEFAULTS: FullOptions = {
   subject: "",
@@ -21,6 +21,7 @@ const DEFAULTS: FullOptions = {
     slice_timing: false,
   },
   artifact: { uncertain_as: "signal", aggressive: false, mode: "manual" },
+  connectivity: { atlases: ["schaefer100n7"], only_voxels_with_signal: true },
   diffusion: {
     denoise: true,
     unring: true,
@@ -69,7 +70,7 @@ function StageCard({
               Done earlier: not repeated if unchanged
             </Badge>
           )}
-          {settings && stage.can_run && (
+          {settings && (stage.can_run || open) && (
             <Button
               size="1"
               variant="ghost"
@@ -102,7 +103,7 @@ function StageCard({
             ))}
           </Flex>
         )}
-        {settings && stage.can_run && open && (
+        {settings && (stage.can_run || open) && open && (
           <Flex direction="column" gap={space.group} pt="2" style={{ borderTop: "1px solid var(--gray-a5)" }}>
             {settings}
           </Flex>
@@ -116,12 +117,12 @@ function StageCard({
  * left out and why, and a way to change the settings. Stages come from the plan, so a new
  * stage shows up here without changes to this dialog. */
 /** The choices without the subject, in a stable form, to see whether they still equal a preset. */
-function signature(o: Pick<FullOptions, "stages" | "anatomical" | "functional" | "artifact" | "diffusion">): string {
+function signature(o: Pick<FullOptions, "stages" | "anatomical" | "functional" | "artifact" | "connectivity" | "diffusion">): string {
   const sort = (v: unknown): unknown =>
     v && typeof v === "object" && !Array.isArray(v)
       ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([k, x]) => [k, sort(x)]))
       : v;
-  return JSON.stringify(sort({ s: o.stages ?? {}, a: o.anatomical, f: o.functional, r: o.artifact, d: o.diffusion }));
+  return JSON.stringify(sort({ s: o.stages ?? {}, a: o.anatomical, f: o.functional, r: o.artifact, c: o.connectivity, d: o.diffusion }));
 }
 
 export function ConfirmProcessDialog({
@@ -163,6 +164,7 @@ export function ConfirmProcessDialog({
       anatomical: x.options.anatomical,
       functional: x.options.functional,
       artifact: x.options.artifact,
+      connectivity: x.options.connectivity,
       diffusion: x.options.diffusion,
     });
   };
@@ -176,7 +178,7 @@ export function ConfirmProcessDialog({
           body: {
             name: presetNameInput,
             description: presetText,
-            options: { stages: opts.stages, anatomical: opts.anatomical, functional: opts.functional, artifact: opts.artifact, diffusion: opts.diffusion },
+            options: { stages: opts.stages, anatomical: opts.anatomical, functional: opts.functional, artifact: opts.artifact, connectivity: opts.connectivity, diffusion: opts.diffusion },
           },
         }),
       ),
@@ -195,10 +197,11 @@ export function ConfirmProcessDialog({
   });
   const request: FullOptions = { ...opts, subject, preset: presetName };
   const batch = subjects && subjects.length > 0 ? subjects : null;
-  const batchRequest = { subjects: batch ?? [], stages: opts.stages, anatomical: opts.anatomical, functional: opts.functional, artifact: opts.artifact, diffusion: opts.diffusion, preset: presetName };
+  const batchRequest = { subjects: batch ?? [], stages: opts.stages, anatomical: opts.anatomical, functional: opts.functional, artifact: opts.artifact, connectivity: opts.connectivity, diffusion: opts.diffusion, preset: presetName };
   const plan = useQuery({
     queryKey: ["ws", ws, "plan", batch ? JSON.stringify(batchRequest) : JSON.stringify(request)],
     enabled: open,
+    placeholderData: keepPreviousData, // keep the list on screen (and its scroll position) while a changed choice is re-planned
     queryFn: async () => {
       if (batch) {
         const b = await call(api.POST("/api/workspaces/{ws_id}/process/plan-batch", { params: { path: { ws_id: ws } }, body: batchRequest }));
@@ -228,6 +231,14 @@ export function ConfirmProcessDialog({
   const a = opts.anatomical!;
   const r = opts.artifact!;
   const d = opts.diffusion!;
+  const c = opts.connectivity!;
+  const atlases = useQuery({ queryKey: ["atlases"], queryFn: () => call(api.GET("/api/atlases")), enabled: open });
+  const chosenAtlases = c.atlases ?? [];
+  const toggleAtlas = (id: string, on: boolean) =>
+    setOpts({
+      ...opts,
+      connectivity: { ...c, atlases: on ? [...chosenAtlases.filter((x) => x !== id), id] : chosenAtlases.filter((x) => x !== id) },
+    });
   const setD = (change: Partial<NonNullable<FullOptions["diffusion"]>>) =>
     setOpts({ ...opts, diffusion: { ...d, ...change } });
   const functionalSettings = (
@@ -492,10 +503,54 @@ export function ConfirmProcessDialog({
               </Text>
     </Flex>
   );
+  const connectivitySettings = (
+    <Flex direction="column" gap={space.group}>
+      <Text size={type.help} weight="medium">
+        Atlases (each one gets its own results; choose one or more)
+      </Text>
+      {(atlases.data?.families ?? []).map((family) => (
+        <Flex key={family.id} direction="column" gap="1">
+          <Text size={type.caption} color="gray">
+            {family.name}: {family.kind}
+          </Text>
+          {(atlases.data?.atlases ?? [])
+            .filter((x) => x.family === family.id)
+            .map((x) => (
+              <Flex key={x.id} direction="column" gap="1">
+                <Text as="label" size={type.help}>
+                  <Flex gap={space.inline} align="center">
+                    <Checkbox checked={chosenAtlases.includes(x.id)} onCheckedChange={(v) => toggleAtlas(x.id, v === true)} />
+                    {x.name} ({x.regions} regions)
+                  </Flex>
+                </Text>
+                {chosenAtlases.includes(x.id) && x.caveat && (
+                  <Text size={type.caption} color="gray" style={{ marginLeft: 24 }}>
+                    {x.caveat}
+                  </Text>
+                )}
+              </Flex>
+            ))}
+        </Flex>
+      ))}
+      <Text as="label" size={type.help}>
+        <Flex gap={space.inline} align="center">
+          <Switch
+            checked={c.only_voxels_with_signal ?? true}
+            onCheckedChange={(on) => setOpts({ ...opts, connectivity: { ...c, only_voxels_with_signal: on } })}
+          />
+          Average only voxels inside the brain of each run (recommended; otherwise every voxel of a region is used)
+        </Flex>
+      </Text>
+      <Text size={type.caption} color="gray">
+        Needs the run in standard space at 2 mm. The cleaned data is used when artifact rejection was done.
+      </Text>
+    </Flex>
+  );
   const settingsFor: Record<string, ReactNode> = {
     anatomical: anatomicalSettings,
     functional: functionalSettings,
     artifact_rejection: artifactSettings,
+    connectivity: connectivitySettings,
     diffusion: diffusionSettings,
   };
   const p = plan.data;

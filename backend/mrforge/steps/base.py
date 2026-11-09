@@ -21,6 +21,7 @@ from sqlalchemy import select
 
 from mrforge.bids import bids_name, inherited_entities
 from mrforge.errors import StepError
+from mrforge.layout import placed
 from mrforge.models import File
 from mrforge.workspace import Workspace
 
@@ -95,7 +96,7 @@ class StepContext(Generic[I, P]):
         sub/ses come from the workspace; acq/run/... are carried over from the first input."""
         paths = input_relpaths(self.inputs)
         base = inherited_entities(self.subject, self.session, paths[0] if paths else None)
-        return bids_name({**base, **entities}, suffix, ext)
+        return placed(bids_name({**base, **entities}, suffix, ext), self.output_dir.name)
 
     def input_path(self, relpath: str) -> Path:
         return self.workspace.abspath(relpath)
@@ -209,6 +210,9 @@ class Step(ABC, Generic[I, P, O]):
 
     def prepare(self, ctx: StepContext[I, P]) -> None:
         ctx.output_dir.mkdir(parents=True, exist_ok=True)
+        for _, value in self.expected_outputs(ctx):
+            if isinstance(value, str) and "/" in value:  # sorted into a subfolder (layout.py)
+                (ctx.output_dir / value).parent.mkdir(parents=True, exist_ok=True)
         ctx.run_dir.mkdir(parents=True, exist_ok=True)
         ctx.log_dir.mkdir(parents=True, exist_ok=True)
 

@@ -28,12 +28,15 @@ UI (React)  ->  API (FastAPI)  ->  Services  ->  Step objects  ->  Job runner  -
         sub-XXX/[ses-YY/]anat/      # results with BIDS names, e.g. sub-001_desc-brain_mask.nii.gz
             sub-XXX_T1w.anat/       # native fsl_anat folder, named after the input image
             _runs/<label>/          # one folder per step run: provenance.json, logs/stdout.log, stderr.log
-        sub-XXX/[ses-YY/]func/      # (later stages)
+        sub-XXX/[ses-YY/]func/      # the results people open (bold, masks, boldref), plus sorted subfolders:
+            qc/  ica/  transforms/  feat/  connectivity/<atlas>/    # see layout.py (rule below)
     imports/import-NNN/manifest.json   # scan results, user decisions, conversion provenance
     reports/
 ```
 
 Rules: `sourcedata/` and `rawbids/` are never modified after creation. All results go under `derivatives/`. A workspace with one scan is simply `sub-001`.
+
+**Sorted subfolders (func).** `layout.subfolder_for(name, datatype)` decides from the file name alone where a result goes: `*_qc.*`, `*_qc_slices/` and the motion series to `qc/`; components, labels, AROMA and noise-removal files and `*.ica` to `ica/`; `*_xfm.*` to `transforms/`; `*.feat` to `feat/`; every file with a `seg-<atlas>` entity to `connectivity/<atlas>/`; everything else stays in the datatype folder. `StepContext.bids_name()` applies it, so a step's declared output is simply `qc/sub-..._qc.png` and nothing else in a step changes. Only `func` is sorted; `anat` and `dwi` stay flat. `workspace.json` carries `layout_version` (2); older workspaces are moved by `mrforge workspace migrate` (`migrate_layout.py`: files are renamed, recorded paths, hashes of rewritten result files and the database follow; nothing is recomputed) and starting work in an unmigrated workspace is refused with `WORKSPACE_LAYOUT_OLD`.
 
 **Naming.** Result files follow BIDS derivatives naming: entities taken from the input file (`sub`, `ses`, `acq`, `run`, ...) plus `space-`, `desc-`, `label-`, `from-`/`to-`/`mode-` as needed, then a suffix (`T1w`, `mask`, `dseg`, `probseg`, `xfm`). The BIDS-named results of a step are hard links to (or copies of) the tool's native files, so the native folder stays intact for FSL tools that expect it. Each step declares its BIDS datatype folder (`anat`, `func`, ...). The per-step record (`_runs/<label>/`) is MRForge-specific and listed in `.bidsignore`.
 
@@ -212,3 +215,13 @@ Port of the lab's `alps.sh` (G. Barisano, MIT). Each part is a separate `Step` (
 - **REVIEW(domain):** see the list at the end of the Stage 9 entry in `PROGRESS.md`.
 - **Region sets side by side:** `alps_rois` and `alps_index` carry a tag of the chosen set in their step label (`alps_rois_legacy5`, `alps_index_sphere3p5`; the packaged 2.5 mm set has no tag and keeps the old names). That gives each set its own result files (`desc-alpslegacy5`), run record and resume state, while everything before the regions (denoise to registration) is shared and not repeated. The results table and export have one row per series and region set.
 
+
+## 17. ROI time series and correlation matrices (Stage 10)
+Per recording, from the best standard-space functional file (FSL MNI152, 2 mm; the cleaned file if artifact rejection ran), for the atlases bundled in `backend/mrforge/data/atlases/` (`atlases.py`; `atlases.json` holds names, citations, caveats, licence notes). Each part is a separate `Step` (`datatype = "func"`), one chain per atlas (`roi_timeseries_<atlas>`, `roi_correlation_<atlas>`), so a new atlas never repeats another's work.
+- `roi_timeseries`: signal mask (voxels with non-zero temporal standard deviation), atlas masked by it, one `fslmeants --label` call, columns matched to `labels.csv` by label value. Coverage (voxels with signal / voxels in the region) per region; regions below 50 % are flagged, never dropped. Setting `only_voxels_with_signal` (default on) is recorded; off reproduces the lab's plain per-mask mean.
+- `roi_correlation` (numpy only): Pearson (pairwise-valid volumes), Fisher z with a 0.999999 clip, z diagonal 0. The matrices are plain numbers (`%.8f`, N x N, no labels), ready for NBS-type tools. Region order is in the time-series header and `desc-roi.json`. It also reports the share of variance explained by one shared signal (largest eigenvalue / N) and flags a high value.
+- **Files** (sorted into `func/connectivity/<atlas>/`, see section 2): `..._seg-<atlas>_timeseries.tsv`, `..._stat-pearsoncorrelation_relmat.txt`, `..._stat-fisherz_relmat.txt`, `..._desc-roi.json` (source of truth: input, settings, versions, per-region coverage, flags), `..._dseg.nii.gz` (the masked atlas, viewer overlay).
+- **Whole-brain signal check** (`func_qc`): the percent change of the whole-brain mean from the run's median, per volume; a plot and a flag when a volume goes beyond a threshold (3 %). It reports, it never excludes.
+- **Stage** (`ConnectivityStage`, off by default): input `${func_to_mni__<slug>.bold_mni}` in a full run; run alone it uses the completed `func_to_mni` output (`existing_standard()` in `results.py`). Options: atlas list (default `schaefer100n7`).
+- **Results** (`roi_results.py`): index of all participants' files with full paths (`reports/roi/roi_matrices_<time>.tsv/.csv`); `GET /roi-results`, `POST /roi-results/export`, `GET /roi-results/exports`, `GET /roi-matrix` (matrix, labels and flags for the heatmap view).
+- **REVIEW(domain):** see the list at the end of the Stage 10 entry in `PROGRESS.md`.

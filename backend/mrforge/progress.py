@@ -42,6 +42,7 @@ TOOL_PHRASES: list[tuple[str, str]] = [
     ("fast", "Separating grey matter, white matter and CSF"),
     ("bet", "Removing the skull"),
     ("flirt", "Aligning images"),
+    ("fslmeants", "Averaging the signal of each brain region"),
     ("slicer", "Drawing the quality-check pictures"),
     ("pngappend", "Drawing the quality-check pictures"),
     ("melodic", "Finding independent components"),

@@ -86,6 +86,8 @@ The UI looks linear (Import → Anatomical → Functional → Denoising → QC �
         sub-XXX/[ses-YY/]anat/   # results with BIDS names, e.g. sub-001_desc-brain_mask.nii.gz
             sub-XXX_T1w.anat/    # native fsl_anat folder, named after the input image
             _runs/<label>/       # per-step record: provenance.json, logs/ (stdout.log, stderr.log)
+        sub-XXX/[ses-YY/]func/   # results people open stay here; the rest is sorted into qc/ ica/
+                                 # transforms/ feat/ connectivity/<atlas>/ (docs/architecture.md section 2)
     imports/import-NNN/      # import manifests: scan results, user decisions, provenance
     reports/
 ```
@@ -383,12 +385,27 @@ Port of the lab's `alps.sh` (G. Barisano, MIT; computes the diffusion-along-peri
 4. Kill and restart mid-eddy: the pipeline resumes at eddy, earlier steps are not repeated.
 5. Export the results table as CSV and Excel and check every number against `alps.json` and the logs.
 
+### Stage 10 — ROI time series and ROI-to-ROI correlation matrices
+
+Moved ahead of the rest of MVP 3 (user decision, 2026-11-09). Per recording, from the best standard-space (FSL MNI152 2 mm) functional file (cleaned if artifact rejection ran), for atlases bundled with the app. Plan and decisions: `docs/DECISIONS.md` (2026-11-09). Each part is its own `Step` with its own QC and tests, compared against the lab's own scripts on the same data.
+
+**Build**
+- 10a docs, licence check of the atlases | 10b bundled atlases (Schaefer 100 with 7/17 networks, Schaefer + Tian S1-S4, AAL3, Brainnetome) and `atlases.py` | 10c `roi_timeseries` (`fslmeants --label`, only voxels with signal, per-region coverage) | 10d `roi_correlation` (Pearson, Fisher z, z diagonal 0; matrices written as plain numbers, ready for NBS-type tools) | 10e `ConnectivityStage` in the stage registry, options, presets, chip, report, viewer overlay | 10f results index (CSV with the full paths of each participant's files), API, dialog card, Process > Connectivity page | 10h basic matrix view (heatmap with region names and coverage flags) | 10g docs, end-to-end check.
+- Not in this stage: groups, Spearman, WM/CSF/motion regression (a later preprocessing step; its result flows in automatically), node coordinates, click-through from the matrix to the viewer.
+
+**Manual test checklist** (at the stage end)
+1. Run the stage from the dialog for two subjects and two atlases; open the atlas overlay on the mean image and check the alignment.
+2. Compare a time series and a matrix with the lab's `fslmeants` script run on the same file and atlas (identical with signal-only averaging switched off; otherwise differences only in regions flagged for low coverage).
+3. Open a matrix file: plain numbers only, N x N, no labels; the index file lists the full paths.
+4. Rerun with one more atlas: only that atlas' steps run.
+5. Kill and restart mid-run: it resumes where it stopped.
+
 ### Later (do not start without an explicit go-ahead)
 
 Each follows the same pattern: backend step with tests and a comparison against manual FSL, quick check, then its screen in the agreed design, then a manual test checklist.
 
 - **MVP 2:** WM/CSF/motion nuisance regression with mask preview, deterministic methods-text generator, motion scrubbing (MELODIC, component classification and ICA-AROMA moved to Stage 6).
-- **MVP 3:** atlas abstraction and browser (Schaefer, AAL, Harvard-Oxford, Yeo, Brainnetome), custom ROIs, time-series extraction, connectivity matrices (Pearson/Spearman, Fisher z), interactive matrix linked to the viewer, connectivity report.
+- **MVP 3 (rest):** atlas browser beyond the bundled set (Harvard-Oxford, Yeo, Glasser), custom ROIs, Spearman, richer matrix visualisation (click a cell to see both regions in the viewer, two subjects side by side or as a difference, reordering by network, picture export), connectivity report. (Time-series extraction, Pearson/Fisher z matrices and a basic matrix view are Stage 10.)
 - **MVP 4:** dataset snapshots, pipeline presets, versions and cloning, advanced QC (DVARS, tSNR, carpet plots), group analysis (FEAT, randomise, dual regression, NBS) as a separate product area.
 
 ---
