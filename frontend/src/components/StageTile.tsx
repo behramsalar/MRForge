@@ -1,4 +1,4 @@
-import { CheckIcon, MixerHorizontalIcon } from "@radix-ui/react-icons";
+import { ArrowTopRightIcon, CheckIcon, MixerHorizontalIcon } from "@radix-ui/react-icons";
 import { Badge, IconButton, Tooltip } from "@radix-ui/themes";
 import type { StagePlan } from "../api/types";
 import "./overview.css";
@@ -17,6 +17,7 @@ export function StageTile({
   hasSettings,
   changed,
   onSettings,
+  pageHref,
 }: {
   label: string;
   plan?: StagePlan;
@@ -28,6 +29,7 @@ export function StageTile({
   hasSettings: boolean;
   changed: boolean;
   onSettings: () => void;
+  pageHref?: string; // the stage's own page: run it alone and see its results
 }) {
   const blocked = !!plan && !plan.can_run;
   const on = enabled && !blocked;
@@ -56,6 +58,15 @@ export function StageTile({
           </Badge>
         )}
       </button>
+      {pageHref && (
+        <Tooltip content={`Open the ${label} page: run this stage alone and see its results`}>
+          <IconButton className="tile-page" size="1" variant="ghost" color="gray" asChild>
+            <a href={pageHref} aria-label={`Open the ${label} page`}>
+              <ArrowTopRightIcon />
+            </a>
+          </IconButton>
+        </Tooltip>
+      )}
       {hasSettings && (
         <Tooltip content={changed ? "Settings (changed)" : "Settings"}>
           <IconButton className="tile-gear" size="1" variant="ghost" color="gray" onClick={onSettings} aria-label={`Settings for ${label}`}>

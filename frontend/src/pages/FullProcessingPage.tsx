@@ -16,6 +16,7 @@ import { EmptyState, PageHeader } from "../components/ui/Layout";
 import type { WorkspaceState } from "../api/types";
 import { href } from "../lib/router";
 import { DEFAULTS, STAGE_GROUPS, settingsChanged, signature, stageCounts, usePlan } from "../lib/processOptions";
+import { STAGE_PAGES } from "../shell/nav";
 import { space, type } from "../theme/tokens";
 
 const HAS_SETTINGS = new Set(["anatomical", "functional", "artifact_rejection", "connectivity", "diffusion"]);
@@ -75,6 +76,11 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
     if (c.done === 0) return undefined;
     return picked.length === 1 ? "Done earlier" : `${c.done} of ${picked.length} done earlier`;
   };
+  const stagePageHref = (id: string) => {
+    if (id === "artifact_rejection") return href(ws, "quality", "artifacts");
+    const sp = STAGE_PAGES.find((x) => x.stage === id);
+    return sp ? href(ws, "process", sp.extra) : undefined;
+  };
   const renderGroup = (g: (typeof STAGE_GROUPS)[number]) => (
     <div key={g.id} className="tile-group">
       <Flex direction="column">
@@ -102,6 +108,7 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
                 hasSettings={HAS_SETTINGS.has(id)}
                 changed={settingsChanged(id, opts)}
                 onSettings={() => setPanel(id)}
+                pageHref={stagePageHref(id)}
               />
             </Fragment>
           );
@@ -120,7 +127,7 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
           title="There is no data to process yet"
           text="Import your scans first; then come back here and press Process."
           action="Import scans"
-          href={href(ws, "data")}
+          href={href(ws, "import")}
         />
       )}
       {rows.length > 0 && (

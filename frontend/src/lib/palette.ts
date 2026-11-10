@@ -13,7 +13,12 @@ export type Entry = {
 type NavLike = { id: string; label: string; children?: { id: string; label: string }[] }[];
 
 /** Everything reachable inside an open workspace: pages, subjects, a few actions. */
-export function buildEntries(ws: string | undefined, nav: NavLike, subjects: string[]): Entry[] {
+export function buildEntries(
+  ws: string | undefined,
+  nav: NavLike,
+  subjects: string[],
+  stagePages: { extra: string; label: string }[] = [],
+): Entry[] {
   const out: Entry[] = [];
   if (ws) {
     for (const n of nav) {
@@ -27,6 +32,9 @@ export function buildEntries(ws: string | undefined, nav: NavLike, subjects: str
           to: href(ws, n.id, c.id),
         });
       }
+    }
+    for (const p of stagePages) {
+      out.push({ id: `page:process/${p.extra}`, group: "Pages", label: p.label, hint: "Run one stage", to: href(ws, "process", p.extra) });
     }
     for (const s of subjects) out.push({ id: `subject:${s}`, group: "Subjects", label: s, to: href(ws, "subject", s) });
   }

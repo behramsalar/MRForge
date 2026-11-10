@@ -71,7 +71,7 @@ function ImportsList({ ws, imports, selected }: { ws: string; imports: ImportSum
               return (
                 <Table.Row
                   key={i.id}
-                  onClick={() => (location.hash = href(ws, "data", i.id))}
+                  onClick={() => (location.hash = href(ws, "import", i.id))}
                   style={{ cursor: "pointer", background: i.id === selected ? "var(--accent-a3)" : undefined }}
                 >
                   <Table.RowHeaderCell>
@@ -156,7 +156,7 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
     if (op?.status === "Completed" && typeof op.result?.import_id === "string") {
       setScanOp(null);
       const ids = Array.isArray(op.result.import_ids) ? (op.result.import_ids as string[]) : [];
-      location.hash = href(ws, "data", ids[0] ?? op.result.import_id);
+      location.hash = href(ws, "import", ids[0] ?? op.result.import_id);
     } else if (op && op.status !== "Queued" && op.status !== "Running") setScanOp(null);
   }, [state, scanOp, ws]);
 

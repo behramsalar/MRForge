@@ -180,3 +180,4 @@
 .tile-group { display: flex; flex-direction: column; gap: 4px; }
 .tile-group > .tiles { flex: 1; }
 .tile-group-help { min-height: 2.6em; }
+.tile-page { position: absolute; top: 6px; right: 32px; }

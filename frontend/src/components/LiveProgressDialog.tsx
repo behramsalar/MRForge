@@ -117,7 +117,7 @@ function StepRow({ s, ws }: { s: ProgressStep; ws: string }) {
               {s.state === "review" && (
                 <Flex style={{ paddingLeft: 28 }}>
                   <Text size={type.help} color="amber">
-                    Waiting for you: <a href={href(ws, "quality")}>open the review</a> to label the components.
+                    Waiting for you: <a href={href(ws, "quality", "artifacts")}>open the review</a> to label the components.
                   </Text>
                 </Flex>
               )}

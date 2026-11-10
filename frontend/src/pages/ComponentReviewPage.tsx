@@ -51,7 +51,7 @@ function Dot({ label }: { label?: IcaLabel }) {
  * summary, time course and frequencies) and label it signal, noise or uncertain. MRForge only
  * shows; the decision is yours. Saving the final decision lets a waiting pipeline carry on.
  */
-export function ComponentReviewPage({ ws }: { ws: string }) {
+export function ComponentReviewPage({ ws, embedded = false }: { ws: string; embedded?: boolean }) {
   const queryClient = useQueryClient();
   const { state } = useWorkspace();
   const subjects = useSubjects(ws);
@@ -169,10 +169,12 @@ export function ComponentReviewPage({ ws }: { ws: string }) {
 
   return (
     <Flex direction="column" gap={space.section}>
-      <PageHeader
-        title="Artifact rejection"
-        description="Look at each component MELODIC found and decide whether it is brain activity or noise."
-      />
+      {!embedded && (
+        <PageHeader
+          title="Artifact rejection"
+          description="Look at each component MELODIC found and decide whether it is brain activity or noise."
+        />
+      )}
       <Flex gap={space.group} align="center" wrap="wrap">
         <Select.Root value={label} onValueChange={setSubject}>
           <Select.Trigger aria-label="Subject" />

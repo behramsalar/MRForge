@@ -3,11 +3,12 @@ import { WORKSPACE_NAV } from "../shell/nav";
 import { buildEntries, filterEntries } from "./palette";
 
 describe("command palette entries", () => {
-  const entries = buildEntries("demo", WORKSPACE_NAV, ["sub-001", "sub-012"]);
+  const entries = buildEntries("demo", WORKSPACE_NAV, ["sub-001", "sub-012"], [{ extra: "anat", label: "Anatomical" }]);
   it("offers every sidebar page, every function under it and every subject", () => {
     const ids = entries.map((e) => e.id);
     expect(ids).toContain("page:viewer");
     expect(ids).toContain("page:results/connectivity");
+    expect(ids).toContain("page:process/anat");
     expect(ids).toContain("subject:sub-012");
     expect(entries.find((e) => e.id === "subject:sub-001")?.to).toBe("#/w/demo/subject/sub-001");
   });

@@ -24,7 +24,7 @@ import { crumbs, defaultChild } from "./nav";
 
 describe("sidebar tree", () => {
   it("has one Process page without a tree, and results listed under Results", () => {
-    expect(WORKSPACE_NAV.map((n) => n.id)).toEqual(["dashboard", "data", "process", "quality", "results", "viewer", "jobs"]);
+    expect(WORKSPACE_NAV.map((n) => n.id)).toEqual(["dashboard", "import", "data", "process", "quality", "results", "viewer", "jobs"]);
     expect(WORKSPACE_NAV.find((n) => n.id === "process")?.children).toBeUndefined();
     expect(WORKSPACE_NAV.find((n) => n.id === "results")?.children?.map((c) => c.id)).toEqual(["connectivity", "diffusion"]);
     expect(defaultChild("results")).toBe("connectivity");
@@ -34,6 +34,7 @@ describe("sidebar tree", () => {
     expect(crumbs("results", "diffusion")).toEqual(["Results", "Diffusion (ALPS)"]);
     expect(crumbs("results")).toEqual(["Results", "Connectivity"]);
     expect(crumbs("process")).toEqual(["Process"]);
+    expect(crumbs("process", "func")).toEqual(["Process", "Functional preprocessing"]);
     expect(crumbs("viewer")).toEqual(["Viewer"]);
   });
 });

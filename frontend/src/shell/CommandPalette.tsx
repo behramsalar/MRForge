@@ -3,7 +3,7 @@ import { Dialog, Flex, Text, TextField } from "@radix-ui/themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSubjects } from "../api/hooks";
 import { buildEntries, filterEntries, type Entry } from "../lib/palette";
-import { WORKSPACE_NAV } from "./nav";
+import { WORKSPACE_NAV, STAGE_PAGES } from "./nav";
 import { useResearcher } from "./ResearcherProvider";
 import { useAppTheme } from "./ThemeProvider";
 
@@ -26,7 +26,7 @@ export function CommandPalette({
   const [index, setIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const entries = useMemo(
-    () => buildEntries(ws, WORKSPACE_NAV, ws ? (subjects.data ?? []).map((s) => s.label) : []),
+    () => buildEntries(ws, WORKSPACE_NAV, ws ? (subjects.data ?? []).map((s) => s.label) : [], STAGE_PAGES),
     [ws, subjects.data],
   );
   const shown = useMemo(() => filterEntries(entries, query), [entries, query]);

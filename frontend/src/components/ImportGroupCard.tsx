@@ -116,7 +116,7 @@ export function ImportGroupCard({ ws, group, busy }: { ws: string; group: Import
           </Table.Header>
           <Table.Body>
             {group.map((i) => (
-              <GroupRow key={i.id} ws={ws} i={i} onOpen={() => (location.hash = href(ws, "data", i.id))} />
+              <GroupRow key={i.id} ws={ws} i={i} onOpen={() => (location.hash = href(ws, "import", i.id))} />
             ))}
           </Table.Body>
         </Table.Root>

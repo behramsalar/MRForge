@@ -3,6 +3,7 @@ import {
   ArchiveIcon,
   BarChartIcon,
   CheckCircledIcon,
+  DownloadIcon,
   DesktopIcon,
   EyeOpenIcon,
   GearIcon,
@@ -29,10 +30,11 @@ export type NavItem = {
  */
 export const WORKSPACE_NAV: NavItem[] = [
   { id: "dashboard", label: "Overview", icon: HomeIcon },
+  { id: "import", label: "Import", icon: DownloadIcon },
   { id: "data", label: "Data", icon: ArchiveIcon },
   // One Process page: every stage (preprocessing, analysis, diffusion) is a tile on it.
   { id: "process", label: "Process", icon: MixerHorizontalIcon },
-  // Quality will gain the cross-subject check list; for now it holds the artifact labelling.
+  // Quality: the subjects to check, their reports, and the artifact labelling (tabs on the page).
   { id: "quality", label: "Quality", icon: CheckCircledIcon },
   {
     id: "results",
@@ -45,6 +47,16 @@ export const WORKSPACE_NAV: NavItem[] = [
   },
   { id: "viewer", label: "Viewer", icon: EyeOpenIcon },
   { id: "jobs", label: "Jobs", icon: ActivityLogIcon },
+];
+
+/** Pages that are not in the sidebar but are reached from the Process tiles, the subject page and
+ * the jump list: the run-one-stage pages with their own results. ``stage`` is the Process tile. */
+export const STAGE_PAGES: { stage: string; extra: string; label: string }[] = [
+  { stage: "anatomical", extra: "anat", label: "Anatomical" },
+  { stage: "functional", extra: "func", label: "Functional preprocessing" },
+  { stage: "standard_space", extra: "mni", label: "Standard space" },
+  { stage: "connectivity", extra: "conn", label: "Connectivity (ROI to ROI)" },
+  { stage: "diffusion", extra: "dwi", label: "Diffusion (ALPS)" },
 ];
 
 export const GLOBAL_NAV: NavItem[] = [{ id: "workspaces", label: "Workspaces", icon: LayersIcon }];
@@ -68,6 +80,8 @@ export function defaultChild(page: string): string | undefined {
 /** Top-bar trail for a page: ["Process", "Anatomical"]. */
 export function crumbs(page: string, extra?: string): string[] {
   const item = ALL.find((n) => n.id === page);
+  const stagePage = page === "process" ? STAGE_PAGES.find((x) => x.extra === extra) : undefined;
+  if (stagePage) return [pageLabel(page), stagePage.label];
   const child = item?.children?.find((c) => c.id === (extra ?? defaultChild(page)));
   return [pageLabel(page), ...(child ? [child.label] : [])];
 }

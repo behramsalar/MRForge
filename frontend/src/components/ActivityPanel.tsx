@@ -86,7 +86,7 @@ export function ActivityPanel({ ws, state }: { ws: string; state: WorkspaceState
             </Text>
           </Text>
           <Button size="2" asChild>
-            <a href={href(ws, "quality")}>Open the review</a>
+            <a href={href(ws, "quality", "artifacts")}>Open the review</a>
           </Button>
         </Flex>
       </Callout.Root>,

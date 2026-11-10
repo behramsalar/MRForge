@@ -88,7 +88,7 @@ export function ViewerPage({ ws, subject, image }: { ws: string; subject?: strin
     <Flex direction="column" gap={space.section}>
       <PageHeader title="Viewer" description="Look at any image of a subject, raw or processed, with overlays." />
       {subjects.data?.length === 0 && (
-        <EmptyState title="Nothing to view yet" text="Images appear here once you have imported scans." action="Import scans" href={href(ws, "data")} />
+        <EmptyState title="Nothing to view yet" text="Images appear here once you have imported scans." action="Import scans" href={href(ws, "import")} />
       )}
       {list.error && <ErrorCallout error={(list.error as ApiError).body} />}
       {label && (
