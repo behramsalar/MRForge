@@ -26,7 +26,7 @@ describe("sidebar tree", () => {
   it("has one Process page without a tree, and results listed under Results", () => {
     expect(WORKSPACE_NAV.map((n) => n.id)).toEqual(["dashboard", "import", "data", "process", "quality", "results", "viewer", "jobs"]);
     expect(WORKSPACE_NAV.find((n) => n.id === "process")?.children).toBeUndefined();
-    expect(WORKSPACE_NAV.find((n) => n.id === "results")?.children?.map((c) => c.id)).toEqual(["connectivity", "diffusion"]);
+    expect(WORKSPACE_NAV.find((n) => n.id === "results")?.children?.map((c) => c.id)).toEqual(["connectivity", "diffusion", "methods"]);
     expect(defaultChild("results")).toBe("connectivity");
     expect(defaultChild("viewer")).toBeUndefined();
   });

@@ -99,3 +99,6 @@ Built from the existing report data, no backend change. The grid compares one ch
 
 ## D-28 Import page (U5b), 2026-11-10
 Decision: keep the import as a page (not a pop-up), because the series table, detail panel and undo need room; take the mockup's ideas instead: a three-step strip (Read, Check the series, Convert and organise), a footer bar that stays in view with "N of M series will be imported" and one primary button, and the "Import scans" button in the page header. The imports list only shows when there is more than one import. Every function is kept (folder/archive/NIfTI/BIDS, corrections, advanced option, validator report, undo, group card). Frontend only, no address changes.
+
+## D-29 Results and provenance (U7), 2026-11-11
+Decision: Results keeps one page per kind of result (Connectivity: file index + matrix view; Diffusion: ALPS table; both already have their exports) and gets a third entry, "Methods and provenance": a reserved "Methods text, coming later" card (the generator comes later and must use only recorded facts) and a per-subject table of recorded runs (step, when, by, tool versions, first command with copy). Built from the existing subject report endpoint; no backend change. No comparison between subjects. The full record of a run (parameters, hashes, logs, Re-run) stays in Jobs.

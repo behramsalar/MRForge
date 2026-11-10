@@ -43,6 +43,7 @@ export const WORKSPACE_NAV: NavItem[] = [
     children: [
       { id: "connectivity", label: "Connectivity" },
       { id: "diffusion", label: "Diffusion (ALPS)" },
+      { id: "methods", label: "Methods and provenance" },
     ],
   },
   { id: "viewer", label: "Viewer", icon: EyeOpenIcon },

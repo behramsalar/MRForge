@@ -114,3 +114,6 @@ Every change on branch `ui-redesign` is listed here with its commit.
 
 ## U6 ICA screen
 - Checked under Quality > Artifact rejection: header, subject picker, run button and the empty state fit the new look. The labelling screen itself is unchanged (original kept, as agreed). Not seen with real components: the scratch workspace has no MELODIC run, so the labelling view must be checked on a real dataset.
+
+## U7 Results and provenance
+- New Results > Methods and provenance (components/ProvenanceView.tsx, pages/ResultsPage.tsx, shell/nav.ts + test). Checked on the scratch workspace: runs, versions, commands listed.
