@@ -77,3 +77,13 @@ The scratch workspace has one subject. A throw-away dev server config (`frontend
 
 ## 2026-11-10 D-23: The Process page (U4)
 The Pipelines page now starts from the outcome: goal cards -> route map -> subjects -> the same confirmation dialog. No backend change. Goals are plain sets of existing stages (`lib/goals.ts`); "Full processing" passes nothing, so it keeps the server's own defaults exactly as before. The other goals tick the stages they need (including the upstream ones; stages already done are not repeated), and artifact rejection is a separate switch because it makes the pipeline wait for the researcher. The route map is a picture only; the dialog still shows the real plan and lets the researcher change it. Sidebar entries and the single-step pages are unchanged. **Proposed (user to judge by eye).** REVIEW(domain): the stage sets per goal (e.g. that "Clean the scans" is anatomical + functional only) are my reading of the stage registry; please confirm.
+
+## 2026-11-10 D-24: The Process page is a workbench (replaces D-23)
+User review of the first U4: settings were hidden behind the start button, presets could not be saved visibly, the start bar appeared only for several subjects, and single steps could not batch. Decisions:
+- Stages are grouped as a methods section orders them: **Preprocessing** (Structural T1, Functional, Artifact rejection, Standard space), **Analysis** (Connectivity), **Diffusion** (its own pipeline). Reason: anatomical, functional, denoising and normalisation are all preprocessing; connectivity is analysis; diffusion is a separate modality.
+- Each stage is one line (switch, name, summary of its settings from the server's plan, Settings button). Settings open in a side panel with Reset to defaults; a dot marks a stage that differs from the defaults. The page never shows the controls inline.
+- Presets (switches + all settings) are chosen, saved ("Save as a new preset"), updated and deleted from a bar at the top; built-in presets cannot be overwritten. "Changed" shows when the choices differ from the chosen preset. No built-in "goal" presets were added (that would be a backend change).
+- Single steps are the same page: switch the other stages off, so batch works for every stage. The confirmation dialog became a summary (what runs, what is left out and why, who cannot run); the old dialog still serves the subject and component-review pages.
+- Start bar is shown whenever one or more subjects are ticked.
+- Subject lists are compact (rows 64 -> 42 px in the check).
+**Proposed (user to judge by eye).** Open: the sidebar (option A agreed) waits for the Quality and Results pages, see CHANGELOG.

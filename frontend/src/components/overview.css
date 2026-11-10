@@ -90,45 +90,12 @@
 .move[data-tone="red"] { border-left-color: var(--red-9); }
 .move[data-tone="amber"] { border-left-color: var(--amber-9); }
 
-/* Process page: goal cards and route map. */
-.goal {
-  text-align: left;
-  cursor: pointer;
-  padding: var(--space-3);
-  border: 1px solid var(--gray-6);
-  border-radius: var(--radius-3);
-  background: var(--color-panel-solid);
-  color: inherit;
-  font: inherit;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+/* Subject lists: tight rows, one line where possible. */
+.st-compact th,
+.st-compact td {
+  padding-block: 3px;
+  white-space: nowrap;
 }
-.goal:hover { border-color: var(--accent-8); }
-.goal:focus-visible { outline: 2px solid var(--accent-8); outline-offset: 2px; }
-.goal[aria-pressed="true"] { border-color: var(--accent-9); background: var(--accent-a3); }
-.goal-title { font-weight: 600; font-size: var(--font-size-3); }
-.goal-text { font-size: var(--font-size-1); color: var(--gray-11); }
-
-.route { display: flex; align-items: stretch; gap: var(--space-2); flex-wrap: wrap; }
-.route-arrow { align-self: center; color: var(--gray-9); flex: none; }
-.route-node {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 110px;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--gray-6);
-  border-radius: var(--radius-3);
-  background: var(--gray-a2);
+.st-compact td:nth-child(n + 2) {
+  white-space: normal;
 }
-.route-name { font-weight: 600; font-size: var(--font-size-2); }
-.route-cap { font-size: var(--font-size-1); color: var(--gray-11); }
-.route-node[data-optional="true"] { border-style: dashed; }
-.route-node[data-off="true"] { opacity: 0.5; }
-.route-node[data-state="done"] { background: var(--green-a3); border-color: var(--green-7); }
-.route-node[data-state="done"] .route-cap { color: var(--green-11); }
-.route-node[data-state="running"] { background: var(--blue-a3); border-color: var(--blue-7); }
-.route-node[data-state="review"] { background: var(--amber-a3); border-color: var(--amber-7); }
-.route-node[data-state="failed"], .route-node[data-state="stopped"] { background: var(--red-a3); border-color: var(--red-7); }
-.route-node[data-state="unavailable"] { opacity: 0.55; }
