@@ -1,35 +1,17 @@
-import { Badge, Button, Card, Flex, SegmentedControl, Table, Text } from "@radix-ui/themes";
-import { useMemo, useState } from "react";
+import { Badge, Button, Flex, Table, Text } from "@radix-ui/themes";
 import type { Overview } from "../api/types";
 import { href } from "../lib/router";
 import { reviewable } from "../lib/overviewSummary";
-import { space, stageColor, stageLabel, type } from "../theme/tokens";
+import { stageColor, stageLabel, type } from "../theme/tokens";
 import { DECISION_COLOUR, DECISION_LABEL } from "./QualityDecisionCard";
 
 type Row = Overview["subjects"][number];
-type Show = "todo" | "flagged" | "all";
-
-const FILTER: Record<Show, (r: Row) => boolean> = {
-  todo: (r) => reviewable(r) && !r.qc_decision,
-  flagged: (r) => !!r.motion_flag || r.qc_decision === "review" || r.stages.some((c) => c.state === "failed" || c.state === "review"),
-  all: () => true,
-};
-
 /** Every subject with what the checks found and the decision so far. The pictures and numbers are
  * in each subject's report; the decision is made on the subject page. Nothing here excludes anyone. */
-export function QualityTable({ ws, subjects }: { ws: string; subjects: Row[] }) {
-  const [show, setShow] = useState<Show>("todo");
-  const shown = useMemo(() => subjects.filter(FILTER[show]), [subjects, show]);
-  const count = (s: Show) => subjects.filter(FILTER[s]).length;
+export function QualityTable({ ws, subjects, onOpen }: { ws: string; subjects: Row[]; onOpen: (label: string) => void }) {
   const state = (r: Row, id: string) => r.stages.find((c) => c.id === id)?.state ?? "none";
   return (
-    <Card size="2">
-      <Flex direction="column" gap={space.group}>
-        <SegmentedControl.Root size="1" value={show} onValueChange={(v) => setShow(v as Show)} style={{ alignSelf: "flex-start" }}>
-          <SegmentedControl.Item value="todo">Needs a decision {count("todo")}</SegmentedControl.Item>
-          <SegmentedControl.Item value="flagged">Flagged {count("flagged")}</SegmentedControl.Item>
-          <SegmentedControl.Item value="all">All {count("all")}</SegmentedControl.Item>
-        </SegmentedControl.Root>
+    <>
         <Table.Root size="1" className="st-compact">
           <Table.Header>
             <Table.Row>
@@ -42,7 +24,7 @@ export function QualityTable({ ws, subjects }: { ws: string; subjects: Row[] }) 
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {shown.map((r) => {
+            {subjects.map((r) => {
               const pre = state(r, "preprocessing");
               const ica = state(r, "artifact_rejection");
               return (
@@ -99,8 +81,8 @@ export function QualityTable({ ws, subjects }: { ws: string; subjects: Row[] }) 
                       <Button size="1" variant="soft" color="gray" asChild>
                         <a href={href(ws, "subject", r.label, "results")}>Report</a>
                       </Button>
-                      <Button size="1" variant="soft" asChild>
-                        <a href={href(ws, "subject", r.label)}>Decide</a>
+                      <Button size="1" variant="soft" onClick={() => onOpen(r.label)}>
+                        Decide
                       </Button>
                     </Flex>
                   </Table.Cell>
@@ -109,12 +91,6 @@ export function QualityTable({ ws, subjects }: { ws: string; subjects: Row[] }) 
             })}
           </Table.Body>
         </Table.Root>
-        {shown.length === 0 && (
-          <Text size={type.help} color="gray">
-            {show === "todo" ? "Nobody is waiting for a decision." : "No subject matches."}
-          </Text>
-        )}
-      </Flex>
-    </Card>
+    </>
   );
 }

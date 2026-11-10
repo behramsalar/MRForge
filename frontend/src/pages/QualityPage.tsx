@@ -1,6 +1,6 @@
 import { Flex, Tabs } from "@radix-ui/themes";
 import { useOverview } from "../api/hooks";
-import { QualityTable } from "../components/QualityTable";
+import { QualityReview } from "../components/QualityReview";
 import { EmptyState, PageHeader } from "../components/ui/Layout";
 import { href } from "../lib/router";
 import { space } from "../theme/tokens";
@@ -29,7 +29,7 @@ export function QualityPage({ ws, tab }: { ws: string; tab?: string }) {
           ) : overview.data && rows.length === 0 ? (
             <EmptyState title="Nothing to check yet" text="Quality checks appear here once subjects have been processed." action="Process data" href={href(ws, "process")} />
           ) : (
-            <QualityTable ws={ws} subjects={rows} />
+            <QualityReview ws={ws} subjects={rows} />
           )}
         </div>
       </Tabs.Root>

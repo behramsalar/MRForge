@@ -15,7 +15,7 @@ type Choice = "accept" | "review" | "exclude";
 export const DECISION_LABEL: Record<Choice, string> = { accept: "Accepted", review: "To review", exclude: "Excluded" };
 export const DECISION_COLOUR: Record<Choice, "green" | "amber" | "red"> = { accept: "green", review: "amber", exclude: "red" };
 
-const QUICK: Record<Choice, string[]> = {
+export const QUICK_REASONS: Record<Choice, string[]> = {
   accept: ["Checked: motion and registration look fine", "Checked the quality pictures"],
   review: ["Motion looks high; want a second opinion", "Registration looks off; look again"],
   exclude: ["Too much head motion", "Poor registration", "Scanner artefact", "Incomplete scan"],
@@ -118,7 +118,7 @@ export function QualityDecisionCard({ ws, row }: { ws: string; row: Row }) {
           </Dialog.Description>
           <Flex direction="column" gap="2" mt="3">
             <Flex gap="1" wrap="wrap">
-              {(choice ? QUICK[choice] : []).map((q) => (
+              {(choice ? QUICK_REASONS[choice] : []).map((q) => (
                 <Button key={q} size="1" variant="soft" color="gray" onClick={() => setReason(q)}>
                   {q}
                 </Button>
