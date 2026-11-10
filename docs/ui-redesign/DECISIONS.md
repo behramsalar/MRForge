@@ -55,3 +55,6 @@ Problem: with the indigo accent the done (green), failed (red) and running (blue
 
 ## 2026-11-10 D-18: Indigo is the palette to continue with (user)
 Indigo (teal done, ruby failed, cyan running) is the default on this branch. The other palettes and the switcher stay on `#/design` until the user confirms the indicator colours, then they are removed and indigo is written into `theme` in `tokens.ts`. **Agreed (indicator colours still to be confirmed).**
+
+## 2026-11-10 D-19: Other palettes stay for now (user)
+The user is not fully sure about indigo yet. Decision: keep the palette switcher and all palettes on `#/design`, indigo as the default, and do not remove anything until the user says so. **Agreed.**

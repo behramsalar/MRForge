@@ -25,3 +25,4 @@ Every change on branch `ui-redesign` is listed here with its commit.
 - Checked: `tsc` clean, 30 tests pass, indigo palette on the design page and the dashboard at 1280x800. Not yet looked at: teal, blue, neutral, dark mode, other pages.
 
 - Indigo set as the default palette (`ThemeProvider.tsx`, D-18).
+- Decision D-19: other palettes and the switcher stay until the user decides.
