@@ -1,19 +1,19 @@
 import { Theme } from "@radix-ui/themes";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { accentOptions, theme, type AccentId } from "../theme/tokens";
+import { paletteCss, palettes, theme, type PaletteId } from "../theme/tokens";
 
 export type Mode = "light" | "dark" | "system";
 const KEY = "mrforge-theme";
-const ACCENT_KEY = "mrforge-accent";
+const PALETTE_KEY = "mrforge-palette";
 
-function storedAccent(): AccentId {
+function storedPalette(): PaletteId {
   try {
-    const v = localStorage.getItem(ACCENT_KEY);
-    if (accentOptions.some((o) => o.id === v)) return v as AccentId;
+    const v = localStorage.getItem(PALETTE_KEY);
+    if (palettes.some((p) => p.id === v)) return v as PaletteId;
   } catch {
     /* blocked storage: use the default */
   }
-  return theme.accentColor;
+  return palettes[0].id;
 }
 
 function stored(): Mode {
@@ -31,8 +31,8 @@ type Ctx = {
   appearance: "light" | "dark";
   setMode: (m: Mode) => void;
   toggle: () => void;
-  accent: AccentId; // provisional palette choice (UI redesign, D-08)
-  setAccent: (a: AccentId) => void;
+  palette: PaletteId; // provisional palette choice (UI redesign, D-08, D-16)
+  setPalette: (p: PaletteId) => void;
 };
 const ThemeContext = createContext<Ctx | null>(null);
 
@@ -45,7 +45,7 @@ export function useAppTheme(): Ctx {
 /** Light / dark / follow the computer, remembered between visits. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<Mode>(stored);
-  const [accent, setAccentState] = useState<AccentId>(storedAccent);
+  const [palette, setPaletteState] = useState<PaletteId>(storedPalette);
   const [systemDark, setSystemDark] = useState(() => matchMedia("(prefers-color-scheme: dark)").matches);
   useEffect(() => {
     const q = matchMedia("(prefers-color-scheme: dark)");
@@ -66,11 +66,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           /* not remembered; still works for this visit */
         }
       },
-      accent,
-      setAccent: (a) => {
-        setAccentState(a);
+      palette,
+      setPalette: (p) => {
+        setPaletteState(p);
         try {
-          localStorage.setItem(ACCENT_KEY, a);
+          localStorage.setItem(PALETTE_KEY, p);
         } catch {
           /* not remembered; still works for this visit */
         }
@@ -85,11 +85,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         }
       },
     }),
-    [mode, appearance, accent],
+    [mode, appearance, palette],
   );
+  const current = palettes.find((p) => p.id === palette) ?? palettes[0];
   return (
     <ThemeContext.Provider value={value}>
-      <Theme {...theme} accentColor={accent} appearance={appearance} style={{ minHeight: "100vh" }}>
+      <style>{paletteCss()}</style>
+      <Theme
+        {...theme}
+        accentColor={current.accent}
+        grayColor={current.gray}
+        data-palette={current.id}
+        appearance={appearance}
+        style={{ minHeight: "100vh" }}
+      >
         {children}
       </Theme>
     </ThemeContext.Provider>

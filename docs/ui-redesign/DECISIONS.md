@@ -41,8 +41,14 @@ Only use case is remote status checks from a phone. **Agreed.**
 ## 2026-11-10 D-13: How density is done (U1)
 Radix `scaling` 100% -> 90% (smaller type, spacing and controls everywhere in one place), radius `large` -> `medium`, page padding step 6 -> 4, section gap 5 -> 4, page title size 7 -> 6, section title 5 -> 4, sidebar 232 -> 208 px (collapsed 64 -> 56), top bar 56 -> 44 px. Reason: user wants more at a glance on a 13-inch laptop; one global knob keeps every existing screen consistent without editing each. Values can be tuned in `tokens.ts` / `shell.css`. **Proposed (user to judge by eye).**
 
-## 2026-11-10 D-14: Provisional accent switcher
+## 2026-11-10 D-14: Provisional accent switcher (superseded by D-16)
 `ThemeProvider` takes the accent from a browser-stored choice (default: the earlier amber); the choice is made on `#/design` (Palette). When the user picks one, it moves into `tokens.ts` and the switcher is removed. Options shown: Forge amber, indigo, teal, blue, neutral. **Proposed.**
 
 ## 2026-11-10 D-15: Dev setup for checks
 `vite.config.ts` reads `MRFORGE_API` (default unchanged) so the dev UI can talk to a scratch server instead of the user's server on port 8000. `.claude/launch.json` (local, not committed) starts the scratch server (port 8100, scratch copy of the `nifti` workspace) and the dev UI (port 5180). The user's workspaces are never written to. **Agreed by the rule in D-03 / scope.**
+
+## 2026-11-10 D-16: Palettes carry their own state colours (user feedback)
+Problem: with the indigo accent the done (green), failed (red) and running (blue) colours and some hard-coded orange (researcher avatar, bell count, "created by" badge, in-progress bars) clashed. Decision: a palette is an accent plus its own colours for the five state meanings. Screens keep saying green / amber / red / blue / orange by meaning; `tokens.ts` (`palettes`, `paletteCss`) re-points those names per palette with CSS variables, so no screen needs changing per palette. Accent-like uses of orange (avatar, bell count, "created by you", in-progress bars) now use the accent. "Forge amber" has no re-pointing and is identical to the earlier look; "neutral" keeps the standard state colours. Indigo: done teal, failed ruby, running cyan; Teal: grass / tomato / indigo; Blue: jade / ruby / cyan. All provisional. **Proposed.**
+
+## 2026-11-10 D-17: The original must stay untouched (user, "really important")
+`main` and the user's running app on port 8000 must keep working and looking as before. My earlier U1 build overwrote `frontend/dist`, which that server serves, so the app on 8000 briefly showed the new look. Fixed: `frontend/dist` was rebuilt from `main`. From now on: **never run `npm run build` on this branch**; checks use the dev server (port 5180, scratch data, port 8100) only; a build of this branch happens only at the end, into a separate folder, if the user asks. **Agreed.**

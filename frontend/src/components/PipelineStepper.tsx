@@ -35,7 +35,7 @@ export function PipelineStepper({ stages }: { stages: Overview["stages"] }) {
                     {st.label}
                   </Text>
                 </Flex>
-                <Progress value={pct} size="1" color={finished ? "green" : "orange"} aria-label={`${st.label} progress`} />
+                <Progress value={pct} size="1" color={finished ? "green" : undefined} aria-label={`${st.label} progress`} />
                 <Text size={type.caption} color="gray">
                   {st.total === 0 ? "Nothing to do yet" : `${st.done} of ${st.total} ${st.total === 1 ? "subject" : "subjects"}`}
                 </Text>

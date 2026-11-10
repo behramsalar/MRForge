@@ -15,3 +15,11 @@ Every change on branch `ui-redesign` is listed here with its commit.
 - U1 `frontend/src/pages/DesignSystem.tsx`: "Palette (provisional)" switcher.
 - `frontend/vite.config.ts`: `MRFORGE_API` environment variable for the dev proxy.
 - Checked: `tsc` clean, 30 frontend tests pass, dashboard looked at in the browser at 1280x800 with amber, teal and indigo, light and dark. Not checked: other pages with the new density, the production build.
+
+## 2026-11-10 (U1 follow-up: palettes with their own state colours)
+- Restored `frontend/dist` from `main` (my U1 build had changed what the user's server on port 8000 shows). See D-17.
+- `tokens.ts`: `accentOptions` replaced by `palettes` (accent, gray, state colours) and `paletteCss()`.
+- `ThemeProvider.tsx`: `palette` / `setPalette` (browser storage key `mrforge-palette`), injects the palette CSS, sets `data-palette`.
+- `DesignSystem.tsx`: palette switcher with a row of state badges and bars to judge each palette.
+- Accent-like orange replaced by the accent in `TopBar.tsx` (bell count, avatar), `Workspaces.tsx` ("created by you" badge), `PipelineStepper.tsx` and `LiveProgressDialog.tsx` (progress bars).
+- Checked: `tsc` clean, 30 tests pass, indigo palette on the design page and the dashboard at 1280x800. Not yet looked at: teal, blue, neutral, dark mode, other pages.

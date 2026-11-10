@@ -26,7 +26,7 @@ function Activity({ ws }: { ws: string }) {
             <Badge
               size="1"
               radius="full"
-              color={attention.length ? "red" : "orange"}
+              color={attention.length ? "red" : undefined}
               variant="solid"
               style={{ position: "absolute", top: -6, right: -8 }}
             >
@@ -100,7 +100,7 @@ function ResearcherMenu() {
     <DropdownMenu.Root>
       <DropdownMenu.Trigger>
         <IconButton variant="ghost" color="gray" radius="full" aria-label="Researcher">
-          <Avatar size="2" radius="full" fallback={researcher ? initials(researcher.name) : "?"} color="orange" />
+          <Avatar size="2" radius="full" fallback={researcher ? initials(researcher.name) : "?"} />
         </IconButton>
       </DropdownMenu.Trigger>
       <DropdownMenu.Content align="end">

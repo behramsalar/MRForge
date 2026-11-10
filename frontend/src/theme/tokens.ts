@@ -22,18 +22,45 @@ export const theme = {
 } as const satisfies ThemeProps;
 
 /**
- * Accent colour options while the palette is still being chosen (UI redesign, D-08).
- * The choice is remembered in the browser; once one is picked it becomes `theme.accentColor`
- * and this list goes away. "orange" is the Forge amber of the earlier design.
+ * Palettes while the look is still being chosen (UI redesign, D-08, D-16). A palette is an
+ * accent colour plus its own colours for the state indicators: every screen says "green",
+ * "amber", "red", "blue" and "orange" by MEANING (done, needs you, failed, running, stopped),
+ * and a palette re-points those five names at colours that sit well with its accent. Nothing
+ * in the screens changes when a palette is added or swapped. "amber" is the earlier look,
+ * with no re-pointing at all. Once one palette is chosen it becomes `theme` and the rest go.
  */
-export const accentOptions = [
-  { id: "orange", label: "Forge amber (earlier look)" },
-  { id: "indigo", label: "Indigo" },
-  { id: "teal", label: "Teal" },
-  { id: "blue", label: "Blue" },
-  { id: "gray", label: "Neutral (no colour accent)" },
-] as const satisfies readonly { id: RadixColor; label: string }[];
-export type AccentId = (typeof accentOptions)[number]["id"];
+type Meaning = "green" | "amber" | "red" | "blue" | "orange";
+export type Palette = {
+  id: string;
+  label: string;
+  accent: RadixColor;
+  gray: NonNullable<ThemeProps["grayColor"]>;
+  state: Partial<Record<Meaning, RadixColor>>; // which Radix colour shows each meaning
+};
+export const palettes: readonly Palette[] = [
+  { id: "amber", label: "Forge amber (earlier look)", accent: "orange", gray: "gray", state: {} },
+  { id: "indigo", label: "Indigo", accent: "indigo", gray: "slate", state: { green: "teal", red: "ruby", blue: "cyan" } },
+  { id: "teal", label: "Teal", accent: "teal", gray: "sage", state: { green: "grass", red: "tomato", blue: "indigo" } },
+  { id: "blue", label: "Blue", accent: "blue", gray: "slate", state: { green: "jade", red: "ruby", blue: "cyan" } },
+  { id: "neutral", label: "Neutral (no colour accent)", accent: "gray", gray: "gray", state: {} },
+];
+export type PaletteId = string;
+
+const STEPS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+/** CSS that re-points the state colours of each palette (one rule per palette). */
+export function paletteCss(): string {
+  return palettes
+    .filter((p) => Object.keys(p.state).length > 0)
+    .map((p) => {
+      const lines = Object.entries(p.state).flatMap(([meaning, to]) => [
+        ...STEPS.flatMap((n) => [`--${meaning}-${n}: var(--${to}-${n});`, `--${meaning}-a${n}: var(--${to}-a${n});`]),
+        ...["contrast", "surface", "indicator", "track"].map((k) => `--${meaning}-${k}: var(--${to}-${k});`),
+      ]);
+      return `.radix-themes[data-palette="${p.id}"] {\n  ${lines.join("\n  ")}\n}`;
+    })
+    .join("\n");
+}
 
 /** Size of the app shell. */
 export const shell = { sidebar: "208px", sidebarCollapsed: "56px", topbar: "44px" } as const;
