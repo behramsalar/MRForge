@@ -70,12 +70,12 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
     return picked.length === 1 ? "Done earlier" : `${c.done} of ${picked.length} done earlier`;
   };
   const renderGroup = (g: (typeof STAGE_GROUPS)[number]) => (
-    <Flex key={g.id} direction="column" gap="1">
-      <Flex align="baseline" gap={space.group} wrap="wrap">
+    <div key={g.id} className="tile-group">
+      <Flex direction="column">
         <Heading as="h2" size={type.sectionTitle}>
           {g.title}
         </Heading>
-        <Text size={type.caption} color="gray">
+        <Text size={type.caption} color="gray" className="tile-group-help">
           {GROUP_HELP[g.id]}
         </Text>
       </Flex>
@@ -100,7 +100,7 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
           );
         })}
       </div>
-    </Flex>
+    </div>
   );
   return (
     <Flex direction="column" gap={space.section}>

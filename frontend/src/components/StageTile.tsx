@@ -1,4 +1,4 @@
-import { MixerHorizontalIcon } from "@radix-ui/react-icons";
+import { CheckIcon, MixerHorizontalIcon } from "@radix-ui/react-icons";
 import { Badge, IconButton, Tooltip } from "@radix-ui/themes";
 import type { StagePlan } from "../api/types";
 import "./overview.css";
@@ -32,6 +32,9 @@ export function StageTile({
   return (
     <div className="tile" data-on={on} data-blocked={blocked}>
       <button type="button" className="tile-main" aria-pressed={on} disabled={blocked} onClick={() => onToggle(!on)}>
+        <span className="tile-check" aria-hidden>
+          {on && <CheckIcon />}
+        </span>
         <span className="tile-name">{label}</span>
         <span className="tile-sum" title={blocked ? undefined : summary}>
           {blocked ? `Not possible: ${plan?.reason}` : summary}

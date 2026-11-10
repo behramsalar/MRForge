@@ -73,3 +73,8 @@ Every change on branch `ui-redesign` is listed here with its commit.
 - `pages/FullProcessingPage.tsx`: Preprocessing tiles in one row with arrows in running order; Analysis and Diffusion side by side below. Styles in `components/overview.css`.
 - Settings panel, preset bar, subject list, start bar and review dialog unchanged.
 - Checked: `tsc` clean, 41 tests pass; browser at 1280x800 on the real scratch subject: clicking Artifact rejection fills it and changes the summaries (Standard space and Connectivity then say "denoised data") and the preset bar shows "Changed"; a ticked subject shows "Done earlier" on Diffusion and the start bar. Not checked: the settings gear after this change (panel itself unchanged), narrow widths, light mode, other palettes.
+
+## 2026-11-10 (stage tiles: alignment and look, user request)
+- Tiles are taller (about 130 px) with centred text, a larger name and a round check mark top left (filled when included, dashed when the stage is impossible); the gear stays top right.
+- Alignment: the group heading and its help text now sit in a fixed-height block, and the two groups in the Analysis / Diffusion row stretch to equal height, so both tiles start at the same line (checked: same top and height in the browser).
+- Files: `components/StageTile.tsx`, `components/overview.css`, `pages/FullProcessingPage.tsx`. Checked: `tsc` clean. Tests not re-run (no logic changed). Not checked: narrow widths, light mode, other palettes.
