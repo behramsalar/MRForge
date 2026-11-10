@@ -12,13 +12,28 @@ The prototype uses Atkinson Hyperlegible from Google Fonts. The lab computer may
 The UI never builds shell commands and only talks to the API. Anything needing a backend change is listed in PLAN.md section 3 and asked about first. User instruction. **Agreed.**
 
 ## 2026-11-10 D-04: Methods text (open)
-The prototype shows a generated methods paragraph with numbered facts. This needs a backend generator and is MVP 2 in CLAUDE.md. Proposal: do not build now; reorganise the existing provenance records only. **Open.**
+The prototype shows a generated methods paragraph with numbered facts. This needs a backend generator and is MVP 2 in CLAUDE.md. User: idea approved, generator later. Decision: build the provenance half now and reserve a place for the methods text; generator is a later backend task. **Agreed.**
 
 ## 2026-11-10 D-05: Backend-dependent ideas (open)
-Cross-subject QC list, live CPU/memory. Proposal: build the frontend first with what exists (lazy per-subject pictures, slots in use), then ask. **Open.**
+Cross-subject QC list, live CPU/memory. User: fine for now; list what each needs so the effort can be judged (PLAN.md section 3). Decision: frontend first with what exists. **Agreed.**
 
 ## 2026-11-10 D-06: Matrix compare and reorder (open)
-Computed in the browser from existing data, but CLAUDE.md puts them under "later". Proposal: include only if you say so. **Open.**
+Computed in the browser from existing data, but CLAUDE.md puts them under "later". User: compare has no scientific use case, not a priority (maybe for QC later). Decision: no subject comparison; reorder by network optional. **Agreed.**
 
 ## 2026-11-10 D-07: Prototype is a reference, not code
 No HTML/CSS/JS is copied from it. Its simulated data and viewer are dropped; the look is reproduced through the existing token files. Reason: a one-file prototype with fake data cannot be merged into a typed React app with a design system. **Proposed.**
+
+## 2026-11-10 D-08: Colours are provisional, accent restrained
+User is not a fan of orange everywhere. Decision: keep all colours in the token files so the palette can change in one place; use the accent only where the researcher has to act; offer a few palette options in U1 for the user to choose. **Agreed.**
+
+## 2026-11-10 D-09: Density (user)
+Mockup is tidier and smaller and shows more at a glance on a 13-inch laptop; the current design is too large. Decision: compact type and spacing, checked at about 1280 x 800 in every step. **Agreed.**
+
+## 2026-11-10 D-10: ICA labelling screen stays as it is
+User did not like the mockup's version and finds the original good enough. Decision: no layout rework (plan part 8, U6). **Agreed.**
+
+## 2026-11-10 D-11: Import page is reworked, functions kept
+Try the mockup's approach; keep every existing import function. New step U5b. **Agreed.**
+
+## 2026-11-10 D-12: Mobile layout skipped
+Only use case is remote status checks from a phone. **Agreed.**
