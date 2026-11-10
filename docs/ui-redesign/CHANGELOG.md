@@ -117,3 +117,6 @@ Every change on branch `ui-redesign` is listed here with its commit.
 
 ## U7 Results and provenance
 - New Results > Methods and provenance (components/ProvenanceView.tsx, pages/ResultsPage.tsx, shell/nav.ts + test). Checked on the scratch workspace: runs, versions, commands listed.
+
+## U8 Polish
+- Removed unused PipelineStepper and StatCard; design-system.md updated with the redesign patterns. Final check: types, 46 tests, build (to a temp folder only; see D-17).

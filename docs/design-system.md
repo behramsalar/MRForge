@@ -12,7 +12,7 @@ The app is used on a desktop or laptop screen; phone and tablet layouts are not 
 | Amber accent and sidebar colours (CSS variables) | `frontend/src/theme/forge.css` |
 | Shell: sidebar, top bar, theme, researcher profile, error boundary | `frontend/src/shell/` |
 | Sidebar items (one line per function; groups use `children`) | `frontend/src/shell/nav.ts` |
-| Reusable pieces | `frontend/src/components/ui/` (`Layout`: `PageHeader`, `EmptyState`, `StatCard`; `Badges`) |
+| Reusable pieces | `frontend/src/components/ui/` (`Layout`: `PageHeader`, `EmptyState`; `Badges`) |
 | Live reference page | `#/design` in the running app |
 
 ## Page anatomy
@@ -48,6 +48,14 @@ Every page: `PageHeader` (title + one plain sentence), then cards. The page titl
     and an export states where the files were saved.
 12. Adding a function: one line in `nav.ts`, its page in `main.tsx`; for processing, a stage
     in `backend/mrforge/processing.py` (it then appears in the full-processing dialog).
+
+## Pages and patterns added in the redesign (see `docs/ui-redesign/`)
+- Sidebar: Overview, Import, Data, Process, Quality, Results (Connectivity, Diffusion, Methods and provenance), Viewer, Jobs.
+- Process: selectable stage tiles (`StageTile`: description on top, itemised settings below), settings in a side panel (`StageSettingsPanel`), presets (`PresetBar`), compact subjects table and a start bar that stays in view.
+- Quality: grid of QC pictures with a keyboard inspector (`QualityGrid`, `QualityInspector`); keys are listed in the shortcuts dialog.
+- Import: step strip and a bar that stays in view with the one primary action.
+- Palettes are CSS variables from `tokens.ts` (indigo default); semantic colours keep their meaning in every palette.
+- Desktop and laptop layouts only; there is no phone layout.
 
 ## Not used
 Tailwind CSS is not installed (see `docs/DECISIONS.md`): Radix layout props cover layout, and

@@ -43,56 +43,6 @@ export function PageHeader({
   );
 }
 
-/** A number with a label, for the dashboard. */
-export function StatCard({
-  label,
-  value,
-  hint,
-  color,
-  icon,
-}: {
-  label: string;
-  value: ReactNode;
-  hint?: string;
-  color?: string; // a Radix colour name
-  icon?: ReactNode;
-}) {
-  return (
-    <Card size="3">
-      <Flex gap={space.group} align="center">
-        {icon && (
-          <Flex
-            align="center"
-            justify="center"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "var(--radius-4)",
-              background: color ? `var(--${color}-a3)` : "var(--gray-a3)",
-              color: color ? `var(--${color}-11)` : "var(--gray-11)",
-            }}
-          >
-            {icon}
-          </Flex>
-        )}
-        <Flex direction="column">
-          <Text size={type.help} color="gray">
-            {label}
-          </Text>
-          <Text size="7" weight="bold" style={{ lineHeight: 1.1 }}>
-            {value}
-          </Text>
-          {hint && (
-            <Text size={type.caption} color="gray">
-              {hint}
-            </Text>
-          )}
-        </Flex>
-      </Flex>
-    </Card>
-  );
-}
-
 /** An invitation instead of an apology: what this space is for, and the button to start. */
 export function EmptyState({
   title,
