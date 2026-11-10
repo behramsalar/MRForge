@@ -33,8 +33,14 @@ const GROUP_HELP: Record<string, string> = {
   diffusion: "A separate pipeline for diffusion scans. It needs none of the other stages.",
 };
 
-const summaryOf = (s?: StagePlan) =>
-  s ? (s.items.flatMap((i) => i.settings.map((x) => `${x.name}: ${x.value}`)).slice(0, 4).join(" · ") || s.description) : "";
+/** The chosen settings of a stage, one per line, without repeats (a stage planned for several runs lists each once). */
+const paramsOf = (s?: StagePlan) => {
+  const seen = new Set<string>();
+  return (s?.items ?? [])
+    .flatMap((i) => i.settings)
+    .filter((x) => !seen.has(`${x.name}:${x.value}`) && !!seen.add(`${x.name}:${x.value}`))
+    .map((x) => ({ name: x.name, value: String(x.value) }));
+};
 
 /** The Process page: stages in the order a methods section describes them, each with a switch, a
  * one-line summary and its settings one click away; presets for saving a whole setup; subjects
@@ -90,7 +96,8 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
                 plan={picked.length > 0 ? s : undefined}
                 enabled={enabledOf(id)}
                 onToggle={(on) => setStage(id, on)}
-                summary={summaryOf(s)}
+                description={s?.description ?? ""}
+                params={paramsOf(s)}
                 status={statusOf(id)}
                 hasSettings={HAS_SETTINGS.has(id)}
                 changed={settingsChanged(id, opts)}

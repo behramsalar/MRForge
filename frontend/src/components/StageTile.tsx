@@ -11,7 +11,8 @@ export function StageTile({
   plan,
   enabled,
   onToggle,
-  summary,
+  description,
+  params,
   status,
   hasSettings,
   changed,
@@ -21,7 +22,8 @@ export function StageTile({
   plan?: StagePlan;
   enabled: boolean;
   onToggle: (on: boolean) => void;
-  summary: string;
+  description: string;
+  params: { name: string; value: string }[];
   status?: string;
   hasSettings: boolean;
   changed: boolean;
@@ -36,8 +38,17 @@ export function StageTile({
           {on && <CheckIcon />}
         </span>
         <span className="tile-name">{label}</span>
-        <span className="tile-sum" title={blocked ? undefined : summary}>
-          {blocked ? `Not possible: ${plan?.reason}` : summary}
+        <span className="tile-desc" title={description}>
+          {blocked ? `Not possible: ${plan?.reason}` : description}
+        </span>
+        <span className="tile-params" aria-label="Chosen settings">
+          {params.slice(0, 6).map((x) => (
+            <span key={`${x.name}:${x.value}`} className="tile-param" title={`${x.name}: ${x.value}`}>
+              <span className="tile-pn">{x.name}</span>
+              <span className="tile-pv">{x.value}</span>
+            </span>
+          ))}
+          {params.length === 0 && <span className="tile-param tile-pn">No settings</span>}
         </span>
         {status && !blocked && (
           <Badge color="green" variant="soft" size="1" className="tile-badge">

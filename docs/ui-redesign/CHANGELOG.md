@@ -78,3 +78,9 @@ Every change on branch `ui-redesign` is listed here with its commit.
 - Tiles are taller (about 130 px) with centred text, a larger name and a round check mark top left (filled when included, dashed when the stage is impossible); the gear stays top right.
 - Alignment: the group heading and its help text now sit in a fixed-height block, and the two groups in the Analysis / Diffusion row stretch to equal height, so both tiles start at the same line (checked: same top and height in the browser).
 - Files: `components/StageTile.tsx`, `components/overview.css`, `pages/FullProcessingPage.tsx`. Checked: `tsc` clean. Tests not re-run (no logic changed). Not checked: narrow widths, light mode, other palettes.
+
+## 2026-11-10 (stage tiles: description on top, parameters below, user request)
+- Tile layout is now fixed: stage name, the stage's own description (up to four lines, never changes when the tile is selected), then at the bottom a small itemised list of its settings (name left, value right, up to six rows, a long value wraps to two lines). A tile that is off keeps its list, dimmed. An impossible stage shows its reason in place of the description.
+- Tiles are taller (about 230 px) so the description and the list fit without jumping.
+- Files: `components/StageTile.tsx` (props `description`, `params` replace `summary`), `components/overview.css`, `pages/FullProcessingPage.tsx` (`paramsOf` lists the plan's settings once each).
+- Checked: `tsc` clean; browser at 1280x800: selecting Artifact rejection leaves every description unchanged and only the values in the lists change (Standard space and Connectivity: "denoised data"); all tiles in a row are the same height. Not checked: narrow widths, light mode, other palettes, the 24-subject mock.
