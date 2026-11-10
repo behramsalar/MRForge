@@ -1,13 +1,15 @@
 import { CheckCircledIcon } from "@radix-ui/react-icons";
-import { Button, Callout, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { Button, Callout, Card, Flex, Grid, Heading, Switch, Text } from "@radix-ui/themes";
 import { useState } from "react";
 import { useOverview } from "../api/hooks";
 import type { WorkspaceState } from "../api/types";
 import { ConfirmProcessDialog } from "../components/ConfirmProcessDialog";
 import { JobsPanel } from "../components/JobsPanel";
+import { RouteMap } from "../components/RouteMap";
 import { StageChips } from "../components/StageChips";
 import { SubjectsTable } from "../components/SubjectsTable";
 import { EmptyState, PageHeader } from "../components/ui/Layout";
+import { GOALS, goalStages } from "../lib/goals";
 import { href } from "../lib/router";
 import { space, type } from "../theme/tokens";
 
@@ -17,10 +19,16 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
   const overview = useOverview(ws);
   const [picked, setPicked] = useState<string[]>([]);
   const [confirm, setConfirm] = useState(false);
+  const [goalId, setGoalId] = useState("full");
+  const [withArtifact, setWithArtifact] = useState(false);
   const rows = (overview.data?.subjects ?? []).filter((s) => s.n_files > 0);
   const chosen = picked.length === 1 ? picked[0] : undefined;
   const row = rows.find((s) => s.label === chosen);
   const busy = !!state?.operations.some((o) => o.status === "Queued" || o.status === "Running");
+  const goal = GOALS.find((g) => g.id === goalId) ?? GOALS[0];
+  const stagesOn = goalStages(goal, withArtifact);
+  const dialogKey = `${goal.id}:${withArtifact}`;
+  const pickedRows = rows.filter((s) => picked.includes(s.label));
   const jobs = (state?.jobs ?? []).filter((j) => j.subject === chosen);
   return (
     <Flex direction="column" gap={space.section}>
@@ -38,6 +46,31 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
       )}
       {rows.length > 0 && (
         <>
+          <Flex direction="column" gap="2">
+            <Heading as="h2" size={type.sectionTitle}>
+              1. What do you want?
+            </Heading>
+            <Grid columns={{ initial: "1", sm: "2", lg: "5" }} gap="2">
+              {GOALS.map((g) => (
+                <button key={g.id} type="button" className="goal" aria-pressed={g.id === goal.id} onClick={() => setGoalId(g.id)}>
+                  <span className="goal-title">{g.title}</span>
+                  <span className="goal-text">{g.text}</span>
+                </button>
+              ))}
+            </Grid>
+            {goal.optionalArtifact && (
+              <Text as="label" size={type.help}>
+                <Flex gap="2" align="center">
+                  <Switch size="1" checked={withArtifact} onCheckedChange={setWithArtifact} />
+                  Include artifact rejection (you label the noise components; the pipeline waits for you)
+                </Flex>
+              </Text>
+            )}
+          </Flex>
+          <RouteMap goal={goal} withArtifact={withArtifact} rows={pickedRows} />
+          <Heading as="h2" size={type.sectionTitle}>
+            2. Which subjects?
+          </Heading>
           <Text size={type.help} color="gray">
             Tick one or more subjects. Several subjects are processed together, a few at a time.
           </Text>
@@ -102,9 +135,9 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
           </Flex>
         </Card>
       )}
-      {row && <ConfirmProcessDialog ws={ws} subject={row.label} open={confirm} onOpenChange={setConfirm} />}
+      {row && <ConfirmProcessDialog key={dialogKey} ws={ws} subject={row.label} stagesOn={stagesOn} open={confirm} onOpenChange={setConfirm} />}
       {picked.length > 1 && (
-        <ConfirmProcessDialog ws={ws} subject={picked[0]} subjects={picked} open={confirm} onOpenChange={setConfirm} />
+        <ConfirmProcessDialog key={dialogKey} ws={ws} subject={picked[0]} subjects={picked} stagesOn={stagesOn} open={confirm} onOpenChange={setConfirm} />
       )}
       {row && <JobsPanel ws={ws} jobs={jobs} busy={busy} />}
     </Flex>

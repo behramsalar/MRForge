@@ -132,11 +132,13 @@ export function ConfirmProcessDialog({
   onOpenChange,
   onStarted,
   onlyStage,
+  stagesOn,
   subjects,
 }: {
   ws: string;
   subject: string;
   onlyStage?: string; // run just this stage (the others are unticked; earlier results are used)
+  stagesOn?: string[]; // the stages ticked when the dialog opens (a goal from the Process page); can still be changed
   subjects?: string[]; // several subjects at once (a batch): the same choices for all of them
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -146,7 +148,11 @@ export function ConfirmProcessDialog({
   const [opts, setOpts] = useState<FullOptions>({
     ...DEFAULTS,
     subject,
-    stages: onlyStage ? Object.fromEntries(STAGE_IDS.map((id) => [id, id === onlyStage])) : {},
+    stages: onlyStage
+      ? Object.fromEntries(STAGE_IDS.map((id) => [id, id === onlyStage]))
+      : stagesOn
+        ? Object.fromEntries(STAGE_IDS.map((id) => [id, stagesOn.includes(id)]))
+        : {},
   });
   const [openCards, setOpenCards] = useState<Set<string>>(new Set());
   const presets = useQuery({ queryKey: ["presets"], queryFn: () => call(api.GET("/api/presets")), enabled: open });
@@ -160,7 +166,7 @@ export function ConfirmProcessDialog({
     if (!x) return;
     setOpts({
       ...opts,
-      stages: onlyStage ? opts.stages : x.options.stages,
+      stages: onlyStage || stagesOn ? opts.stages : x.options.stages,
       anatomical: x.options.anatomical,
       functional: x.options.functional,
       artifact: x.options.artifact,

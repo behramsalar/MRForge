@@ -74,3 +74,6 @@ The Dashboard page (route id stays `dashboard`; the sidebar and top bar now say 
 
 ## 2026-11-10 D-22: How big lists were checked without a big workspace
 The scratch workspace has one subject. A throw-away dev server config (`frontend/vite.mock.config.mjs`, excluded from git through `.git/info/exclude`) answers `/overview` with 24 invented subjects in all states and passes everything else to the scratch server. Nothing is written anywhere. **Agreed (scope of D-15).**
+
+## 2026-11-10 D-23: The Process page (U4)
+The Pipelines page now starts from the outcome: goal cards -> route map -> subjects -> the same confirmation dialog. No backend change. Goals are plain sets of existing stages (`lib/goals.ts`); "Full processing" passes nothing, so it keeps the server's own defaults exactly as before. The other goals tick the stages they need (including the upstream ones; stages already done are not repeated), and artifact rejection is a separate switch because it makes the pipeline wait for the researcher. The route map is a picture only; the dialog still shows the real plan and lets the researcher change it. Sidebar entries and the single-step pages are unchanged. **Proposed (user to judge by eye).** REVIEW(domain): the stage sets per goal (e.g. that "Clean the scans" is anatomical + functional only) are my reading of the stage registry; please confirm.

@@ -48,3 +48,10 @@ Every change on branch `ui-redesign` is listed here with its commit.
 - "Your move" renamed "Needs your decision" (`components/YourMove.tsx`, comments in `overview.css`, `lib/overviewSummary.ts`).
 - "Recent activity" moved from the left column to the bottom of the right column, below the pipeline map and the analysis-ready card (`pages/Dashboard.tsx`), so it ranks lower.
 - Checked: `tsc` clean; in the browser (24 invented subjects) heading order is Needs your decision, Running now, Pipeline map, Recent activity. Tests not re-run.
+
+## 2026-11-10 (U4: Process)
+- New `lib/goals.ts` (+ test, 3 cases): the goals (Full processing, Clean the scans, Analysis-ready in standard space, Connectivity matrices, Diffusion) as sets of existing stage ids.
+- New `components/RouteMap.tsx` + styles in `overview.css`: the stages of the chosen goal in order, optional artifact rejection drawn dashed, and for the ticked subjects "Done earlier" / "Will run" / "Not possible".
+- `pages/FullProcessingPage.tsx` (the Pipelines page): "1. What do you want?" goal cards, a switch for optional artifact rejection, the route map, "2. Which subjects?" (the existing table, unchanged). The single-subject card, batch bar and Jobs panel are kept.
+- `components/ConfirmProcessDialog.tsx`: new optional prop `stagesOn` (stages ticked when it opens). Everything else in the dialog is unchanged; it stays the one place that starts work and shows the real plan.
+- Checked: `tsc` clean, 40 tests pass. Browser at 1280x800: 24 invented subjects (route map shows done/will-run per subject) and the real scratch subject (dialog opens with the goal's stages ticked: Connectivity goal -> Anatomical, Functional, Standard space, Connectivity). Nothing was started. Not checked: batch dialog with several subjects, artifact-rejection switch end to end, light mode, other palettes.
