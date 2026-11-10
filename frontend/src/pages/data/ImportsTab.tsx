@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { DownloadIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { Badge, Button, Callout, Card, Checkbox, Flex, Grid, Heading, Switch, Table, Text, TextField } from "@radix-ui/themes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -209,8 +209,19 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
       <PageHeader
         title="Import"
         description="Bring scans into this workspace: DICOM folders, NIfTI files or a BIDS dataset."
-        actions={<NewImportDialog ws={ws} disabled={busy} onStarted={setScanOp} />}
       />
+      <Card size="3" style={{ background: "var(--accent-a2)", borderStyle: "dashed" }}>
+        <Flex direction="column" align="center" gap={space.group} py="4">
+          <DownloadIcon width={32} height={32} color="var(--accent-10)" />
+          <Heading as="h2" size={type.sectionTitle}>
+            Import scans
+          </Heading>
+          <Text size={type.help} color="gray" align="center" style={{ maxWidth: 480 }}>
+            Choose a folder or archive with scanner files, NIfTI files or an existing BIDS dataset. Your originals are copied and never changed.
+          </Text>
+          <NewImportDialog ws={ws} disabled={busy} onStarted={setScanOp} />
+        </Flex>
+      </Card>
       {groups.map((g) => (
         <ImportGroupCard key={g[0].group_source} ws={ws} group={g} busy={busy} />
       ))}

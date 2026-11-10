@@ -120,3 +120,6 @@ Every change on branch `ui-redesign` is listed here with its commit.
 
 ## U8 Polish
 - Removed unused PipelineStepper and StatCard; design-system.md updated with the redesign patterns. Final check: types, 46 tests, build (to a temp folder only; see D-17).
+
+## Import page: centred call to action (user feedback)
+- A dashed, centred "Import scans" card with a large button now sits at the top of the Import page; the small header button is gone.

@@ -54,7 +54,7 @@ export function NewImportDialog({
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger>
-        <Button size="3" disabled={disabled}>
+        <Button size="4" disabled={disabled}>
           Import scans
         </Button>
       </Dialog.Trigger>
