@@ -2,7 +2,7 @@ import type { Overview } from "../api/types";
 
 type Row = Overview["subjects"][number];
 
-/** Counting for the Overview cards and the "Your move" list. Pure: everything comes from the
+/** Counting for the Overview cards and the "Needs your decision" list. Pure: everything comes from the
  * overview the server already gives, nothing is decided here (flag, don't decide). */
 export type Segment = { key: "done" | "running" | "waiting" | "failed" | "rest"; n: number };
 

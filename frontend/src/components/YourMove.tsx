@@ -12,7 +12,7 @@ export function YourMove({ ws, o }: { ws: string; o: Overview }) {
     <Card size="2">
       <Flex direction="column" gap={space.group}>
         <Heading as="h2" size={type.sectionTitle}>
-          Your move
+          Needs your decision
         </Heading>
         {moves.length === 0 && (
           <Flex align="center" gap="2">

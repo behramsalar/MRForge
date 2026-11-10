@@ -43,3 +43,8 @@ Every change on branch `ui-redesign` is listed here with its commit.
 - `components/SubjectsTable.tsx`: exports `FILTERS` and `Filter` (no behaviour change). `components/ui/Layout.tsx`: smaller page-header icon.
 - `shell/shell.css`: function list scrolls so System/Settings stay visible.
 - Checked: `tsc` clean, 37 tests pass; in the browser at 1280x800 with 24 invented subjects (all states) and with the real one-subject scratch workspace; indigo palette, dark mode. Not checked: light mode and other palettes on this screen, a real failure, clicking through "Your move" buttons, the empty workspace screen, 100+ subjects.
+
+## 2026-11-10 (U3 follow-up, user request)
+- "Your move" renamed "Needs your decision" (`components/YourMove.tsx`, comments in `overview.css`, `lib/overviewSummary.ts`).
+- "Recent activity" moved from the left column to the bottom of the right column, below the pipeline map and the analysis-ready card (`pages/Dashboard.tsx`), so it ranks lower.
+- Checked: `tsc` clean; in the browser (24 invented subjects) heading order is Needs your decision, Running now, Pipeline map, Recent activity. Tests not re-run.

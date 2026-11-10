@@ -73,6 +73,10 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
               ))}
             </Flex>
           </Card>
+        </Flex>
+        <Flex direction="column" gap={space.group}>
+          <PipelineMap subjects={o?.subjects ?? []} onOpen={(l) => (location.hash = href(ws, "subject", l))} />
+          {o && <AnalysisReadyCard ws={ws} subjectsWithRuns={o.stages.find((x) => x.id === "preprocessing")?.total ?? 0} />}
           <Card size="3">
             <Flex direction="column" gap={space.group}>
               <Heading as="h2" size={type.sectionTitle}>Recent activity</Heading>
@@ -100,10 +104,6 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
               )}
             </Flex>
           </Card>
-        </Flex>
-        <Flex direction="column" gap={space.group}>
-          <PipelineMap subjects={o?.subjects ?? []} onOpen={(l) => (location.hash = href(ws, "subject", l))} />
-          {o && <AnalysisReadyCard ws={ws} subjectsWithRuns={o.stages.find((x) => x.id === "preprocessing")?.total ?? 0} />}
         </Flex>
       </Grid>
       <Badge style={{ display: "none" }}>{overview.isFetching ? "refreshing" : ""}</Badge>

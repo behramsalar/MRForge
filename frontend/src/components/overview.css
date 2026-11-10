@@ -1,4 +1,4 @@
-/* Overview screen: journey cards, "Your move", pipeline map. Colours are the state names
+/* Overview screen: journey cards, "Needs your decision", pipeline map. Colours are the state names
    (green, amber, red, blue, orange, gray) so every palette re-points them in one place. */
 .seg-bar {
   display: flex;
