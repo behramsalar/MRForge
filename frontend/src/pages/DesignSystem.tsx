@@ -1,9 +1,11 @@
-import { Button, Callout, Card, Flex, Heading, Table, Text } from "@radix-ui/themes";
+import { Button, Callout, Card, Flex, Heading, SegmentedControl, Table, Text } from "@radix-ui/themes";
 import { ActionBadge, ConfidenceBadge, StatusBadge } from "../components/ui/Badges";
-import { layout, space, type } from "../theme/tokens";
+import { useAppTheme } from "../shell/ThemeProvider";
+import { accentOptions, layout, space, type, type AccentId } from "../theme/tokens";
 
 /** A living reference of the building blocks (open with ?page=design). */
 export function DesignSystem() {
+  const { accent, setAccent } = useAppTheme();
   return (
     <Flex direction="column" gap={space.section} p={space.page} maxWidth={layout.contentWidth} mx="auto">
       <Heading size={type.pageTitle}>MRForge design system</Heading>
@@ -11,6 +13,19 @@ export function DesignSystem() {
         Everything below comes from src/theme/tokens.ts and Radix Themes. New screens reuse these
         pieces instead of inventing new styles.
       </Text>
+
+      <Heading as="h2" size={type.sectionTitle}>Palette (provisional)</Heading>
+      <Text size={type.help} color="gray">
+        Pick an accent colour to try it on every screen. Remembered in this browser only; the final
+        choice will be written into tokens.ts.
+      </Text>
+      <SegmentedControl.Root value={accent} onValueChange={(v) => setAccent(v as AccentId)}>
+        {accentOptions.map((o) => (
+          <SegmentedControl.Item key={o.id} value={o.id}>
+            {o.label}
+          </SegmentedControl.Item>
+        ))}
+      </SegmentedControl.Root>
 
       <Heading as="h2" size={type.sectionTitle}>Buttons</Heading>
       <Flex gap={space.group}>

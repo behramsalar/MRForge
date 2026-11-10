@@ -6,7 +6,7 @@ Format: date, decision, reason, status (agreed / proposed / open).
 `ui-redesign`, cut from `main` at `fc3c559`, so `main` is unaffected if the result is not liked. User request. **Agreed.**
 
 ## 2026-11-10 D-02: Font (open)
-The prototype uses Atkinson Hyperlegible from Google Fonts. The lab computer may be offline and the app has no external requests today. Options: (a) keep the current system font; (b) bundle the font files in the frontend (new npm dependency `@fontsource/...`, works offline). Proposal: (b), after you agree to the dependency. **Open.**
+The prototype uses Atkinson Hyperlegible from Google Fonts. The lab computer may be offline and the app has no external requests today. Options: (a) keep the current system font; (b) bundle the font files in the frontend (new npm dependency `@fontsource/...`, works offline). Proposal: (b), after you agree to the dependency. Until answered the system font stays (U1 changes no font). **Open.**
 
 ## 2026-11-10 D-03: Rule for the work
 The UI never builds shell commands and only talks to the API. Anything needing a backend change is listed in PLAN.md section 3 and asked about first. User instruction. **Agreed.**
@@ -37,3 +37,12 @@ Try the mockup's approach; keep every existing import function. New step U5b. **
 
 ## 2026-11-10 D-12: Mobile layout skipped
 Only use case is remote status checks from a phone. **Agreed.**
+
+## 2026-11-10 D-13: How density is done (U1)
+Radix `scaling` 100% -> 90% (smaller type, spacing and controls everywhere in one place), radius `large` -> `medium`, page padding step 6 -> 4, section gap 5 -> 4, page title size 7 -> 6, section title 5 -> 4, sidebar 232 -> 208 px (collapsed 64 -> 56), top bar 56 -> 44 px. Reason: user wants more at a glance on a 13-inch laptop; one global knob keeps every existing screen consistent without editing each. Values can be tuned in `tokens.ts` / `shell.css`. **Proposed (user to judge by eye).**
+
+## 2026-11-10 D-14: Provisional accent switcher
+`ThemeProvider` takes the accent from a browser-stored choice (default: the earlier amber); the choice is made on `#/design` (Palette). When the user picks one, it moves into `tokens.ts` and the switcher is removed. Options shown: Forge amber, indigo, teal, blue, neutral. **Proposed.**
+
+## 2026-11-10 D-15: Dev setup for checks
+`vite.config.ts` reads `MRFORGE_API` (default unchanged) so the dev UI can talk to a scratch server instead of the user's server on port 8000. `.claude/launch.json` (local, not committed) starts the scratch server (port 8100, scratch copy of the `nifti` workspace) and the dev UI (port 5180). The user's workspaces are never written to. **Agreed by the rule in D-03 / scope.**

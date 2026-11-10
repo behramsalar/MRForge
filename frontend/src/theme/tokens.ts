@@ -16,26 +16,40 @@ type RadixColor = NonNullable<ThemeProps["accentColor"]>;
 export const theme = {
   accentColor: "orange",
   grayColor: "gray",
-  radius: "large", // soft, rounded corners everywhere
-  scaling: "100%", // 90% denser, 110% roomier
+  radius: "medium", // slightly tighter corners (UI redesign, D-09)
+  scaling: "90%", // denser: more on screen on a 13-inch laptop (UI redesign, D-09)
   panelBackground: "solid",
 } as const satisfies ThemeProps;
 
+/**
+ * Accent colour options while the palette is still being chosen (UI redesign, D-08).
+ * The choice is remembered in the browser; once one is picked it becomes `theme.accentColor`
+ * and this list goes away. "orange" is the Forge amber of the earlier design.
+ */
+export const accentOptions = [
+  { id: "orange", label: "Forge amber (earlier look)" },
+  { id: "indigo", label: "Indigo" },
+  { id: "teal", label: "Teal" },
+  { id: "blue", label: "Blue" },
+  { id: "gray", label: "Neutral (no colour accent)" },
+] as const satisfies readonly { id: RadixColor; label: string }[];
+export type AccentId = (typeof accentOptions)[number]["id"];
+
 /** Size of the app shell. */
-export const shell = { sidebar: "232px", sidebarCollapsed: "64px", topbar: "56px" } as const;
+export const shell = { sidebar: "208px", sidebarCollapsed: "56px", topbar: "44px" } as const;
 
 /** Page layout. Values are Radix spacing steps (1 = 4px ... 9 = 64px), never raw pixels. */
 export const space = {
-  page: "6", // padding around a screen
-  section: "5", // gap between blocks
+  page: "4", // padding around a screen
+  section: "4", // gap between blocks
   group: "3", // gap between related controls
   inline: "2", // gap inside a row of small things
 } as const;
 
 /** Text sizes (Radix type scale 1-9) used for each role. */
 export const type = {
-  pageTitle: "7",
-  sectionTitle: "5",
+  pageTitle: "6",
+  sectionTitle: "4",
   body: "3",
   help: "2", // explanations, hints
   caption: "1",

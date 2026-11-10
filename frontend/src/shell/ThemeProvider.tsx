@@ -1,9 +1,20 @@
 import { Theme } from "@radix-ui/themes";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { theme } from "../theme/tokens";
+import { accentOptions, theme, type AccentId } from "../theme/tokens";
 
 export type Mode = "light" | "dark" | "system";
 const KEY = "mrforge-theme";
+const ACCENT_KEY = "mrforge-accent";
+
+function storedAccent(): AccentId {
+  try {
+    const v = localStorage.getItem(ACCENT_KEY);
+    if (accentOptions.some((o) => o.id === v)) return v as AccentId;
+  } catch {
+    /* blocked storage: use the default */
+  }
+  return theme.accentColor;
+}
 
 function stored(): Mode {
   try {
@@ -15,7 +26,14 @@ function stored(): Mode {
   return "system";
 }
 
-type Ctx = { mode: Mode; appearance: "light" | "dark"; setMode: (m: Mode) => void; toggle: () => void };
+type Ctx = {
+  mode: Mode;
+  appearance: "light" | "dark";
+  setMode: (m: Mode) => void;
+  toggle: () => void;
+  accent: AccentId; // provisional palette choice (UI redesign, D-08)
+  setAccent: (a: AccentId) => void;
+};
 const ThemeContext = createContext<Ctx | null>(null);
 
 export function useAppTheme(): Ctx {
@@ -27,6 +45,7 @@ export function useAppTheme(): Ctx {
 /** Light / dark / follow the computer, remembered between visits. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<Mode>(stored);
+  const [accent, setAccentState] = useState<AccentId>(storedAccent);
   const [systemDark, setSystemDark] = useState(() => matchMedia("(prefers-color-scheme: dark)").matches);
   useEffect(() => {
     const q = matchMedia("(prefers-color-scheme: dark)");
@@ -47,6 +66,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           /* not remembered; still works for this visit */
         }
       },
+      accent,
+      setAccent: (a) => {
+        setAccentState(a);
+        try {
+          localStorage.setItem(ACCENT_KEY, a);
+        } catch {
+          /* not remembered; still works for this visit */
+        }
+      },
       toggle: () => {
         const next = appearance === "dark" ? "light" : "dark";
         setModeState(next);
@@ -57,11 +85,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         }
       },
     }),
-    [mode, appearance],
+    [mode, appearance, accent],
   );
   return (
     <ThemeContext.Provider value={value}>
-      <Theme {...theme} appearance={appearance} style={{ minHeight: "100vh" }}>
+      <Theme {...theme} accentColor={accent} appearance={appearance} style={{ minHeight: "100vh" }}>
         {children}
       </Theme>
     </ThemeContext.Provider>
