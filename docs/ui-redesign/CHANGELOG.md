@@ -35,3 +35,11 @@ Every change on branch `ui-redesign` is listed here with its commit.
 - `api/hooks.ts`: `useResources`; `useSubjects` and `useOverview` no longer ask when no workspace is open.
 - `shell.css`: styles for the above.
 - Checked: `tsc` clean, 33 tests pass (3 new), in the browser: palette opens with Ctrl+K, finds the subject, Enter opens the subject page; shortcuts dialog opens; meter shows "Jobs 0 of 4, Memory 14 / 17 GB". Not checked: badges with real failed/waiting items (scratch workspace has none), Mac Cmd key, collapsed sidebar, other palettes.
+
+## 2026-11-10 (U3: Overview)
+- New `lib/overviewSummary.ts` (+ test, 4 cases): process groups, quality counts, "Your move" items.
+- New `components/OverviewCards.tsx`, `YourMove.tsx`, `PipelineMap.tsx`, `overview.css`.
+- `pages/Dashboard.tsx` rebuilt on them; `shell/nav.ts`: label "Dashboard" -> "Overview" (route unchanged, old links work).
+- `components/SubjectsTable.tsx`: exports `FILTERS` and `Filter` (no behaviour change). `components/ui/Layout.tsx`: smaller page-header icon.
+- `shell/shell.css`: function list scrolls so System/Settings stay visible.
+- Checked: `tsc` clean, 37 tests pass; in the browser at 1280x800 with 24 invented subjects (all states) and with the real one-subject scratch workspace; indigo palette, dark mode. Not checked: light mode and other palettes on this screen, a real failure, clicking through "Your move" buttons, the empty workspace screen, 100+ subjects.

@@ -90,6 +90,8 @@ body {
 }
 .nav-grow {
   flex: 1;
+  min-height: 0; /* lets the list scroll instead of pushing System and Settings off the screen */
+  overflow-y: auto;
 }
 .nav-item {
   display: flex;

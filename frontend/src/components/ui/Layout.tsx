@@ -24,9 +24,9 @@ export function PageHeader({
             align="center"
             justify="center"
             aria-hidden
-            style={{ width: 48, height: 48, flex: "none", borderRadius: "var(--radius-4)", background: "var(--accent-a3)", color: "var(--accent-10)" }}
+            style={{ width: 36, height: 36, flex: "none", borderRadius: "var(--radius-4)", background: "var(--accent-a3)", color: "var(--accent-10)" }}
           >
-            <Icon width={24} height={24} />
+            <Icon width={20} height={20} />
           </Flex>
         )}
         <Flex direction="column" gap="1" style={{ minWidth: 0 }}>

@@ -1,0 +1,91 @@
+/* Overview screen: journey cards, "Your move", pipeline map. Colours are the state names
+   (green, amber, red, blue, orange, gray) so every palette re-points them in one place. */
+.seg-bar {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--gray-a4);
+}
+.seg-bar i {
+  display: block;
+  height: 100%;
+}
+.seg-bar i[data-k="done"] { background: var(--green-9); }
+.seg-bar i[data-k="running"] { background: var(--blue-9); }
+.seg-bar i[data-k="waiting"] { background: var(--amber-9); }
+.seg-bar i[data-k="failed"] { background: var(--red-9); }
+.seg-bar i[data-k="rest"] { background: var(--gray-7); }
+.seg-bar i[data-k="excluded"] { background: var(--gray-9); }
+
+.pm-scroll {
+  max-height: 520px;
+  overflow: auto;
+}
+.pm {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--font-size-2);
+}
+.pm th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--space-1) var(--space-1);
+  background: var(--color-panel-solid);
+  border-bottom: 1px solid var(--gray-5);
+  font-size: var(--font-size-1);
+  font-weight: 500;
+  color: var(--gray-11);
+  text-align: left;
+  white-space: nowrap;
+}
+.pm td {
+  padding: 3px var(--space-1);
+  border-bottom: 1px solid var(--gray-a3);
+  white-space: nowrap;
+}
+.pm tbody tr {
+  cursor: pointer;
+}
+.pm tbody tr:hover,
+.pm tbody tr:focus-visible {
+  background: var(--accent-a3);
+  outline: none;
+}
+.pm tr[data-excluded="true"] {
+  opacity: 0.55;
+}
+.pm-cell {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 26px;
+  height: 18px;
+  border-radius: var(--radius-1);
+  background: var(--gray-a3);
+  color: var(--gray-11);
+  font-size: 11px;
+  line-height: 1;
+}
+.pm-cell[data-state="done"] { background: var(--green-a5); color: var(--green-11); }
+.pm-cell[data-state="running"] { background: var(--blue-a5); color: var(--blue-11); }
+.pm-cell[data-state="review"],
+.pm-cell[data-state="partial"] { background: var(--amber-9); color: var(--amber-contrast); }
+.pm-cell[data-state="failed"] { background: var(--red-9); color: #fff; }
+.pm-cell[data-state="stopped"] { background: var(--orange-9); color: #fff; }
+.pm-cell[data-state="unavailable"] { background: transparent; color: var(--gray-8); }
+
+.move {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--gray-6);
+  border-radius: var(--radius-2);
+  background: var(--gray-a2);
+}
+.move[data-tone="red"] { border-left-color: var(--red-9); }
+.move[data-tone="amber"] { border-left-color: var(--amber-9); }

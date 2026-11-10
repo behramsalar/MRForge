@@ -8,7 +8,7 @@ import { DECISION_COLOUR, DECISION_LABEL } from "./QualityDecisionCard";
 import { StageChips } from "./StageChips";
 
 type Row = Overview["subjects"][number];
-type Filter = "all" | "todo" | "attention" | "complete" | "excluded";
+export type Filter = "all" | "todo" | "attention" | "complete" | "excluded";
 
 const PAGE = 20;
 
@@ -18,7 +18,7 @@ function attention(r: Row): boolean {
   return r.stages.some((c) => NEEDS_ATTENTION.includes(c.state)) || !!r.motion_flag || r.qc_decision === "review";
 }
 
-const FILTERS: Record<Filter, (r: Row) => boolean> = {
+export const FILTERS: Record<Filter, (r: Row) => boolean> = {
   all: () => true,
   todo: (r) => !r.complete && !attention(r) && r.qc_decision !== "exclude",
   attention: (r) => attention(r) && r.qc_decision !== "exclude",
