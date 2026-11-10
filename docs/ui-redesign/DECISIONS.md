@@ -58,3 +58,6 @@ Indigo (teal done, ruby failed, cyan running) is the default on this branch. The
 
 ## 2026-11-10 D-19: Other palettes stay for now (user)
 The user is not fully sure about indigo yet. Decision: keep the palette switcher and all palettes on `#/design`, indigo as the default, and do not remove anything until the user says so. **Agreed.**
+
+## 2026-11-10 D-20: What U2 includes, and what it leaves for later steps
+Built: sidebar badges (Dashboard: failed + waiting-for-you count, red when something failed, else amber; Jobs: running now), a small resource meter at the sidebar foot (jobs in use out of the limit, memory in use, from the existing `/api/resources`), a "Jump to…" button in the top bar and the Cmd/Ctrl+K palette (pages, every function under a page, subjects, a few actions), a keyboard-shortcuts dialog (`?` key or the top-bar button; lists only shortcuts that exist). **Not changed:** the sidebar entries and their names. The prototype's Overview / Quality review / Results / Methods entries do not exist as pages yet, so they arrive with U3, U5 and U7 (an entry is added only when its page exists). The bell/activity popover is kept as it is. Memory shown is "in use of total" (total minus available); CPU load is not shown (needs a backend change, see PLAN section 3). **Agreed by plan; wording of the meter is a proposal.**

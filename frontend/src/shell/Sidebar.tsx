@@ -1,17 +1,62 @@
 import { ChevronDownIcon, ChevronRightIcon, DoubleArrowLeftIcon, DoubleArrowRightIcon } from "@radix-ui/react-icons";
 import { DropdownMenu, Theme } from "@radix-ui/themes";
 import { Fragment, useEffect, useState } from "react";
-import { useWorkspaces } from "../api/hooks";
+import { useOverview, useResources, useWorkspaces } from "../api/hooks";
 import { href, type Route } from "../lib/router";
 import { GLOBAL_NAV, SETTINGS_NAV, SYSTEM_NAV, WORKSPACE_NAV, defaultChild, type NavItem } from "./nav";
 
-function Item({ item, to, active, collapsed }: { item: NavItem; to: string; active: boolean; collapsed: boolean }) {
+type Badge = { n: number; tone: "red" | "amber" | "blue"; title: string };
+
+function Item({
+  item,
+  to,
+  active,
+  collapsed,
+  badge,
+}: {
+  item: NavItem;
+  to: string;
+  active: boolean;
+  collapsed: boolean;
+  badge?: Badge;
+}) {
   const Icon = item.icon;
   return (
     <a className="nav-item" href={to} aria-current={active ? "page" : undefined} title={collapsed ? item.label : undefined}>
       <Icon width={18} height={18} />
       <span className="nav-label">{item.label}</span>
+      {badge && badge.n > 0 && !collapsed && (
+        <span className="nav-badge" data-tone={badge.tone} title={badge.title}>
+          {badge.n}
+        </span>
+      )}
     </a>
+  );
+}
+
+/** What the computer is doing, in two short lines (slots in use, free memory). */
+function ResourceMeter() {
+  const info = useResources();
+  const d = info.data;
+  if (!d) return null;
+  const slots = `${Math.min(d.machine.jobs_running, d.policy.max_subjects)} of ${d.policy.max_subjects}`;
+  const used = Math.max(0, d.machine.ram_gb - d.machine.free_ram_gb);
+  return (
+    <div className="side-meter" title="Processing slots in use, and memory in use on this computer">
+      <div>
+        <span>Jobs</span>
+        <b>{slots}</b>
+      </div>
+      <div>
+        <span>Memory</span>
+        <b>
+          {used.toFixed(0)} / {d.machine.ram_gb.toFixed(0)} GB
+        </b>
+      </div>
+      <span className="meter" aria-hidden="true">
+        <i style={{ width: `${Math.min(100, (100 * used) / d.machine.ram_gb)}%` }} />
+      </span>
+    </div>
   );
 }
 
@@ -104,6 +149,19 @@ export function Sidebar({
 }) {
   const workspaces = useWorkspaces();
   const ws = route.workspace;
+  const overview = useOverview(ws ?? "");
+  const o = overview.data;
+  // Badges say how many things want the researcher (red: something failed) or are running now.
+  const badges: Record<string, Badge> = {};
+  if (o) {
+    const needs = (o.failed ?? 0) + (o.needs_review ?? 0);
+    badges.dashboard = {
+      n: needs,
+      tone: o.failed ? "red" : "amber",
+      title: `${o.failed} failed, ${o.needs_review} waiting for you`,
+    };
+    badges.jobs = { n: o.running, tone: "blue", title: `${o.running} running now` };
+  }
   return (
     <Theme asChild appearance="dark" hasBackground={false}>
       <aside className="sidebar" aria-label="Main">
@@ -140,7 +198,14 @@ export function Sidebar({
                 n.children ? (
                   <Group key={n.id} item={n} ws={ws} route={route} collapsed={collapsed} />
                 ) : (
-                  <Item key={n.id} item={n} to={href(ws, n.id)} active={route.page === n.id} collapsed={collapsed} />
+                  <Item
+                    key={n.id}
+                    item={n}
+                    to={href(ws, n.id)}
+                    active={route.page === n.id}
+                    collapsed={collapsed}
+                    badge={badges[n.id]}
+                  />
                 ),
               )
             : GLOBAL_NAV.map((n) => (
@@ -148,6 +213,7 @@ export function Sidebar({
               ))}
         </nav>
 
+        {!collapsed && <ResourceMeter />}
         <div className="sidebar-foot">
           <Item item={SYSTEM_NAV} to="#/system" active={route.page === "system"} collapsed={collapsed} />
           <Item item={SETTINGS_NAV} to="#/settings" active={route.page === "settings"} collapsed={collapsed} />

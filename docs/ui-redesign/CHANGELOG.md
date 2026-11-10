@@ -26,3 +26,12 @@ Every change on branch `ui-redesign` is listed here with its commit.
 
 - Indigo set as the default palette (`ThemeProvider.tsx`, D-18).
 - Decision D-19: other palettes and the switcher stay until the user decides.
+
+## 2026-11-10 (U2: shell)
+- New `lib/palette.ts` (+ `palette.test.ts`): entries and matching for the jump list.
+- New `shell/CommandPalette.tsx`, `shell/ShortcutsDialog.tsx`; `AppShell.tsx` owns their open state and the keys (Cmd/Ctrl+K toggles; `?` opens help unless typing).
+- `TopBar.tsx`: "Jump to…" button and a shortcuts button; bell, theme switch and researcher menu unchanged.
+- `Sidebar.tsx`: badges on Dashboard and Jobs; resource meter above System/Settings (hidden when the sidebar is collapsed).
+- `api/hooks.ts`: `useResources`; `useSubjects` and `useOverview` no longer ask when no workspace is open.
+- `shell.css`: styles for the above.
+- Checked: `tsc` clean, 33 tests pass (3 new), in the browser: palette opens with Ctrl+K, finds the subject, Enter opens the subject page; shortcuts dialog opens; meter shows "Jobs 0 of 4, Memory 14 / 17 GB". Not checked: badges with real failed/waiting items (scratch workspace has none), Mac Cmd key, collapsed sidebar, other palettes.

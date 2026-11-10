@@ -1,4 +1,4 @@
-import { BellIcon, MoonIcon, SunIcon } from "@radix-ui/react-icons";
+import { BellIcon, KeyboardIcon, MagnifyingGlassIcon, MoonIcon, SunIcon } from "@radix-ui/react-icons";
 import { Avatar, Badge, DropdownMenu, Flex, IconButton, Popover, Text } from "@radix-ui/themes";
 import { latestJobs, stepName } from "../components/JobsPanel";
 import { StatusBadge } from "../components/ui/Badges";
@@ -6,6 +6,7 @@ import { href, type Route } from "../lib/router";
 import { space, type } from "../theme/tokens";
 import { crumbs } from "./nav";
 import { useResearcher } from "./ResearcherProvider";
+import { modKey } from "./ShortcutsDialog";
 import { useAppTheme } from "./ThemeProvider";
 import { useWorkspace } from "./WorkspaceContext";
 
@@ -112,7 +113,7 @@ function ResearcherMenu() {
   );
 }
 
-export function TopBar({ route }: { route: Route }) {
+export function TopBar({ route, onSearch, onHelp }: { route: Route; onSearch: () => void; onHelp: () => void }) {
   const { appearance, toggle } = useAppTheme();
   return (
     <header className="topbar">
@@ -143,6 +144,11 @@ export function TopBar({ route }: { route: Route }) {
         ))}
       </Flex>
       <Flex align="center" gap={space.group}>
+        <button className="top-search" onClick={onSearch} aria-label="Jump to a page, subject or action">
+          <MagnifyingGlassIcon />
+          <span>Jump to…</span>
+          <kbd className="kbd">{modKey} K</kbd>
+        </button>
         {route.workspace && <Activity ws={route.workspace} />}
         <IconButton
           variant="ghost"
@@ -151,6 +157,9 @@ export function TopBar({ route }: { route: Route }) {
           aria-label={appearance === "dark" ? "Switch to light mode" : "Switch to dark mode"}
         >
           {appearance === "dark" ? <SunIcon width={18} height={18} /> : <MoonIcon width={18} height={18} />}
+        </IconButton>
+        <IconButton variant="ghost" color="gray" onClick={onHelp} aria-label="Keyboard shortcuts">
+          <KeyboardIcon width={18} height={18} />
         </IconButton>
         <ResearcherMenu />
       </Flex>
