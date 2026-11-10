@@ -52,3 +52,6 @@ Problem: with the indigo accent the done (green), failed (red) and running (blue
 
 ## 2026-11-10 D-17: The original must stay untouched (user, "really important")
 `main` and the user's running app on port 8000 must keep working and looking as before. My earlier U1 build overwrote `frontend/dist`, which that server serves, so the app on 8000 briefly showed the new look. Fixed: `frontend/dist` was rebuilt from `main`. From now on: **never run `npm run build` on this branch**; checks use the dev server (port 5180, scratch data, port 8100) only; a build of this branch happens only at the end, into a separate folder, if the user asks. **Agreed.**
+
+## 2026-11-10 D-18: Indigo is the palette to continue with (user)
+Indigo (teal done, ruby failed, cyan running) is the default on this branch. The other palettes and the switcher stay on `#/design` until the user confirms the indicator colours, then they are removed and indigo is written into `theme` in `tokens.ts`. **Agreed (indicator colours still to be confirmed).**

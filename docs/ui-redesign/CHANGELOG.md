@@ -23,3 +23,5 @@ Every change on branch `ui-redesign` is listed here with its commit.
 - `DesignSystem.tsx`: palette switcher with a row of state badges and bars to judge each palette.
 - Accent-like orange replaced by the accent in `TopBar.tsx` (bell count, avatar), `Workspaces.tsx` ("created by you" badge), `PipelineStepper.tsx` and `LiveProgressDialog.tsx` (progress bars).
 - Checked: `tsc` clean, 30 tests pass, indigo palette on the design page and the dashboard at 1280x800. Not yet looked at: teal, blue, neutral, dark mode, other pages.
+
+- Indigo set as the default palette (`ThemeProvider.tsx`, D-18).

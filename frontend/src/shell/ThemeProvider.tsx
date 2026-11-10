@@ -4,6 +4,8 @@ import { paletteCss, palettes, theme, type PaletteId } from "../theme/tokens";
 
 export type Mode = "light" | "dark" | "system";
 const KEY = "mrforge-theme";
+/** The palette in use until someone picks another (indigo chosen by the user, D-18). */
+const DEFAULT_PALETTE: PaletteId = "indigo";
 const PALETTE_KEY = "mrforge-palette";
 
 function storedPalette(): PaletteId {
@@ -13,7 +15,7 @@ function storedPalette(): PaletteId {
   } catch {
     /* blocked storage: use the default */
   }
-  return palettes[0].id;
+  return DEFAULT_PALETTE;
 }
 
 function stored(): Mode {
