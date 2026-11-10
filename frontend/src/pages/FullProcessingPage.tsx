@@ -1,6 +1,7 @@
+import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { api } from "../api/client";
 import { call } from "../api/call";
 import { useOverview } from "../api/hooks";
@@ -8,7 +9,7 @@ import type { FullOptions, StagePlan } from "../api/types";
 import { JobsPanel } from "../components/JobsPanel";
 import { PresetBar } from "../components/PresetBar";
 import { ReviewStartDialog } from "../components/ReviewStartDialog";
-import { StageRow } from "../components/StageRow";
+import { StageTile } from "../components/StageTile";
 import { StageSettingsPanel } from "../components/StageSettingsPanel";
 import { SubjectsTable } from "../components/SubjectsTable";
 import { EmptyState, PageHeader } from "../components/ui/Layout";
@@ -62,12 +63,45 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
   const jobs = (state?.jobs ?? []).filter((j) => picked.length === 1 && j.subject === picked[0]);
   const doneEarlier = Object.fromEntries(STAGE_GROUPS.flatMap((g) => g.stages).map((id) => [id, stageCounts(id, chosenRows).done]));
   const included = stages.filter((s) => s.enabled && s.can_run);
-  const statusOf = (id: string): { text: string; tone: "green" | "amber" | "gray" } | undefined => {
+  const statusOf = (id: string): string | undefined => {
     if (picked.length === 0) return undefined;
     const c = stageCounts(id, chosenRows);
     if (c.done === 0) return undefined;
-    return { text: picked.length === 1 ? "Done earlier" : `${c.done} of ${picked.length} done earlier`, tone: "green" };
+    return picked.length === 1 ? "Done earlier" : `${c.done} of ${picked.length} done earlier`;
   };
+  const renderGroup = (g: (typeof STAGE_GROUPS)[number]) => (
+    <Flex key={g.id} direction="column" gap="1">
+      <Flex align="baseline" gap={space.group} wrap="wrap">
+        <Heading as="h2" size={type.sectionTitle}>
+          {g.title}
+        </Heading>
+        <Text size={type.caption} color="gray">
+          {GROUP_HELP[g.id]}
+        </Text>
+      </Flex>
+      <div className="tiles">
+        {g.stages.map((id, i) => {
+          const s = stageOf(id);
+          return (
+            <Fragment key={id}>
+              {i > 0 && g.id === "pre" && <ArrowRightIcon className="tile-arrow" aria-hidden />}
+              <StageTile
+                label={s?.label ?? FALLBACK_LABEL[id]}
+                plan={picked.length > 0 ? s : undefined}
+                enabled={enabledOf(id)}
+                onToggle={(on) => setStage(id, on)}
+                summary={summaryOf(s)}
+                status={statusOf(id)}
+                hasSettings={HAS_SETTINGS.has(id)}
+                changed={settingsChanged(id, opts)}
+                onSettings={() => setPanel(id)}
+              />
+            </Fragment>
+          );
+        })}
+      </div>
+    </Flex>
+  );
   return (
     <Flex direction="column" gap={space.section}>
       <PageHeader
@@ -85,35 +119,12 @@ export function FullProcessingPage({ ws, state }: { ws: string; state: Workspace
       {rows.length > 0 && (
         <>
           <PresetBar opts={opts} onChange={setOpts} presetId={presetId} onPresetId={setPresetId} />
-          {STAGE_GROUPS.map((g) => (
-            <Flex key={g.id} direction="column" gap="2">
-              <Flex align="baseline" gap={space.group} wrap="wrap">
-                <Heading as="h2" size={type.sectionTitle}>
-                  {g.title}
-                </Heading>
-                <Text size={type.caption} color="gray">
-                  {GROUP_HELP[g.id]}
-                </Text>
-              </Flex>
-              {g.stages.map((id) => {
-                const s = stageOf(id);
-                return (
-                  <StageRow
-                    key={id}
-                    label={s?.label ?? FALLBACK_LABEL[id]}
-                    plan={picked.length > 0 ? s : undefined}
-                    enabled={enabledOf(id)}
-                    onToggle={(on) => setStage(id, on)}
-                    summary={summaryOf(s)}
-                    status={statusOf(id)}
-                    hasSettings={HAS_SETTINGS.has(id)}
-                    changed={settingsChanged(id, opts)}
-                    onSettings={() => setPanel(id)}
-                  />
-                );
-              })}
-            </Flex>
-          ))}
+          <Flex direction="column" gap="3">
+            {renderGroup(STAGE_GROUPS[0])}
+            <div className="tile-pair">
+              {STAGE_GROUPS.slice(1).map((g) => renderGroup(g))}
+            </div>
+          </Flex>
           <Heading as="h2" size={type.sectionTitle}>
             Subjects
           </Heading>
