@@ -111,3 +111,6 @@ Every change on branch `ui-redesign` is listed here with its commit.
 
 ## U5b Import page
 - Header with Import scans button; step strip; sticky import bar ("Convert and organise"); list hidden for a single import. Files: pages/data/ImportsTab.tsx, pages/ImportPage.tsx.
+
+## U6 ICA screen
+- Checked under Quality > Artifact rejection: header, subject picker, run button and the empty state fit the new look. The labelling screen itself is unchanged (original kept, as agreed). Not seen with real components: the scratch workspace has no MELODIC run, so the labelling view must be checked on a real dataset.
