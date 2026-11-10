@@ -4,12 +4,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode, Suspense, lazy, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { useRoute } from "./lib/router";
-import { AnatomicalPage } from "./pages/AnatomicalPage";
 import { Dashboard } from "./pages/Dashboard";
 import { DesignSystem } from "./pages/DesignSystem";
 import { DataPage } from "./pages/DataPage";
 import { JobsPage } from "./pages/JobsPage";
 import { ProcessPage } from "./pages/ProcessPage";
+import { QualityPage } from "./pages/QualityPage";
+import { ResultsPage } from "./pages/ResultsPage";
 import { SubjectPage } from "./pages/SubjectPage";
 import { Settings } from "./pages/Settings";
 import { SystemPage } from "./pages/SystemPage";
@@ -32,7 +33,7 @@ function WorkspacePage({ page, extra, extra2 }: { page: string; extra?: string; 
     case "data":
       return <DataPage ws={ws} extra={extra} state={state} />;
     case "process":
-      return <ProcessPage ws={ws} tab={extra} state={state} />;
+      return <ProcessPage ws={ws} state={state} />;
     case "subject":
       return <SubjectPage ws={ws} label={extra} tab={extra2} state={state} />;
     case "viewer":
@@ -43,8 +44,10 @@ function WorkspacePage({ page, extra, extra2 }: { page: string; extra?: string; 
       );
     case "jobs":
       return <JobsPage ws={ws} state={state} />;
-    case "anatomical":
-      return <AnatomicalPage ws={ws} state={state} />;
+    case "quality":
+      return <QualityPage ws={ws} />;
+    case "results":
+      return <ResultsPage ws={ws} tab={extra} />;
     default:
       return <Dashboard ws={ws} state={state} />;
   }

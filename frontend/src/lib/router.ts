@@ -10,8 +10,8 @@ export type Route = { workspace?: string; page: string; extra?: string; extra2?:
 /** Addresses used before the sidebar existed keep working. */
 const LEGACY: Record<string, { page: string; extra?: string; extra2?: string; keepExtra?: boolean }> = {
   import: { page: "data", keepExtra: true },
-  anat: { page: "process", extra: "anat" },
-  func: { page: "process", extra: "func" },
+  anat: { page: "process" },
+  func: { page: "process" },
   view: { page: "viewer", keepExtra: true },
 };
 
@@ -30,7 +30,15 @@ export function parse(hash: string): Route {
         extra: legacy.keepExtra ? parts[3] : legacy.extra,
       };
     }
-    if (raw === "process" && parts[3] === "full") return { workspace: parts[1], page: raw, extra: "pipelines" };
+    if (raw === "process") {
+      // Single-step pages were folded into the Process page; the results and review moved.
+      const old = parts[3];
+      if (old === "conn") return { workspace: parts[1], page: "results", extra: "connectivity" };
+      if (old === "dwi") return { workspace: parts[1], page: "results", extra: "diffusion" };
+      if (old === "ica") return { workspace: parts[1], page: "quality" };
+      return { workspace: parts[1], page: "process" };
+    }
+    if (raw === "anatomical") return { workspace: parts[1], page: "process" };
     return { workspace: parts[1], page: raw, extra: parts[3], extra2: parts[4] };
   }
   return { page: "workspaces" };

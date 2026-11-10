@@ -87,3 +87,6 @@ User review of the first U4: settings were hidden behind the start button, prese
 - Start bar is shown whenever one or more subjects are ticked.
 - Subject lists are compact (rows 64 -> 42 px in the check).
 **Proposed (user to judge by eye).** Open: the sidebar (option A agreed) waits for the Quality and Results pages, see CHANGELOG.
+
+## 2026-11-10 D-25: Sidebar (option A, interim)
+User chose option A. Built now with what exists: Overview, Data, Process (one page), Quality (artifact labelling for now), Results (Connectivity, Diffusion), Viewer, Jobs. Single-step pages were removed (their run function is the Process page; their pictures are in the subject's Results tab), old addresses redirect. Stage pages are no longer sidebar items; Anatomical and Connectivity are no longer at one level. Open: "Data" vs "Import" as the label; a Reports entry; Quality gaining its check list (U5). **Proposed (user to judge by eye).**

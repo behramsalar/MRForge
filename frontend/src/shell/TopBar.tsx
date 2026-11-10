@@ -62,7 +62,7 @@ function Activity({ ws }: { ws: string }) {
           ))}
           {waiting.map((j) => (
             <Flex key={j.id} justify="between" gap={space.group} align="center">
-              <a href={href(ws, "process", "ica")}>
+              <a href={href(ws, "quality")}>
                 <Text size={type.help}>
                   Label the components{j.run ? ` of ${j.run}` : ""} ({j.subject})
                 </Text>

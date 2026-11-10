@@ -17,12 +17,12 @@ import { space, type } from "../theme/tokens";
 
 // What each stage card offers: which stage a "Run" starts, and a page to look at.
 const STAGE_ACTIONS: Record<string, { stage: string; look?: [string, string?]; lookLabel?: string }> = {
-  anatomical: { stage: "anatomical", look: ["process", "anat"], lookLabel: "Open the page" },
-  preprocessing: { stage: "functional", look: ["process", "func"], lookLabel: "Open the page" },
-  artifact_rejection: { stage: "artifact_rejection", look: ["process", "ica"], lookLabel: "Open the review" },
-  standard_space: { stage: "standard_space", look: ["process", "mni"], lookLabel: "Open the page" },
-  connectivity: { stage: "connectivity", look: ["process", "conn"], lookLabel: "Open the page" },
-  diffusion: { stage: "diffusion", look: ["process", "dwi"], lookLabel: "Open the page" },
+  anatomical: { stage: "anatomical" },
+  preprocessing: { stage: "functional" },
+  artifact_rejection: { stage: "artifact_rejection", look: ["quality"], lookLabel: "Open the review" },
+  standard_space: { stage: "standard_space" },
+  connectivity: { stage: "connectivity", look: ["results", "connectivity"], lookLabel: "Open the results" },
+  diffusion: { stage: "diffusion", look: ["results", "diffusion"], lookLabel: "Open the results" },
 };
 
 function StageCard({
@@ -154,7 +154,7 @@ export function SubjectPage({ ws, label, tab, state }: { ws: string; label?: str
               <Flex align="center" justify="between" gap={space.group} wrap="wrap" style={{ width: "100%" }}>
                 <Text>Processing waits for your decision on the components.</Text>
                 <Button asChild>
-                  <a href={href(ws, "process", "ica")}>Open the review</a>
+                  <a href={href(ws, "quality")}>Open the review</a>
                 </Button>
               </Flex>
             </Callout.Root>

@@ -16,13 +16,20 @@ describe("router", () => {
   });
   it("reads workspace, page and extra", () => {
     expect(parse("#/w/demo/viewer/sub-001")).toEqual({ workspace: "demo", page: "viewer", extra: "sub-001" });
-    expect(parse("#/w/demo/process/func")).toEqual({ workspace: "demo", page: "process", extra: "func" });
+    expect(parse("#/w/demo/results/diffusion")).toEqual({ workspace: "demo", page: "results", extra: "diffusion", extra2: undefined });
   });
   it("keeps addresses from before the sidebar working", () => {
     expect(parse("#/w/demo/import/import-002")).toEqual({ workspace: "demo", page: "data", extra: "import-002" });
-    expect(parse("#/w/demo/anat")).toEqual({ workspace: "demo", page: "process", extra: "anat" });
-    expect(parse("#/w/demo/func")).toEqual({ workspace: "demo", page: "process", extra: "func" });
-    expect(parse("#/w/demo/process/full")).toEqual({ workspace: "demo", page: "process", extra: "pipelines" });
+    expect(parse("#/w/demo/anat")).toEqual({ workspace: "demo", page: "process" });
+    expect(parse("#/w/demo/func")).toEqual({ workspace: "demo", page: "process" });
+    expect(parse("#/w/demo/process/full")).toEqual({ workspace: "demo", page: "process" });
+  });
+  it("sends the old single-step addresses to where their content lives now", () => {
+    expect(parse("#/w/demo/process/anat")).toEqual({ workspace: "demo", page: "process" });
+    expect(parse("#/w/demo/process/mni")).toEqual({ workspace: "demo", page: "process" });
+    expect(parse("#/w/demo/process/conn")).toEqual({ workspace: "demo", page: "results", extra: "connectivity" });
+    expect(parse("#/w/demo/process/dwi")).toEqual({ workspace: "demo", page: "results", extra: "diffusion" });
+    expect(parse("#/w/demo/process/ica")).toEqual({ workspace: "demo", page: "quality" });
     expect(parse("#/w/demo/view/sub-001")).toEqual({ workspace: "demo", page: "viewer", extra: "sub-001" });
   });
   it("can name the image to show in the viewer", () => {

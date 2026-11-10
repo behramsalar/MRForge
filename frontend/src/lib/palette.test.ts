@@ -7,7 +7,7 @@ describe("command palette entries", () => {
   it("offers every sidebar page, every function under it and every subject", () => {
     const ids = entries.map((e) => e.id);
     expect(ids).toContain("page:viewer");
-    expect(ids).toContain("page:process/anat");
+    expect(ids).toContain("page:results/connectivity");
     expect(ids).toContain("subject:sub-012");
     expect(entries.find((e) => e.id === "subject:sub-001")?.to).toBe("#/w/demo/subject/sub-001");
   });
@@ -18,7 +18,7 @@ describe("command palette entries", () => {
   });
   it("matches all typed words in any order, label hits first", () => {
     expect(filterEntries(entries, "012")[0].id).toBe("subject:sub-012");
-    expect(filterEntries(entries, "anat process").map((e) => e.id)).toContain("page:process/anat");
+    expect(filterEntries(entries, "connectivity results").map((e) => e.id)).toContain("page:results/connectivity");
     expect(filterEntries(entries, "zzzz")).toEqual([]);
   });
 });

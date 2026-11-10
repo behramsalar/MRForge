@@ -108,7 +108,7 @@
   flex: 1 1 150px;
   min-width: 0;
   border: 1px solid var(--gray-6);
-  border-radius: var(--radius-3);
+  border-radius: var(--radius-4);
   background: var(--color-panel-solid);
 }
 .tile:hover { border-color: var(--gray-8); }
