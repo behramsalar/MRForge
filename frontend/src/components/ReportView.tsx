@@ -78,7 +78,7 @@ function RunCard({ ws, subject, run }: { ws: string; subject: string; run: Repor
           {run.step === "func_qc" && (
             <Button size="1" variant="soft" className="no-print" asChild>
               <a href={href(ws, "viewer", subject)}>
-                <MagnifyingGlassIcon /> Open interactively
+                <MagnifyingGlassIcon /> Open in viewer
               </a>
             </Button>
           )}

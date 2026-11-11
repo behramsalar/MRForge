@@ -1,4 +1,4 @@
-import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, Cross2Icon, EyeOpenIcon } from "@radix-ui/react-icons";
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, Cross2Icon, EyeOpenIcon, FileTextIcon } from "@radix-ui/react-icons";
 import { Badge, Button, Callout, Dialog, Flex, Grid, SegmentedControl, Table, Text, TextField } from "@radix-ui/themes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -201,11 +201,16 @@ export function QualityInspector({
                 {ICON[c]} {BUTTON[c]} <kbd className="kbd">{c === "accept" ? "A" : c === "review" ? "R" : "X"}</kbd>
               </Button>
             ))}
-            <Button size="2" variant="ghost" color="gray" asChild>
-              <a href={href(ws, "subject", current ?? "", "results")}>Full report</a>
+            <span style={{ flex: 1 }} />
+            <Button size="2" variant="outline" asChild>
+              <a href={href(ws, "viewer", current ?? "")}>
+                <EyeOpenIcon /> Open in viewer
+              </a>
             </Button>
-            <Button size="2" variant="ghost" color="gray" asChild>
-              <a href={href(ws, "viewer", current ?? "")}>Open interactively</a>
+            <Button size="2" variant="soft" asChild>
+              <a href={href(ws, "subject", current ?? "", "results")}>
+                <FileTextIcon /> Full report
+              </a>
             </Button>
           </Flex>
           {choice && (

@@ -126,3 +126,6 @@ Every change on branch `ui-redesign` is listed here with its commit.
 
 ## Fix: "Open the review" opened the wrong subject (user feedback)
 - The artifact review now opens on the subject that is waiting for labels (state `review`), not the first subject in the list. Applies to every link to Quality > Artifact rejection (banner, top bar, subject page, progress window). If several subjects wait, the first of them opens; the picker still switches. Frontend only (pages/ComponentReviewPage.tsx).
+
+## R1/R2 Quality group, report access
+- nav.ts Quality children; pages/QualityPage.tsx without tabs (Reports list via SubjectsTable); QualityInspector buttons "Open in viewer" and "Full report".

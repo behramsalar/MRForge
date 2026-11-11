@@ -34,8 +34,17 @@ export const WORKSPACE_NAV: NavItem[] = [
   { id: "data", label: "Data", icon: ArchiveIcon },
   // One Process page: every stage (preprocessing, analysis, diffusion) is a tile on it.
   { id: "process", label: "Process", icon: MixerHorizontalIcon },
-  // Quality: the subjects to check, their reports, and the artifact labelling (tabs on the page).
-  { id: "quality", label: "Quality", icon: CheckCircledIcon },
+  // Quality: the subjects to check, their reports, and the artifact labelling.
+  {
+    id: "quality",
+    label: "Quality",
+    icon: CheckCircledIcon,
+    children: [
+      { id: "subjects", label: "Subject review" },
+      { id: "reports", label: "Reports" },
+      { id: "artifacts", label: "Artifact rejection" },
+    ],
+  },
   {
     id: "results",
     label: "Results",
