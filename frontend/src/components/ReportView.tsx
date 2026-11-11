@@ -1,10 +1,12 @@
 import { DownloadIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { Badge, Button, Callout, Card, Code, Flex, Grid, Heading, Table, Text } from "@radix-ui/themes";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, type ReactNode } from "react";
 import { api } from "../api/client";
 import { ApiError, call } from "../api/call";
 import type { ReportQc, ReportRun } from "../api/types";
 import { helpFor } from "../lib/qcHelp";
+import { CHECKS, findQc } from "../lib/qualityReview";
 import { href } from "../lib/router";
 import { space, type } from "../theme/tokens";
 import { ErrorCallout } from "./ErrorCallout";
@@ -64,7 +66,8 @@ function Pictures({ ws, qc }: { ws: string; qc: ReportQc }) {
 
 function RunCard({ ws, subject, run }: { ws: string; subject: string; run: ReportRun }) {
   const metrics = run.qc.filter((q) => q.kind === "metric");
-  const pictures = run.qc.filter((q) => q.kind !== "metric");
+  // The four main checks are shown at the top of the report, not repeated here.
+  const pictures = run.qc.filter((q) => q.kind !== "metric" && !CHECKS.some((c) => c.match.test(q.name)));
   return (
     <Card>
       <Flex direction="column" gap={space.group}>
@@ -84,9 +87,9 @@ function RunCard({ ws, subject, run }: { ws: string; subject: string; run: Repor
           )}
         </Flex>
         <Text size={type.caption} color="gray">
-          Step version {run.step_version}
-          {run.finished ? `, finished ${new Date(run.finished).toLocaleString()}` : ""}
-          {run.started_by ? `, started by ${run.started_by}` : ""}
+          {run.finished ? `Finished ${new Date(run.finished).toLocaleString()}` : "Not finished"}
+          {run.started_by ? ` · ${run.started_by}` : ""}
+          {` · step version ${run.step_version}`}
         </Text>
         {metrics.length > 0 && (
           <Table.Root size="1">
@@ -136,8 +139,23 @@ function RunCard({ ws, subject, run }: { ws: string; subject: string; run: Repor
   );
 }
 
-/** The report of one subject: what was done, with what settings, what the checks say, in
- * reading order. Built by the server only from what was recorded. */
+/** A section that can be folded: a one-line summary always visible, details on demand. */
+export function Fold({ title, summary, badge, defaultOpen = false, children }: { title: string; summary?: string; badge?: ReactNode; defaultOpen?: boolean; children: ReactNode }) {
+  return (
+    <details className="fold" open={defaultOpen}>
+      <summary>
+        <span className="fold-title">{title}</span>
+        {badge}
+        {summary && <span className="fold-summary">{summary}</span>}
+      </summary>
+      <div className="fold-body">{children}</div>
+    </details>
+  );
+}
+
+/** The report of one subject. What matters for the quality of the analysis comes first (the
+ * decision, warnings, the main checks and head-motion numbers); what was done, with settings and
+ * commands, is folded below. Built by the server only from what was recorded. */
 export function ReportView({ ws, subject }: { ws: string; subject: string }) {
   const report = useQuery({
     queryKey: ["ws", ws, "report", subject],
@@ -151,15 +169,24 @@ export function ReportView({ ws, subject }: { ws: string; subject: string }) {
         }),
       ),
   });
+  // Folded sections do not print: open them all while printing.
+  useEffect(() => {
+    const open = () => document.querySelectorAll<HTMLDetailsElement>("details.fold").forEach((d) => (d.open = true));
+    window.addEventListener("beforeprint", open);
+    return () => window.removeEventListener("beforeprint", open);
+  }, []);
   if (report.error) return <ErrorCallout error={(report.error as ApiError).body} />;
   const r = report.data;
   if (!r) return null;
   const last = r.decisions[r.decisions.length - 1];
+  const runs = r.sections.flatMap((s) => s.runs);
+  const numbers = runs.flatMap((run) => run.qc.filter((q) => q.kind === "metric" && /^Head motion|framewise|volumes/i.test(`${q.name}`)));
+  const checks = CHECKS.map((c) => ({ c, found: findQc(r, c.id) })).filter((x) => x.found.length > 0);
   return (
-    <Flex direction="column" gap={space.group}>
+    <Flex direction="column" gap={space.section}>
       <Flex justify="between" align="center" wrap="wrap" gap={space.group}>
         <Heading as="h2" size={type.sectionTitle}>
-          Report
+          Quality at a glance
         </Heading>
         <Flex gap={space.group} className="no-print">
           <Button variant="soft" onClick={() => window.print()}>
@@ -170,9 +197,6 @@ export function ReportView({ ws, subject }: { ws: string; subject: string }) {
           </Button>
         </Flex>
       </Flex>
-      <Text size={type.help} color="gray">
-        Built from what MRForge recorded for {subject}, nothing estimated. Save it as an HTML file to keep a copy or send it to a colleague.
-      </Text>
       {save.error && <ErrorCallout error={(save.error as ApiError).body} />}
       {save.data && (
         <Callout.Root color="green" size="1">
@@ -184,85 +208,171 @@ export function ReportView({ ws, subject }: { ws: string; subject: string }) {
           </Callout.Text>
         </Callout.Root>
       )}
-      {last && (
-        <Card>
-          <Flex direction="column" gap="1">
-            <Text weight="bold">Quality decision</Text>
-            <Text size={type.help}>
-              <Badge color={last.decision === "accept" ? "green" : last.decision === "exclude" ? "red" : "amber"} variant="soft">
-                {last.decision}
-              </Badge>{" "}
-              {last.reason} ({last.who ?? "unknown"}, {new Date(last.when).toLocaleString()})
-            </Text>
-            {r.decisions.length > 1 && (
-              <Text size={type.caption} color="gray">
-                {r.decisions.length - 1} earlier decision(s) are kept in the saved report.
+
+      <Flex direction="column" gap={space.group}>
+        <Card size="2">
+          <Flex gap={space.group} align="center" wrap="wrap">
+            <Text weight="bold">Your decision</Text>
+            {last ? (
+              <>
+                <Badge color={last.decision === "accept" ? "green" : last.decision === "exclude" ? "red" : "amber"} variant="solid">
+                  {last.decision}
+                </Badge>
+                <Text size={type.help}>{last.reason}</Text>
+                <Text size={type.caption} color="gray">
+                  {last.who ?? "unknown"}, {new Date(last.when).toLocaleDateString()}
+                  {r.decisions.length > 1 ? ` · ${r.decisions.length - 1} earlier in the saved report` : ""}
+                </Text>
+              </>
+            ) : (
+              <Text size={type.help} color="gray">
+                No decision yet. Record one in Quality &gt; Subject review.
               </Text>
             )}
           </Flex>
         </Card>
-      )}
-      {r.warnings.length > 0 && (
-        <Callout.Root color="amber">
-          <Callout.Text>
-            {r.warnings.length} {r.warnings.length === 1 ? "warning" : "warnings"}: {r.warnings.join(" · ")}
-          </Callout.Text>
-        </Callout.Root>
-      )}
-      <Heading as="h3" size={type.sectionTitle}>
-        Acquisition
-      </Heading>
-      {r.acquisition.length === 0 ? (
-        <Text size={type.help} color="gray">
-          No imported series are recorded for this subject.
-        </Text>
-      ) : (
-        <Table.Root size="1">
-          <Table.Header>
-            <Table.Row>
-              <Table.ColumnHeaderCell>Series</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Imported as</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Size</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Volumes</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>TR / TE (s)</Table.ColumnHeaderCell>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {r.acquisition.map((a) => (
-              <Table.Row key={`${a.import_id}-${a.number}-${a.description}`}>
-                <Table.Cell>{a.number}</Table.Cell>
-                <Table.Cell>{a.description}</Table.Cell>
-                <Table.Cell>{a.kind}</Table.Cell>
-                <Table.Cell>{a.matrix}</Table.Cell>
-                <Table.Cell>{a.volumes}</Table.Cell>
-                <Table.Cell>
-                  {a.repetition_time_s ?? "-"} / {a.echo_time_s ?? "-"}
-                </Table.Cell>
-              </Table.Row>
+        {r.warnings.map((w) => (
+          <Callout.Root key={w} color="amber" size="1">
+            <Callout.Text>{w}</Callout.Text>
+          </Callout.Root>
+        ))}
+        {numbers.length > 0 && (
+          <Grid columns={{ initial: "2", sm: "4" }} gap={space.inline}>
+            {numbers.map((m, i) => (
+              <Card key={`${m.name}-${i}`} size="1">
+                <Flex direction="column">
+                  <Text size={type.caption} color="gray">
+                    {m.name}
+                  </Text>
+                  <Text size={type.body} weight="bold">
+                    {m.value}
+                  </Text>
+                </Flex>
+              </Card>
             ))}
-          </Table.Body>
-        </Table.Root>
-      )}
-      {r.sections.map((s) => (
-        <Flex key={s.id} direction="column" gap={space.group}>
-          <Heading as="h3" size={type.sectionTitle}>
-            {s.title}
-          </Heading>
-          {s.runs.map((run) => (
-            <RunCard key={run.job_id} ws={ws} subject={subject} run={run} />
-          ))}
-          {s.not_run.length > 0 && (
-            <Text size={type.help} color="gray">
-              Not run: {s.not_run.join(", ")}
-            </Text>
+          </Grid>
+        )}
+      </Flex>
+
+      {checks.length > 0 ? (
+        <Grid columns={{ initial: "1", md: "2" }} gap={space.group}>
+          {checks.flatMap(({ c, found }) =>
+            found.map(({ run, qc }) => (
+              <Card key={`${c.id}-${run.job_id}-${qc.name}`} size="2">
+                <Flex direction="column" gap="2">
+                  <Flex align="center" gap="2" wrap="wrap">
+                    <Text weight="bold">{c.label}</Text>
+                    {run.recording && (
+                      <Badge variant="soft" color="gray">
+                        {run.recording}
+                      </Badge>
+                    )}
+                    {qc.warning && (
+                      <Badge color="amber" variant="soft">
+                        Look at this
+                      </Badge>
+                    )}
+                    {c.id === "t1" && (
+                      <Button size="1" variant="soft" className="no-print" style={{ marginLeft: "auto" }} asChild>
+                        <a href={href(ws, "viewer", subject)}>
+                          <MagnifyingGlassIcon /> Open in viewer
+                        </a>
+                      </Button>
+                    )}
+                  </Flex>
+                  {qc.warning && (
+                    <Callout.Root color="amber" size="1">
+                      <Callout.Text>{qc.warning}</Callout.Text>
+                    </Callout.Root>
+                  )}
+                  <Pictures ws={ws} qc={qc} />
+                </Flex>
+              </Card>
+            )),
           )}
-        </Flex>
-      ))}
-      <Heading as="h3" size={type.sectionTitle}>
-        Software
-      </Heading>
-      <Text size={type.help}>{Object.entries(r.software).map(([k, v]) => `${k} ${v}`).join(" · ")}</Text>
+        </Grid>
+      ) : (
+        <Text size={type.help} color="gray">
+          No quality pictures yet. They appear when functional preprocessing has finished.
+        </Text>
+      )}
+
+      <Flex direction="column" gap={space.inline}>
+        <Heading as="h2" size={type.sectionTitle}>
+          What was done
+        </Heading>
+        <Fold
+          title="Acquisition"
+          summary={r.acquisition.length === 0 ? "no imported series recorded" : `${r.acquisition.length} series`}
+        >
+          {r.acquisition.length === 0 ? (
+            <Text size={type.help} color="gray">
+              No imported series are recorded for this subject.
+            </Text>
+          ) : (
+            <Table.Root size="1">
+              <Table.Header>
+                <Table.Row>
+                  <Table.ColumnHeaderCell>Series</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Imported as</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Size</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Volumes</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>TR / TE (s)</Table.ColumnHeaderCell>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {r.acquisition.map((a) => (
+                  <Table.Row key={`${a.import_id}-${a.number}-${a.description}`}>
+                    <Table.Cell>{a.number}</Table.Cell>
+                    <Table.Cell>{a.description}</Table.Cell>
+                    <Table.Cell>{a.kind}</Table.Cell>
+                    <Table.Cell>{a.matrix}</Table.Cell>
+                    <Table.Cell>{a.volumes}</Table.Cell>
+                    <Table.Cell>
+                      {a.repetition_time_s ?? "-"} / {a.echo_time_s ?? "-"}
+                    </Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table.Root>
+          )}
+        </Fold>
+        {r.sections.map((s) => {
+          const warns = s.runs.reduce((n, run) => n + run.warnings.length + run.qc.filter((q) => q.warning).length, 0);
+          return (
+            <Fold
+              key={s.id}
+              title={s.title}
+              summary={s.runs.length === 0 ? "not run" : `${s.runs.length} ${s.runs.length === 1 ? "run" : "runs"}`}
+              badge={
+                warns > 0 ? (
+                  <Badge color="amber" variant="soft">
+                    {warns} {warns === 1 ? "warning" : "warnings"}
+                  </Badge>
+                ) : undefined
+              }
+            >
+              <Flex direction="column" gap={space.group}>
+                {s.runs.map((run) => (
+                  <RunCard key={run.job_id} ws={ws} subject={subject} run={run} />
+                ))}
+                {s.not_run.length > 0 && (
+                  <Text size={type.help} color="gray">
+                    Not run: {s.not_run.join(", ")}
+                  </Text>
+                )}
+              </Flex>
+            </Fold>
+          );
+        })}
+        <Fold title="Software" summary={`${Object.keys(r.software).length} tools`}>
+          <Text size={type.help}>{Object.entries(r.software).map(([k, v]) => `${k} ${v}`).join(" · ")}</Text>
+        </Fold>
+      </Flex>
+      <Text size={type.caption} color="gray">
+        Built from what MRForge recorded for {subject}; nothing is estimated.
+      </Text>
     </Flex>
   );
 }

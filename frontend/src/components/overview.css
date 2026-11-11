@@ -207,3 +207,13 @@
 .qg-foot { padding: 0 2px; }
 .qi-pics { background: #000; border-radius: var(--radius-3); padding: var(--space-1); }
 .qi-pics img { width: 100%; display: block; }
+
+/* Folded report sections */
+.fold { border: 1px solid var(--gray-a5); border-radius: var(--radius-4); background: var(--color-panel-solid); }
+.fold > summary { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); cursor: pointer; list-style: none; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::before { content: "▸"; color: var(--gray-10); transition: transform .12s; }
+.fold[open] > summary::before { transform: rotate(90deg); }
+.fold-title { font-weight: 600; }
+.fold-summary { margin-left: auto; color: var(--gray-11); font-size: var(--font-size-1); }
+.fold-body { padding: 0 var(--space-4) var(--space-4); }

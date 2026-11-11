@@ -8,7 +8,7 @@ import { useOverview } from "../api/hooks";
 import type { StageChip, WorkspaceState } from "../api/types";
 import { ConfirmProcessDialog } from "../components/ConfirmProcessDialog";
 import { JobsPanel } from "../components/JobsPanel";
-import { ReportView } from "../components/ReportView";
+import { Fold, ReportView } from "../components/ReportView";
 import { QualityDecisionCard } from "../components/QualityDecisionCard";
 import { StageBadge } from "../components/ui/Badges";
 import { EmptyState, PageHeader } from "../components/ui/Layout";
@@ -72,10 +72,8 @@ function Files({ ws, subject }: { ws: string; subject: string }) {
   for (const i of images.data ?? []) groups.set(i.group, [...(groups.get(i.group) ?? []), i]);
   if (!images.data?.length) return null;
   return (
+    <Fold title="Images" summary={`${images.data.length} files, open any in the viewer`}>
     <Flex direction="column" gap={space.group}>
-      <Heading as="h2" size={type.sectionTitle}>
-        Images
-      </Heading>
       {[...groups.entries()].map(([group, list]) => (
         <Card key={group}>
           <Flex direction="column" gap="2">
@@ -97,6 +95,7 @@ function Files({ ws, subject }: { ws: string; subject: string }) {
         </Card>
       ))}
     </Flex>
+    </Fold>
   );
 }
 

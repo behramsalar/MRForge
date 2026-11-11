@@ -129,3 +129,6 @@ Every change on branch `ui-redesign` is listed here with its commit.
 
 ## R1/R2 Quality group, report access
 - nav.ts Quality children; pages/QualityPage.tsx without tabs (Reports list via SubjectsTable); QualityInspector buttons "Open in viewer" and "Full report".
+
+## R3 Report page layout
+- Report now opens with "Quality at a glance": decision, each warning as its own line, head-motion numbers, and the four main checks as picture cards (Open in viewer on the T1 check). "What was done" below is folded: Acquisition, each stage (run count, warning badge), Software; Images on the page also folded. Folded sections open for printing. The long explanatory text is gone (one line at the bottom). Files: components/ReportView.tsx (Fold, ReportView), pages/SubjectPage.tsx, components/overview.css. Page height on the test subject: about 8400 px to about 2000 px.
