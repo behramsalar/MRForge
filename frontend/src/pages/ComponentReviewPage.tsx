@@ -17,7 +17,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { ApiError, call } from "../api/call";
-import { useSubjects } from "../api/hooks";
+import { useOverview, useSubjects } from "../api/hooks";
 import type { IcaComponent } from "../api/types";
 import { ErrorCallout } from "../components/ErrorCallout";
 import { Viewer } from "../components/Viewer";
@@ -56,7 +56,10 @@ export function ComponentReviewPage({ ws, embedded = false }: { ws: string; embe
   const { state } = useWorkspace();
   const subjects = useSubjects(ws);
   const [subject, setSubject] = useState<string | undefined>();
-  const label = subject ?? subjects.data?.[0]?.label;
+  // Open on the subject that is waiting for labels (the banner and links lead here), else the first.
+  const overview = useOverview(ws);
+  const waitingLabel = overview.data?.subjects.find((x) => x.stages.some((st) => st.id === "artifact_rejection" && st.state === "review"))?.label;
+  const label = subject ?? waitingLabel ?? (overview.isLoading ? undefined : subjects.data?.[0]?.label);
   const results = useQuery({
     queryKey: ["ws", ws, "ica", label],
     enabled: !!label,

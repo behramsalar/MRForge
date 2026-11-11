@@ -123,3 +123,6 @@ Every change on branch `ui-redesign` is listed here with its commit.
 
 ## Import page: centred call to action (user feedback)
 - A dashed, centred "Import scans" card with a large button now sits at the top of the Import page; the small header button is gone.
+
+## Fix: "Open the review" opened the wrong subject (user feedback)
+- The artifact review now opens on the subject that is waiting for labels (state `review`), not the first subject in the list. Applies to every link to Quality > Artifact rejection (banner, top bar, subject page, progress window). If several subjects wait, the first of them opens; the picker still switches. Frontend only (pages/ComponentReviewPage.tsx).
