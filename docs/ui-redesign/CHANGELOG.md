@@ -132,3 +132,6 @@ Every change on branch `ui-redesign` is listed here with its commit.
 
 ## R3 Report page layout
 - Report now opens with "Quality at a glance": decision, each warning as its own line, head-motion numbers, and the four main checks as picture cards (Open in viewer on the T1 check). "What was done" below is folded: Acquisition, each stage (run count, warning badge), Software; Images on the page also folded. Folded sections open for printing. The long explanatory text is gone (one line at the bottom). Files: components/ReportView.tsx (Fold, ReportView), pages/SubjectPage.tsx, components/overview.css. Page height on the test subject: about 8400 px to about 2000 px.
+
+## R4 HTML export restyled (approved by the user)
+- backend/mrforge/report_html.py only (layout, no new data, no change to what is recorded): "Quality at a glance" first (decision badge, warnings, head-motion numbers, the four main checks as picture cards), "What was done" as folded sections (acquisition, each stage with run count and warning badge, all decisions, software); card styling, readable times (UTC), print opens all folds, no outside requests, still one file. The four main checks are shown once at the top, not again inside the stage runs. Checked: exported sub-001 from the scratch workspace and viewed it; report/export unit tests pass.
