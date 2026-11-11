@@ -135,3 +135,6 @@ Every change on branch `ui-redesign` is listed here with its commit.
 
 ## R4 HTML export restyled (approved by the user)
 - backend/mrforge/report_html.py only (layout, no new data, no change to what is recorded): "Quality at a glance" first (decision badge, warnings, head-motion numbers, the four main checks as picture cards), "What was done" as folded sections (acquisition, each stage with run count and warning badge, all decisions, software); card styling, readable times (UTC), print opens all folds, no outside requests, still one file. The four main checks are shown once at the top, not again inside the stage runs. Checked: exported sub-001 from the scratch workspace and viewed it; report/export unit tests pass.
+
+## R4 fix: fold arrows in the export
+- The arrow in front of each folded section showed as "B8"/"BE": the CSS escape was read by Python as an octal escape. Now written as ▸ / ▾ (verified: the stylesheet contains the two arrow characters). Reports exported before this fix keep the old look (a saved report never changes); export again.

@@ -83,8 +83,8 @@ th{color:var(--mute);font-weight:600}
 details.fold{background:var(--card);border:1px solid var(--line);border-radius:10px;margin:.45rem 0}
 details.fold>summary{cursor:pointer;padding:.65rem 1rem;display:flex;gap:.7rem;align-items:center;list-style:none}
 details.fold>summary::-webkit-details-marker{display:none}
-details.fold>summary::before{content:"\25B8";color:var(--mute)}
-details.fold[open]>summary::before{content:"\25BE"}
+details.fold>summary::before{content:"\u25B8";color:var(--mute)}
+details.fold[open]>summary::before{content:"\u25BE"}
 details.fold>summary .sum{margin-left:auto;color:var(--mute);font-size:.88em}
 .body{padding:0 1rem 1rem}
 .run{border-top:1px solid var(--line);padding-top:.7rem;margin-top:.7rem}
