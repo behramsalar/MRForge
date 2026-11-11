@@ -138,3 +138,6 @@ Every change on branch `ui-redesign` is listed here with its commit.
 
 ## R4 fix: fold arrows in the export
 - The arrow in front of each folded section showed as "B8"/"BE": the CSS escape was read by Python as an octal escape. Now written as ▸ / ▾ (verified: the stylesheet contains the two arrow characters). Reports exported before this fix keep the old look (a saved report never changes); export again.
+
+## Design page links (user request)
+- Settings > Appearance links to the design page (#/design); the design page has "Back to home" (the workspaces list, #/) and a Settings link. Files: pages/Settings.tsx, pages/DesignSystem.tsx.

@@ -1,3 +1,4 @@
+import { ArrowLeftIcon } from "@radix-ui/react-icons";
 import { Badge, Button, Callout, Card, Flex, Heading, Progress, SegmentedControl, Table, Text } from "@radix-ui/themes";
 import { ActionBadge, ConfidenceBadge, StatusBadge } from "../components/ui/Badges";
 import { useAppTheme } from "../shell/ThemeProvider";
@@ -8,6 +9,16 @@ export function DesignSystem() {
   const { palette, setPalette } = useAppTheme();
   return (
     <Flex direction="column" gap={space.section} p={space.page} maxWidth={layout.contentWidth} mx="auto">
+      <Flex gap={space.group} align="center" wrap="wrap">
+        <Button variant="soft" asChild>
+          <a href="#/">
+            <ArrowLeftIcon /> Back to home
+          </a>
+        </Button>
+        <Button variant="ghost" color="gray" asChild>
+          <a href="#/settings">Settings</a>
+        </Button>
+      </Flex>
       <Heading size={type.pageTitle}>MRForge design system</Heading>
       <Text size={type.help} color="gray">
         Everything below comes from src/theme/tokens.ts and Radix Themes. New screens reuse these

@@ -165,6 +165,9 @@ export function Settings() {
             <SegmentedControl.Item value="dark">Dark</SegmentedControl.Item>
             <SegmentedControl.Item value="system">Follow my computer</SegmentedControl.Item>
           </SegmentedControl.Root>
+          <Text size={type.help} color="gray">
+            Colours, text sizes and building blocks used on every screen: <a href="#/design">open the design page</a>.
+          </Text>
         </Flex>
       </Card>
       <ResourcesCard />
