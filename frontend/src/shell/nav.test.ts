@@ -23,15 +23,18 @@ describe("sidebar", () => {
 import { crumbs, defaultChild } from "./nav";
 
 describe("sidebar tree", () => {
-  it("shows every kind of processing under Process in the sidebar", () => {
-    const process = WORKSPACE_NAV.find((n) => n.id === "process");
-    expect(process?.children?.map((c) => c.id)).toEqual(["pipelines", "anat", "func", "ica", "mni", "conn", "dwi"]);
-    expect(defaultChild("process")).toBe("pipelines");
+  it("has one Process page without a tree, and results listed under Results", () => {
+    expect(WORKSPACE_NAV.map((n) => n.id)).toEqual(["dashboard", "import", "data", "process", "quality", "results", "viewer", "jobs"]);
+    expect(WORKSPACE_NAV.find((n) => n.id === "process")?.children).toBeUndefined();
+    expect(WORKSPACE_NAV.find((n) => n.id === "results")?.children?.map((c) => c.id)).toEqual(["connectivity", "diffusion", "methods"]);
+    expect(defaultChild("results")).toBe("connectivity");
     expect(defaultChild("viewer")).toBeUndefined();
   });
   it("names the trail in the top bar", () => {
-    expect(crumbs("process", "func")).toEqual(["Process", "Preprocessing"]);
-    expect(crumbs("process")).toEqual(["Process", "Pipelines"]);
+    expect(crumbs("results", "diffusion")).toEqual(["Results", "Diffusion (ALPS)"]);
+    expect(crumbs("results")).toEqual(["Results", "Connectivity"]);
+    expect(crumbs("process")).toEqual(["Process"]);
+    expect(crumbs("process", "func")).toEqual(["Process", "Functional preprocessing"]);
     expect(crumbs("viewer")).toEqual(["Viewer"]);
   });
 });

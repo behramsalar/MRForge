@@ -1,6 +1,9 @@
 import {
   ActivityLogIcon,
   ArchiveIcon,
+  BarChartIcon,
+  CheckCircledIcon,
+  DownloadIcon,
   DesktopIcon,
   EyeOpenIcon,
   GearIcon,
@@ -26,27 +29,44 @@ export type NavItem = {
  * page in main.tsx. Items are shown only if the thing they open exists.
  */
 export const WORKSPACE_NAV: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: HomeIcon },
+  { id: "dashboard", label: "Overview", icon: HomeIcon },
+  { id: "import", label: "Import", icon: DownloadIcon },
   { id: "data", label: "Data", icon: ArchiveIcon },
+  // One Process page: every stage (preprocessing, analysis, diffusion) is a tile on it.
+  { id: "process", label: "Process", icon: MixerHorizontalIcon },
+  // Quality: the subjects to check, their reports, and the artifact labelling.
   {
-    id: "process",
-    label: "Process",
-    icon: MixerHorizontalIcon,
-    // Everything under Process is visible in the sidebar. Pipelines is one page that lists
-    // all pipelines and presets as cards (so new ones never lengthen the sidebar); single
-    // steps are listed one by one. Connectivity (ROI to ROI) is the first of the analyses.
+    id: "quality",
+    label: "Quality",
+    icon: CheckCircledIcon,
     children: [
-      { id: "pipelines", label: "Pipelines" },
-      { id: "anat", label: "Anatomical", section: "Single steps" },
-      { id: "func", label: "Preprocessing", section: "Functional" },
-      { id: "ica", label: "Artifact rejection" },
-      { id: "mni", label: "Standard space" },
-      { id: "conn", label: "Connectivity (ROI to ROI)", section: "Analysis" },
-      { id: "dwi", label: "Diffusion (ALPS)", section: "Diffusion" },
+      { id: "subjects", label: "Subject review" },
+      { id: "reports", label: "Reports" },
+      { id: "artifacts", label: "Artifact rejection" },
+    ],
+  },
+  {
+    id: "results",
+    label: "Results",
+    icon: BarChartIcon,
+    children: [
+      { id: "connectivity", label: "Connectivity" },
+      { id: "diffusion", label: "Diffusion (ALPS)" },
+      { id: "methods", label: "Methods and provenance" },
     ],
   },
   { id: "viewer", label: "Viewer", icon: EyeOpenIcon },
   { id: "jobs", label: "Jobs", icon: ActivityLogIcon },
+];
+
+/** Pages that are not in the sidebar but are reached from the Process tiles, the subject page and
+ * the jump list: the run-one-stage pages with their own results. ``stage`` is the Process tile. */
+export const STAGE_PAGES: { stage: string; extra: string; label: string }[] = [
+  { stage: "anatomical", extra: "anat", label: "Anatomical" },
+  { stage: "functional", extra: "func", label: "Functional preprocessing" },
+  { stage: "standard_space", extra: "mni", label: "Standard space" },
+  { stage: "connectivity", extra: "conn", label: "Connectivity (ROI to ROI)" },
+  { stage: "diffusion", extra: "dwi", label: "Diffusion (ALPS)" },
 ];
 
 export const GLOBAL_NAV: NavItem[] = [{ id: "workspaces", label: "Workspaces", icon: LayersIcon }];
@@ -70,6 +90,8 @@ export function defaultChild(page: string): string | undefined {
 /** Top-bar trail for a page: ["Process", "Anatomical"]. */
 export function crumbs(page: string, extra?: string): string[] {
   const item = ALL.find((n) => n.id === page);
+  const stagePage = page === "process" ? STAGE_PAGES.find((x) => x.extra === extra) : undefined;
+  if (stagePage) return [pageLabel(page), stagePage.label];
   const child = item?.children?.find((c) => c.id === (extra ?? defaultChild(page)));
   return [pageLabel(page), ...(child ? [child.label] : [])];
 }

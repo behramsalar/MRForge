@@ -19,8 +19,8 @@ export function SubjectsTab({ ws }: { ws: string }) {
       <EmptyState
         title="No subjects yet"
         text="Subjects appear here once you have imported scans."
-        action="Go to imports"
-        href={href(ws, "data", "")}
+        action="Go to import"
+        href={href(ws, "import")}
       />
     );
   }

@@ -117,7 +117,7 @@ function StepRow({ s, ws }: { s: ProgressStep; ws: string }) {
               {s.state === "review" && (
                 <Flex style={{ paddingLeft: 28 }}>
                   <Text size={type.help} color="amber">
-                    Waiting for you: <a href={href(ws, "process", "ica")}>open the review</a> to label the components.
+                    Waiting for you: <a href={href(ws, "quality", "artifacts")}>open the review</a> to label the components.
                   </Text>
                 </Flex>
               )}
@@ -180,7 +180,7 @@ export function LiveProgressDialog({ ws, operationId, trigger }: { ws: string; o
           {progress.error && <ErrorCallout error={(progress.error as ApiError).body} />}
           {p && p.total > 0 && (
             <Flex direction="column" gap="1">
-              <Progress value={Math.round((100 * p.done) / p.total)} color="orange" aria-label="Progress" />
+              <Progress value={Math.round((100 * p.done) / p.total)} aria-label="Progress" />
               <Text size={type.help} color="gray">
                 {p.done} of {p.total} {p.subjects.length ? "subjects" : "steps"} finished
                 {!p.subjects.length && p.current !== null && p.current !== undefined && running ? ` · now step ${p.current + 1}` : ""}

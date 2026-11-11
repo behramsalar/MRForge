@@ -24,9 +24,9 @@ export function PageHeader({
             align="center"
             justify="center"
             aria-hidden
-            style={{ width: 48, height: 48, flex: "none", borderRadius: "var(--radius-4)", background: "var(--accent-a3)", color: "var(--accent-10)" }}
+            style={{ width: 36, height: 36, flex: "none", borderRadius: "var(--radius-4)", background: "var(--accent-a3)", color: "var(--accent-10)" }}
           >
-            <Icon width={24} height={24} />
+            <Icon width={20} height={20} />
           </Flex>
         )}
         <Flex direction="column" gap="1" style={{ minWidth: 0 }}>
@@ -40,56 +40,6 @@ export function PageHeader({
       </Flex>
       {actions && <Flex gap={space.inline}>{actions}</Flex>}
     </Flex>
-  );
-}
-
-/** A number with a label, for the dashboard. */
-export function StatCard({
-  label,
-  value,
-  hint,
-  color,
-  icon,
-}: {
-  label: string;
-  value: ReactNode;
-  hint?: string;
-  color?: string; // a Radix colour name
-  icon?: ReactNode;
-}) {
-  return (
-    <Card size="3">
-      <Flex gap={space.group} align="center">
-        {icon && (
-          <Flex
-            align="center"
-            justify="center"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "var(--radius-4)",
-              background: color ? `var(--${color}-a3)` : "var(--gray-a3)",
-              color: color ? `var(--${color}-11)` : "var(--gray-11)",
-            }}
-          >
-            {icon}
-          </Flex>
-        )}
-        <Flex direction="column">
-          <Text size={type.help} color="gray">
-            {label}
-          </Text>
-          <Text size="7" weight="bold" style={{ lineHeight: 1.1 }}>
-            {value}
-          </Text>
-          {hint && (
-            <Text size={type.caption} color="gray">
-              {hint}
-            </Text>
-          )}
-        </Flex>
-      </Flex>
-    </Card>
   );
 }
 

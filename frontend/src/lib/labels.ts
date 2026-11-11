@@ -23,6 +23,13 @@ export function when(iso: string | null | undefined): string {
   return d.toLocaleString();
 }
 
+/** A short date and time (no seconds) for tables; the full one stays in tooltips. */
+export function whenShort(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z");
+  return d.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
+}
+
 export function elapsed(start: string | null | undefined, end: string | null | undefined): string {
   if (!start) return "";
   const norm = (v: string) => new Date(v.endsWith("Z") || v.includes("+") ? v : v + "Z").getTime();

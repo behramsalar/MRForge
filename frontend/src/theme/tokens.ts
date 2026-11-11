@@ -16,26 +16,67 @@ type RadixColor = NonNullable<ThemeProps["accentColor"]>;
 export const theme = {
   accentColor: "orange",
   grayColor: "gray",
-  radius: "large", // soft, rounded corners everywhere
-  scaling: "100%", // 90% denser, 110% roomier
+  radius: "medium", // slightly tighter corners (UI redesign, D-09)
+  scaling: "90%", // denser: more on screen on a 13-inch laptop (UI redesign, D-09)
   panelBackground: "solid",
 } as const satisfies ThemeProps;
 
+/**
+ * Palettes while the look is still being chosen (UI redesign, D-08, D-16). A palette is an
+ * accent colour plus its own colours for the state indicators: every screen says "green",
+ * "amber", "red", "blue" and "orange" by MEANING (done, needs you, failed, running, stopped),
+ * and a palette re-points those five names at colours that sit well with its accent. Nothing
+ * in the screens changes when a palette is added or swapped. "amber" is the earlier look,
+ * with no re-pointing at all. Once one palette is chosen it becomes `theme` and the rest go.
+ */
+type Meaning = "green" | "amber" | "red" | "blue" | "orange";
+export type Palette = {
+  id: string;
+  label: string;
+  accent: RadixColor;
+  gray: NonNullable<ThemeProps["grayColor"]>;
+  state: Partial<Record<Meaning, RadixColor>>; // which Radix colour shows each meaning
+};
+export const palettes: readonly Palette[] = [
+  { id: "amber", label: "Forge amber (earlier look)", accent: "orange", gray: "gray", state: {} },
+  { id: "indigo", label: "Indigo", accent: "indigo", gray: "slate", state: { green: "teal", red: "ruby", blue: "cyan" } },
+  { id: "teal", label: "Teal", accent: "teal", gray: "sage", state: { green: "grass", red: "tomato", blue: "indigo" } },
+  { id: "blue", label: "Blue", accent: "blue", gray: "slate", state: { green: "jade", red: "ruby", blue: "cyan" } },
+  { id: "neutral", label: "Neutral (no colour accent)", accent: "gray", gray: "gray", state: {} },
+];
+export type PaletteId = string;
+
+const STEPS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+/** CSS that re-points the state colours of each palette (one rule per palette). */
+export function paletteCss(): string {
+  return palettes
+    .filter((p) => Object.keys(p.state).length > 0)
+    .map((p) => {
+      const lines = Object.entries(p.state).flatMap(([meaning, to]) => [
+        ...STEPS.flatMap((n) => [`--${meaning}-${n}: var(--${to}-${n});`, `--${meaning}-a${n}: var(--${to}-a${n});`]),
+        ...["contrast", "surface", "indicator", "track"].map((k) => `--${meaning}-${k}: var(--${to}-${k});`),
+      ]);
+      return `.radix-themes[data-palette="${p.id}"] {\n  ${lines.join("\n  ")}\n}`;
+    })
+    .join("\n");
+}
+
 /** Size of the app shell. */
-export const shell = { sidebar: "232px", sidebarCollapsed: "64px", topbar: "56px" } as const;
+export const shell = { sidebar: "208px", sidebarCollapsed: "56px", topbar: "44px" } as const;
 
 /** Page layout. Values are Radix spacing steps (1 = 4px ... 9 = 64px), never raw pixels. */
 export const space = {
-  page: "6", // padding around a screen
-  section: "5", // gap between blocks
+  page: "4", // padding around a screen
+  section: "4", // gap between blocks
   group: "3", // gap between related controls
   inline: "2", // gap inside a row of small things
 } as const;
 
 /** Text sizes (Radix type scale 1-9) used for each role. */
 export const type = {
-  pageTitle: "7",
-  sectionTitle: "5",
+  pageTitle: "6",
+  sectionTitle: "4",
   body: "3",
   help: "2", // explanations, hints
   caption: "1",

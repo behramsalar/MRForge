@@ -1,9 +1,22 @@
 import { Theme } from "@radix-ui/themes";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { theme } from "../theme/tokens";
+import { paletteCss, palettes, theme, type PaletteId } from "../theme/tokens";
 
 export type Mode = "light" | "dark" | "system";
 const KEY = "mrforge-theme";
+/** The palette in use until someone picks another (indigo chosen by the user, D-18). */
+const DEFAULT_PALETTE: PaletteId = "indigo";
+const PALETTE_KEY = "mrforge-palette";
+
+function storedPalette(): PaletteId {
+  try {
+    const v = localStorage.getItem(PALETTE_KEY);
+    if (palettes.some((p) => p.id === v)) return v as PaletteId;
+  } catch {
+    /* blocked storage: use the default */
+  }
+  return DEFAULT_PALETTE;
+}
 
 function stored(): Mode {
   try {
@@ -15,7 +28,14 @@ function stored(): Mode {
   return "system";
 }
 
-type Ctx = { mode: Mode; appearance: "light" | "dark"; setMode: (m: Mode) => void; toggle: () => void };
+type Ctx = {
+  mode: Mode;
+  appearance: "light" | "dark";
+  setMode: (m: Mode) => void;
+  toggle: () => void;
+  palette: PaletteId; // provisional palette choice (UI redesign, D-08, D-16)
+  setPalette: (p: PaletteId) => void;
+};
 const ThemeContext = createContext<Ctx | null>(null);
 
 export function useAppTheme(): Ctx {
@@ -27,6 +47,7 @@ export function useAppTheme(): Ctx {
 /** Light / dark / follow the computer, remembered between visits. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<Mode>(stored);
+  const [palette, setPaletteState] = useState<PaletteId>(storedPalette);
   const [systemDark, setSystemDark] = useState(() => matchMedia("(prefers-color-scheme: dark)").matches);
   useEffect(() => {
     const q = matchMedia("(prefers-color-scheme: dark)");
@@ -47,6 +68,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           /* not remembered; still works for this visit */
         }
       },
+      palette,
+      setPalette: (p) => {
+        setPaletteState(p);
+        try {
+          localStorage.setItem(PALETTE_KEY, p);
+        } catch {
+          /* not remembered; still works for this visit */
+        }
+      },
       toggle: () => {
         const next = appearance === "dark" ? "light" : "dark";
         setModeState(next);
@@ -57,11 +87,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         }
       },
     }),
-    [mode, appearance],
+    [mode, appearance, palette],
   );
+  const current = palettes.find((p) => p.id === palette) ?? palettes[0];
   return (
     <ThemeContext.Provider value={value}>
-      <Theme {...theme} appearance={appearance} style={{ minHeight: "100vh" }}>
+      <style>{paletteCss()}</style>
+      <Theme
+        {...theme}
+        accentColor={current.accent}
+        grayColor={current.gray}
+        data-palette={current.id}
+        appearance={appearance}
+        style={{ minHeight: "100vh" }}
+      >
         {children}
       </Theme>
     </ThemeContext.Provider>

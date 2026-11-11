@@ -17,7 +17,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { ApiError, call } from "../api/call";
-import { useSubjects } from "../api/hooks";
+import { useOverview, useSubjects } from "../api/hooks";
 import type { IcaComponent } from "../api/types";
 import { ErrorCallout } from "../components/ErrorCallout";
 import { Viewer } from "../components/Viewer";
@@ -51,12 +51,15 @@ function Dot({ label }: { label?: IcaLabel }) {
  * summary, time course and frequencies) and label it signal, noise or uncertain. MRForge only
  * shows; the decision is yours. Saving the final decision lets a waiting pipeline carry on.
  */
-export function ComponentReviewPage({ ws }: { ws: string }) {
+export function ComponentReviewPage({ ws, embedded = false }: { ws: string; embedded?: boolean }) {
   const queryClient = useQueryClient();
   const { state } = useWorkspace();
   const subjects = useSubjects(ws);
   const [subject, setSubject] = useState<string | undefined>();
-  const label = subject ?? subjects.data?.[0]?.label;
+  // Open on the subject that is waiting for labels (the banner and links lead here), else the first.
+  const overview = useOverview(ws);
+  const waitingLabel = overview.data?.subjects.find((x) => x.stages.some((st) => st.id === "artifact_rejection" && st.state === "review"))?.label;
+  const label = subject ?? waitingLabel ?? (overview.isLoading ? undefined : subjects.data?.[0]?.label);
   const results = useQuery({
     queryKey: ["ws", ws, "ica", label],
     enabled: !!label,
@@ -169,10 +172,12 @@ export function ComponentReviewPage({ ws }: { ws: string }) {
 
   return (
     <Flex direction="column" gap={space.section}>
-      <PageHeader
-        title="Artifact rejection"
-        description="Look at each component MELODIC found and decide whether it is brain activity or noise."
-      />
+      {!embedded && (
+        <PageHeader
+          title="Artifact rejection"
+          description="Look at each component MELODIC found and decide whether it is brain activity or noise."
+        />
+      )}
       <Flex gap={space.group} align="center" wrap="wrap">
         <Select.Root value={label} onValueChange={setSubject}>
           <Select.Trigger aria-label="Subject" />

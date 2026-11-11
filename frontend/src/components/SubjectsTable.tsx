@@ -2,13 +2,14 @@ import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { Badge, Button, Card, Checkbox, Flex, SegmentedControl, Table, Text, TextField } from "@radix-ui/themes";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Overview } from "../api/types";
-import { when } from "../lib/labels";
+import { whenShort } from "../lib/labels";
+import "./overview.css";
 import { space, type } from "../theme/tokens";
 import { DECISION_COLOUR, DECISION_LABEL } from "./QualityDecisionCard";
 import { StageChips } from "./StageChips";
 
 type Row = Overview["subjects"][number];
-type Filter = "all" | "todo" | "attention" | "complete" | "excluded";
+export type Filter = "all" | "todo" | "attention" | "complete" | "excluded";
 
 const PAGE = 20;
 
@@ -18,7 +19,7 @@ function attention(r: Row): boolean {
   return r.stages.some((c) => NEEDS_ATTENTION.includes(c.state)) || !!r.motion_flag || r.qc_decision === "review";
 }
 
-const FILTERS: Record<Filter, (r: Row) => boolean> = {
+export const FILTERS: Record<Filter, (r: Row) => boolean> = {
   all: () => true,
   todo: (r) => !r.complete && !attention(r) && r.qc_decision !== "exclude",
   attention: (r) => attention(r) && r.qc_decision !== "exclude",
@@ -96,7 +97,7 @@ export function SubjectsTable({
             {counts.excluded > 0 && <SegmentedControl.Item value="excluded">Excluded ({counts.excluded})</SegmentedControl.Item>}
           </SegmentedControl.Root>
         </Flex>
-        <Table.Root>
+        <Table.Root size="1" className="st-compact">
           <Table.Header>
             <Table.Row>
               {onSelect && multi && (
@@ -158,16 +159,15 @@ export function SubjectsTable({
                 </Table.Cell>
                 <Table.Cell>
                   {r.qc ? (
-                    <Flex direction="column">
-                      <Text size={type.help} title={`${r.qc.volumes_above} of ${r.qc.n_volumes} volumes above ${r.qc.threshold_mm} mm`}>
-                        mean FD {r.qc.fd_mean_mm} mm
-                      </Text>
+                    <Text size={type.help} title={`${r.qc.volumes_above} of ${r.qc.n_volumes} volumes above ${r.qc.threshold_mm} mm`}>
+                      FD {r.qc.fd_mean_mm} mm
                       {r.motion_flag && (
                         <Text size={type.caption} color="amber">
-                          check motion
+                          {" "}
+                          · check
                         </Text>
                       )}
-                    </Flex>
+                    </Text>
                   ) : (
                     <Text size={type.help} color="gray">
                       -
@@ -176,14 +176,10 @@ export function SubjectsTable({
                 </Table.Cell>
                 <Table.Cell>
                   {r.last_activity ? (
-                    <Flex direction="column">
-                      <Text size={type.help}>{when(r.last_activity)}</Text>
-                      {r.last_activity_by && (
-                        <Text size={type.caption} color="gray">
-                          {r.last_activity_by}
-                        </Text>
-                      )}
-                    </Flex>
+                    <Text size={type.help} title={r.last_activity_by ?? undefined}>
+                      {whenShort(r.last_activity)}
+                      {r.last_activity_by ? ` · ${r.last_activity_by}` : ""}
+                    </Text>
                   ) : (
                     <Text size={type.help} color="gray">
                       -

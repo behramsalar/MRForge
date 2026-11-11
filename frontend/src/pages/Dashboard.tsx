@@ -1,19 +1,13 @@
-import {
-  ArchiveIcon,
-  CheckCircledIcon,
-  Cross2Icon,
-  EyeOpenIcon,
-  ExclamationTriangleIcon,
-  PersonIcon,
-} from "@radix-ui/react-icons";
-import { Badge, Button, Callout, Card, Flex, Grid, Heading, Text } from "@radix-ui/themes";
+import { ArchiveIcon } from "@radix-ui/react-icons";
+import { Badge, Button, Card, Flex, Grid, Heading, Text } from "@radix-ui/themes";
 import type { WorkspaceState } from "../api/types";
 import { useOverview } from "../api/hooks";
-import { PipelineStepper } from "../components/PipelineStepper";
+import { OverviewCards } from "../components/OverviewCards";
+import { PipelineMap } from "../components/PipelineMap";
+import { YourMove } from "../components/YourMove";
 import { StatusBadge } from "../components/ui/Badges";
 import { AnalysisReadyCard } from "../components/AnalysisReadyCard";
-import { SubjectsTable } from "../components/SubjectsTable";
-import { EmptyState, PageHeader, StatCard } from "../components/ui/Layout";
+import { EmptyState, PageHeader } from "../components/ui/Layout";
 import { elapsed, when } from "../lib/labels";
 import { href } from "../lib/router";
 import { useTick } from "../api/hooks";
@@ -37,7 +31,7 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
           title="Start your first import"
           text="Choose the folder or archive (ZIP, TAR) with your scanner files. MRForge reads them, shows what it found and asks only about what it cannot decide itself."
           action="Import scans"
-          href={href(ws, "data")}
+          href={href(ws, "import")}
         />
       </Flex>
     );
@@ -53,69 +47,11 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
           </Button>
         }
       />
-      {o && o.review.length > 0 && (
-        <Callout.Root color="amber">
-          <Callout.Icon>
-            <PersonIcon />
-          </Callout.Icon>
-          <Flex align="center" justify="between" gap={space.group} wrap="wrap" style={{ width: "100%" }}>
-            <Flex direction="column">
-              <Text weight="bold">Needs your review</Text>
-              {o.review.map((r, i) => (
-                <Text key={i} size={type.help}>
-                  {r.what} ({r.subject})
-                </Text>
-              ))}
-            </Flex>
-            <Button asChild>
-              <a href={`#/w/${encodeURIComponent(ws)}/${o.review[0].page}`}>Open the review</a>
-            </Button>
-          </Flex>
-        </Callout.Root>
-      )}
-      <Grid columns={{ initial: "1", sm: "2", lg: "5" }} gap={space.group}>
-        <StatCard label="Subjects" value={o?.subjects_total ?? "-"} icon={<PersonIcon width={22} height={22} />} />
-        <StatCard
-          label="Processed"
-          value={o?.processed ?? "-"}
-          hint={o && o.subjects_total ? `${Math.round((100 * o.processed) / o.subjects_total)}% of subjects` : undefined}
-          color="green"
-          icon={<CheckCircledIcon width={22} height={22} />}
-        />
-        <StatCard
-          label="Needs your review"
-          value={o?.needs_review ?? "-"}
-          color={o?.needs_review ? "amber" : "gray"}
-          hint="labels or quality decision"
-          icon={<EyeOpenIcon width={22} height={22} />}
-        />
-        <StatCard
-          label="Failed"
-          value={o?.failed ?? "-"}
-          color={o?.failed ? "red" : "gray"}
-          icon={<ExclamationTriangleIcon width={22} height={22} />}
-        />
-        <StatCard
-          label="Excluded"
-          value={o?.excluded ?? "-"}
-          hint="by you, with a reason"
-          icon={<Cross2Icon width={22} height={22} />}
-        />
-      </Grid>
+      {o && <OverviewCards o={o} importsNeedingYou={(live?.imports ?? []).filter((i) => i.needs_input > 0).length} />}
 
-      <Grid columns={{ initial: "1", lg: "3" }} gap={space.group} align="start">
-        <Flex direction="column" gap={space.group} style={{ gridColumn: "span 2" }}>
-          {o && <PipelineStepper stages={o.stages} />}
-          {o && <AnalysisReadyCard ws={ws} subjectsWithRuns={o.stages.find((x) => x.id === "preprocessing")?.total ?? 0} />}
-          <Card size="3">
-            <Flex direction="column" gap={space.group}>
-              <Heading as="h2" size={type.sectionTitle}>Subjects</Heading>
-              <SubjectsTable subjects={o?.subjects ?? []} onOpen={(l) => (location.hash = href(ws, "subject", l))} />
-            </Flex>
-          </Card>
-        </Flex>
-
+      <Grid columns={{ initial: "1", lg: "minmax(280px, 1fr) minmax(0, 2fr)" }} gap={space.group} align="start">
         <Flex direction="column" gap={space.group}>
+          {o && <YourMove ws={ws} o={o} />}
           <Card size="3">
             <Flex direction="column" gap={space.group}>
               <Heading as="h2" size={type.sectionTitle}>Running now</Heading>
@@ -137,6 +73,10 @@ export function Dashboard({ ws, state }: { ws: string; state: WorkspaceState | n
               ))}
             </Flex>
           </Card>
+        </Flex>
+        <Flex direction="column" gap={space.group}>
+          <PipelineMap subjects={o?.subjects ?? []} onOpen={(l) => (location.hash = href(ws, "subject", l))} />
+          {o && <AnalysisReadyCard ws={ws} subjectsWithRuns={o.stages.find((x) => x.id === "preprocessing")?.total ?? 0} />}
           <Card size="3">
             <Flex direction="column" gap={space.group}>
               <Heading as="h2" size={type.sectionTitle}>Recent activity</Heading>

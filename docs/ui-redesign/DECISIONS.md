@@ -1,0 +1,107 @@
+# UI redesign: decisions
+
+Format: date, decision, reason, status (agreed / proposed / open).
+
+## 2026-11-10 D-01: Work on a separate branch
+`ui-redesign`, cut from `main` at `fc3c559`, so `main` is unaffected if the result is not liked. User request. **Agreed.**
+
+## 2026-11-10 D-02: Font (open)
+The prototype uses Atkinson Hyperlegible from Google Fonts. The lab computer may be offline and the app has no external requests today. Options: (a) keep the current system font; (b) bundle the font files in the frontend (new npm dependency `@fontsource/...`, works offline). Proposal: (b), after you agree to the dependency. Until answered the system font stays (U1 changes no font). **Open.**
+
+## 2026-11-10 D-03: Rule for the work
+The UI never builds shell commands and only talks to the API. Anything needing a backend change is listed in PLAN.md section 3 and asked about first. User instruction. **Agreed.**
+
+## 2026-11-10 D-04: Methods text (open)
+The prototype shows a generated methods paragraph with numbered facts. This needs a backend generator and is MVP 2 in CLAUDE.md. User: idea approved, generator later. Decision: build the provenance half now and reserve a place for the methods text; generator is a later backend task. **Agreed.**
+
+## 2026-11-10 D-05: Backend-dependent ideas (open)
+Cross-subject QC list, live CPU/memory. User: fine for now; list what each needs so the effort can be judged (PLAN.md section 3). Decision: frontend first with what exists. **Agreed.**
+
+## 2026-11-10 D-06: Matrix compare and reorder (open)
+Computed in the browser from existing data, but CLAUDE.md puts them under "later". User: compare has no scientific use case, not a priority (maybe for QC later). Decision: no subject comparison; reorder by network optional. **Agreed.**
+
+## 2026-11-10 D-07: Prototype is a reference, not code
+No HTML/CSS/JS is copied from it. Its simulated data and viewer are dropped; the look is reproduced through the existing token files. Reason: a one-file prototype with fake data cannot be merged into a typed React app with a design system. **Proposed.**
+
+## 2026-11-10 D-08: Colours are provisional, accent restrained
+User is not a fan of orange everywhere. Decision: keep all colours in the token files so the palette can change in one place; use the accent only where the researcher has to act; offer a few palette options in U1 for the user to choose. **Agreed.**
+
+## 2026-11-10 D-09: Density (user)
+Mockup is tidier and smaller and shows more at a glance on a 13-inch laptop; the current design is too large. Decision: compact type and spacing, checked at about 1280 x 800 in every step. **Agreed.**
+
+## 2026-11-10 D-10: ICA labelling screen stays as it is
+User did not like the mockup's version and finds the original good enough. Decision: no layout rework (plan part 8, U6). **Agreed.**
+
+## 2026-11-10 D-11: Import page is reworked, functions kept
+Try the mockup's approach; keep every existing import function. New step U5b. **Agreed.**
+
+## 2026-11-10 D-12: Mobile layout skipped
+Only use case is remote status checks from a phone. **Agreed.**
+
+## 2026-11-10 D-13: How density is done (U1)
+Radix `scaling` 100% -> 90% (smaller type, spacing and controls everywhere in one place), radius `large` -> `medium`, page padding step 6 -> 4, section gap 5 -> 4, page title size 7 -> 6, section title 5 -> 4, sidebar 232 -> 208 px (collapsed 64 -> 56), top bar 56 -> 44 px. Reason: user wants more at a glance on a 13-inch laptop; one global knob keeps every existing screen consistent without editing each. Values can be tuned in `tokens.ts` / `shell.css`. **Proposed (user to judge by eye).**
+
+## 2026-11-10 D-14: Provisional accent switcher (superseded by D-16)
+`ThemeProvider` takes the accent from a browser-stored choice (default: the earlier amber); the choice is made on `#/design` (Palette). When the user picks one, it moves into `tokens.ts` and the switcher is removed. Options shown: Forge amber, indigo, teal, blue, neutral. **Proposed.**
+
+## 2026-11-10 D-15: Dev setup for checks
+`vite.config.ts` reads `MRFORGE_API` (default unchanged) so the dev UI can talk to a scratch server instead of the user's server on port 8000. `.claude/launch.json` (local, not committed) starts the scratch server (port 8100, scratch copy of the `nifti` workspace) and the dev UI (port 5180). The user's workspaces are never written to. **Agreed by the rule in D-03 / scope.**
+
+## 2026-11-10 D-16: Palettes carry their own state colours (user feedback)
+Problem: with the indigo accent the done (green), failed (red) and running (blue) colours and some hard-coded orange (researcher avatar, bell count, "created by" badge, in-progress bars) clashed. Decision: a palette is an accent plus its own colours for the five state meanings. Screens keep saying green / amber / red / blue / orange by meaning; `tokens.ts` (`palettes`, `paletteCss`) re-points those names per palette with CSS variables, so no screen needs changing per palette. Accent-like uses of orange (avatar, bell count, "created by you", in-progress bars) now use the accent. "Forge amber" has no re-pointing and is identical to the earlier look; "neutral" keeps the standard state colours. Indigo: done teal, failed ruby, running cyan; Teal: grass / tomato / indigo; Blue: jade / ruby / cyan. All provisional. **Proposed.**
+
+## 2026-11-10 D-17: The original must stay untouched (user, "really important")
+`main` and the user's running app on port 8000 must keep working and looking as before. My earlier U1 build overwrote `frontend/dist`, which that server serves, so the app on 8000 briefly showed the new look. Fixed: `frontend/dist` was rebuilt from `main`. From now on: **never run `npm run build` on this branch**; checks use the dev server (port 5180, scratch data, port 8100) only; a build of this branch happens only at the end, into a separate folder, if the user asks. **Agreed.**
+
+## 2026-11-10 D-18: Indigo is the palette to continue with (user)
+Indigo (teal done, ruby failed, cyan running) is the default on this branch. The other palettes and the switcher stay on `#/design` until the user confirms the indicator colours, then they are removed and indigo is written into `theme` in `tokens.ts`. **Agreed (indicator colours still to be confirmed).**
+
+## 2026-11-10 D-19: Other palettes stay for now (user)
+The user is not fully sure about indigo yet. Decision: keep the palette switcher and all palettes on `#/design`, indigo as the default, and do not remove anything until the user says so. **Agreed.**
+
+## 2026-11-10 D-20: What U2 includes, and what it leaves for later steps
+Built: sidebar badges (Dashboard: failed + waiting-for-you count, red when something failed, else amber; Jobs: running now), a small resource meter at the sidebar foot (jobs in use out of the limit, memory in use, from the existing `/api/resources`), a "Jump to…" button in the top bar and the Cmd/Ctrl+K palette (pages, every function under a page, subjects, a few actions), a keyboard-shortcuts dialog (`?` key or the top-bar button; lists only shortcuts that exist). **Not changed:** the sidebar entries and their names. The prototype's Overview / Quality review / Results / Methods entries do not exist as pages yet, so they arrive with U3, U5 and U7 (an entry is added only when its page exists). The bell/activity popover is kept as it is. Memory shown is "in use of total" (total minus available); CPU load is not shown (needs a backend change, see PLAN section 3). **Agreed by plan; wording of the meter is a proposal.**
+
+## 2026-11-10 D-21: The Overview (U3): what replaced what
+The Dashboard page (route id stays `dashboard`; the sidebar and top bar now say **Overview**) is rebuilt from the same overview data, no backend change:
+- **Journey cards** (Import, Process, Check quality, Results) replace the five number cards and the "Processing pipeline" stepper. Their numbers: Import = subjects imported (+ imports that need an answer); Process = one group per subject (finished / running / waiting for you / failed or stopped / not started or partly done); Check quality = decided among subjects whose functional preprocessing is done, excluded counted separately; Results = complete subjects not excluded. All counted in `lib/overviewSummary.ts` (tested); nothing is decided there (principle 6).
+- **Needs your decision** (was "Your move") replaces the amber "Needs your review" banner: failures and interrupted work first (red), then component labelling, then undecided quality decisions, each with its own button. Same information as before, plus failures and quality, which the dashboard only showed as counts.
+- **Pipeline map** (subject x stage cells, search, the same filters as before, click opens the subject page) replaces the Subjects table *on this page*. `SubjectsTable` stays unchanged for every other page. Not on the map any more: the written "head motion" numbers (shown as a "motion" flag only; numbers are on the subject page) and the last-activity column (now a tooltip on the row). **Open: say if you want either back as a column.**
+- Kept as they were: Running now, Recent activity, the analysis-ready card, the empty "start your first import" state.
+- Sidebar fix found while testing at 1280 x 800: with the Process tree open, System, Settings and Collapse were pushed off the bottom; the function list now scrolls instead.
+- Page-header icon box 48 -> 36 px (density, D-09). `PipelineStepper` and `StatCard` are no longer used on any page; left in place for now (removal is part of the polish step).
+**Proposed (user to judge by eye).**
+
+## 2026-11-10 D-22: How big lists were checked without a big workspace
+The scratch workspace has one subject. A throw-away dev server config (`frontend/vite.mock.config.mjs`, excluded from git through `.git/info/exclude`) answers `/overview` with 24 invented subjects in all states and passes everything else to the scratch server. Nothing is written anywhere. **Agreed (scope of D-15).**
+
+## 2026-11-10 D-23: The Process page (U4)
+The Pipelines page now starts from the outcome: goal cards -> route map -> subjects -> the same confirmation dialog. No backend change. Goals are plain sets of existing stages (`lib/goals.ts`); "Full processing" passes nothing, so it keeps the server's own defaults exactly as before. The other goals tick the stages they need (including the upstream ones; stages already done are not repeated), and artifact rejection is a separate switch because it makes the pipeline wait for the researcher. The route map is a picture only; the dialog still shows the real plan and lets the researcher change it. Sidebar entries and the single-step pages are unchanged. **Proposed (user to judge by eye).** REVIEW(domain): the stage sets per goal (e.g. that "Clean the scans" is anatomical + functional only) are my reading of the stage registry; please confirm.
+
+## 2026-11-10 D-24: The Process page is a workbench (replaces D-23)
+User review of the first U4: settings were hidden behind the start button, presets could not be saved visibly, the start bar appeared only for several subjects, and single steps could not batch. Decisions:
+- Stages are grouped as a methods section orders them: **Preprocessing** (Structural T1, Functional, Artifact rejection, Standard space), **Analysis** (Connectivity), **Diffusion** (its own pipeline). Reason: anatomical, functional, denoising and normalisation are all preprocessing; connectivity is analysis; diffusion is a separate modality.
+- Each stage is a selectable tile (click to include; summary of its settings from the server's plan; a gear for Settings). Replaced the first one-line-per-stage rows, which the user did not like. Settings open in a side panel with Reset to defaults; a dot marks a stage that differs from the defaults. The page never shows the controls inline.
+- Presets (switches + all settings) are chosen, saved ("Save as a new preset"), updated and deleted from a bar at the top; built-in presets cannot be overwritten. "Changed" shows when the choices differ from the chosen preset. No built-in "goal" presets were added (that would be a backend change).
+- Single steps are the same page: switch the other stages off, so batch works for every stage. The confirmation dialog became a summary (what runs, what is left out and why, who cannot run); the old dialog still serves the subject and component-review pages.
+- Start bar is shown whenever one or more subjects are ticked.
+- Subject lists are compact (rows 64 -> 42 px in the check).
+**Proposed (user to judge by eye).** Open: the sidebar (option A agreed) waits for the Quality and Results pages, see CHANGELOG.
+
+## 2026-11-10 D-25: Sidebar (option A, interim)
+User chose option A. Built now with what exists: Overview, Data, Process (one page), Quality (artifact labelling for now), Results (Connectivity, Diffusion), Viewer, Jobs. Single-step pages were removed (their run function is the Process page; their pictures are in the subject's Results tab), old addresses redirect. Stage pages are no longer sidebar items; Anatomical and Connectivity are no longer at one level. Open: "Data" vs "Import" as the label; a Reports entry; Quality gaining its check list (U5). **Proposed (user to judge by eye).**
+
+## 2026-11-10 D-26: Stage pages stay, Import and Data split, Quality holds reports (supersedes part of D-25)
+User: removing the single-step pages loses something even if they are not needed in the sidebar; Import and Data deserve separate pages; Quality should include the reports and may hold the artifact labelling "for now". Decisions: (1) the stage pages return, unchanged, outside the sidebar, linked from the Process tiles, the subject page and the jump list; (2) Import and Data are separate sidebar entries; (3) Quality has two tabs (subjects and reports, artifact rejection); where the labelling lives long term stays open. **Proposed (user to judge by eye).** Open: the first entry of the old sidebar is now "Import" as in option A; Results entries and the Quality subjects tab may merge later (U5, U7).
+
+## 2026-11-10 D-27: Quality review (U5)
+Built from the existing report data, no backend change. The grid compares one check across subjects (the checks are found by the name the step gives its QC result, so a renamed result needs one line in `lib/qualityReview.ts`); decisions use the existing call and always need a reason; the inspector never decides, it only moves on to the next subject after the researcher saves. Not built: a cross-subject endpoint. If 100+ subjects prove slow, one read-only endpoint returning only the picture paths of one check for all subjects would replace the per-tile report requests (small backend change, to be asked about first). The keyboard keys (A, R, X) are active only while the inspector is open. **Proposed (user to judge by eye).** REVIEW(domain): which QC results count as "the" picture per check (the joined picture when present, otherwise the first slice) and the four check names.
+
+## D-28 Import page (U5b), 2026-11-10
+Decision: keep the import as a page (not a pop-up), because the series table, detail panel and undo need room; take the mockup's ideas instead: a three-step strip (Read, Check the series, Convert and organise), a footer bar that stays in view with "N of M series will be imported" and one primary button, and the "Import scans" button in the page header. The imports list only shows when there is more than one import. Every function is kept (folder/archive/NIfTI/BIDS, corrections, advanced option, validator report, undo, group card). Frontend only, no address changes.
+
+## D-29 Results and provenance (U7), 2026-11-11
+Decision: Results keeps one page per kind of result (Connectivity: file index + matrix view; Diffusion: ALPS table; both already have their exports) and gets a third entry, "Methods and provenance": a reserved "Methods text, coming later" card (the generator comes later and must use only recorded facts) and a per-subject table of recorded runs (step, when, by, tool versions, first command with copy). Built from the existing subject report endpoint; no backend change. No comparison between subjects. The full record of a run (parameters, hashes, logs, Re-run) stays in Jobs.
+
+## D-30 Quality sidebar group and report access (R1/R2), 2026-11-11
+Decision (user, after trying the app): Quality becomes a sidebar group like Results, with Subject review, Reports (a subject list; a row opens that subject's full report) and Artifact rejection; the tabs inside the page are gone. In the review popup the report button is a visible "Full report" button and "Open interactively" is now "Open in viewer" (also in the report). Return point before this rework: git tag `ui-redesign-baseline` (user: come back to it if later changes do not work or look right). Next: R3 report page layout (quality first, details collapsed); R4 restyled HTML export (approved: same facts, backend/report_html.py layout only).

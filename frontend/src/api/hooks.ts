@@ -71,6 +71,7 @@ export function useWorkspaces() {
 export function useSubjects(ws: string) {
   return useQuery({
     queryKey: ["ws", ws, "subjects"],
+    enabled: !!ws, // no workspace open (the palette on the workspace list): nothing to ask
     queryFn: () => call(api.GET("/api/workspaces/{ws_id}/subjects", { params: { path: { ws_id: ws } } })),
   });
 }
@@ -101,6 +102,7 @@ export function useTick(active: boolean): void {
 export function useOverview(ws: string) {
   return useQuery({
     queryKey: ["ws", ws, "overview"],
+    enabled: !!ws, // the sidebar asks too, also on pages outside a workspace
     queryFn: () => call(api.GET("/api/workspaces/{ws_id}/overview", { params: { path: { ws_id: ws } } })),
   });
 }
@@ -115,5 +117,14 @@ export function useSubjectData(ws: string, subject: string | undefined) {
           params: { path: { ws_id: ws, label: subject! } },
         }),
       ),
+  });
+}
+
+/** How the computer is being used (slots, memory) and the limits; refreshed every 10 seconds. */
+export function useResources() {
+  return useQuery({
+    queryKey: ["resources"],
+    queryFn: () => call(api.GET("/api/resources")),
+    refetchInterval: 10000,
   });
 }

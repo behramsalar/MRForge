@@ -8,7 +8,7 @@ import { useOverview } from "../api/hooks";
 import type { StageChip, WorkspaceState } from "../api/types";
 import { ConfirmProcessDialog } from "../components/ConfirmProcessDialog";
 import { JobsPanel } from "../components/JobsPanel";
-import { ReportView } from "../components/ReportView";
+import { Fold, ReportView } from "../components/ReportView";
 import { QualityDecisionCard } from "../components/QualityDecisionCard";
 import { StageBadge } from "../components/ui/Badges";
 import { EmptyState, PageHeader } from "../components/ui/Layout";
@@ -19,7 +19,7 @@ import { space, type } from "../theme/tokens";
 const STAGE_ACTIONS: Record<string, { stage: string; look?: [string, string?]; lookLabel?: string }> = {
   anatomical: { stage: "anatomical", look: ["process", "anat"], lookLabel: "Open the page" },
   preprocessing: { stage: "functional", look: ["process", "func"], lookLabel: "Open the page" },
-  artifact_rejection: { stage: "artifact_rejection", look: ["process", "ica"], lookLabel: "Open the review" },
+  artifact_rejection: { stage: "artifact_rejection", look: ["quality", "artifacts"], lookLabel: "Open the review" },
   standard_space: { stage: "standard_space", look: ["process", "mni"], lookLabel: "Open the page" },
   connectivity: { stage: "connectivity", look: ["process", "conn"], lookLabel: "Open the page" },
   diffusion: { stage: "diffusion", look: ["process", "dwi"], lookLabel: "Open the page" },
@@ -72,10 +72,8 @@ function Files({ ws, subject }: { ws: string; subject: string }) {
   for (const i of images.data ?? []) groups.set(i.group, [...(groups.get(i.group) ?? []), i]);
   if (!images.data?.length) return null;
   return (
+    <Fold title="Images" summary={`${images.data.length} files, open any in the viewer`}>
     <Flex direction="column" gap={space.group}>
-      <Heading as="h2" size={type.sectionTitle}>
-        Images
-      </Heading>
       {[...groups.entries()].map(([group, list]) => (
         <Card key={group}>
           <Flex direction="column" gap="2">
@@ -97,6 +95,7 @@ function Files({ ws, subject }: { ws: string; subject: string }) {
         </Card>
       ))}
     </Flex>
+    </Fold>
   );
 }
 
@@ -154,7 +153,7 @@ export function SubjectPage({ ws, label, tab, state }: { ws: string; label?: str
               <Flex align="center" justify="between" gap={space.group} wrap="wrap" style={{ width: "100%" }}>
                 <Text>Processing waits for your decision on the components.</Text>
                 <Button asChild>
-                  <a href={href(ws, "process", "ica")}>Open the review</a>
+                  <a href={href(ws, "quality", "artifacts")}>Open the review</a>
                 </Button>
               </Flex>
             </Callout.Root>

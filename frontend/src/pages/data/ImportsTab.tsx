@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import { DownloadIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { Badge, Button, Callout, Card, Checkbox, Flex, Grid, Heading, Switch, Table, Text, TextField } from "@radix-ui/themes";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -11,7 +11,7 @@ import { ImportGroupCard } from "../../components/ImportGroupCard";
 import { SeriesDetail } from "../../components/SeriesDetail";
 import { SeriesTable } from "../../components/SeriesTable";
 import { UndoImportDialog } from "../../components/UndoImportDialog";
-import { EmptyState } from "../../components/ui/Layout";
+import { EmptyState, PageHeader } from "../../components/ui/Layout";
 import { when } from "../../lib/labels";
 import { href } from "../../lib/router";
 import { space, type } from "../../theme/tokens";
@@ -71,7 +71,7 @@ function ImportsList({ ws, imports, selected }: { ws: string; imports: ImportSum
               return (
                 <Table.Row
                   key={i.id}
-                  onClick={() => (location.hash = href(ws, "data", i.id))}
+                  onClick={() => (location.hash = href(ws, "import", i.id))}
                   style={{ cursor: "pointer", background: i.id === selected ? "var(--accent-a3)" : undefined }}
                 >
                   <Table.RowHeaderCell>
@@ -116,6 +116,29 @@ function importState(i: ImportSummary): { label: string; color: "green" | "amber
   return { label: "Ready to import", color: "gray" };
 }
 
+/** The three stages of an import, so a newcomer sees where they are. */
+function ImportSteps({ done, needs }: { done: boolean; needs: number }) {
+  const steps = [
+    { n: 1, label: "Read the files", state: "done" },
+    { n: 2, label: needs > 0 ? `Check the series (${needs} to decide)` : "Check the series", state: done ? "done" : "now" },
+    { n: 3, label: "Convert and organise", state: done ? "done" : "next" },
+  ];
+  return (
+    <Flex gap={space.group} align="center" wrap="wrap" aria-label="Import steps">
+      {steps.map((st) => (
+        <Flex key={st.n} gap="2" align="center">
+          <Badge radius="full" color={st.state === "done" ? "green" : st.state === "now" ? "amber" : "gray"} variant={st.state === "now" ? "solid" : "soft"}>
+            {st.state === "done" ? "✓" : st.n}
+          </Badge>
+          <Text size={type.help} weight={st.state === "now" ? "bold" : "regular"} color={st.state === "next" ? "gray" : undefined}>
+            {st.label}
+          </Text>
+        </Flex>
+      ))}
+    </Flex>
+  );
+}
+
 /** Imports of this workspace: the list, the series of the chosen import and the details of the
  * chosen series, with everything needed to decide and import. */
 export function ImportsTab({ ws, importId, state }: { ws: string; importId?: string; state: WorkspaceState | null }) {
@@ -156,7 +179,7 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
     if (op?.status === "Completed" && typeof op.result?.import_id === "string") {
       setScanOp(null);
       const ids = Array.isArray(op.result.import_ids) ? (op.result.import_ids as string[]) : [];
-      location.hash = href(ws, "data", ids[0] ?? op.result.import_id);
+      location.hash = href(ws, "import", ids[0] ?? op.result.import_id);
     } else if (op && op.status !== "Queued" && op.status !== "Running") setScanOp(null);
   }, [state, scanOp, ws]);
 
@@ -169,27 +192,42 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
 
   if (state && imports.length === 0) {
     return (
+      <Flex direction="column" gap={space.section}>
+      <PageHeader title="Import" description="Bring scans into this workspace: DICOM folders, NIfTI files or a BIDS dataset." />
       <EmptyState
         title="Start your first import"
         text="Choose a folder or archive (ZIP, TAR, TAR.GZ, TAR.BZ2, TAR.XZ) with your scanner files, a folder with several archives, a folder of NIfTI files, or an existing BIDS dataset. MRForge looks at what it is, shows what it found and asks only about what it cannot decide itself."
       >
         <NewImportDialog ws={ws} disabled={busy} onStarted={setScanOp} />
       </EmptyState>
+      </Flex>
     );
   }
 
   return (
     <Flex direction="column" gap={space.section}>
-      <Flex gap={space.group} align="center" wrap="wrap" justify="between">
-        <Heading as="h2" size={type.sectionTitle}>
-          Imports
-        </Heading>
-        <NewImportDialog ws={ws} disabled={busy} onStarted={setScanOp} />
-      </Flex>
+      <PageHeader
+        title="Import"
+        description="Bring scans into this workspace: DICOM folders, NIfTI files or a BIDS dataset."
+      />
+      <Card size="3" style={{ background: "var(--accent-a2)", borderStyle: "dashed" }}>
+        <Flex direction="column" align="center" gap={space.group} py="4">
+          <DownloadIcon width={32} height={32} color="var(--accent-10)" />
+          <Heading as="h2" size={type.sectionTitle}>
+            Import scans
+          </Heading>
+          <Text size={type.help} color="gray" align="center" style={{ maxWidth: 480 }}>
+            Choose a folder or archive with scanner files, NIfTI files or an existing BIDS dataset. Your originals are copied and never changed.
+          </Text>
+          <NewImportDialog ws={ws} disabled={busy} onStarted={setScanOp} />
+        </Flex>
+      </Card>
       {groups.map((g) => (
         <ImportGroupCard key={g[0].group_source} ws={ws} group={g} busy={busy} />
       ))}
-      <ImportsList ws={ws} imports={imports} selected={selected} />
+      {imports.length > 1 ? (
+        <ImportsList ws={ws} imports={imports} selected={selected} />
+      ) : null}
       <Grid columns={{ initial: "1", lg: "minmax(0, 1fr) 340px" }} gap={space.group} align="start">
       <Flex direction="column" gap={space.group} style={{ minWidth: 0 }}>
         {detail.error && <ErrorCallout error={(detail.error as ApiError).body} />}
@@ -209,6 +247,7 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
                 </Badge>
               )}
             </Flex>
+            {d.kind !== "bids" && <ImportSteps done={d.organized > 0} needs={d.needs_input} />}
             {d.kind === "bids" && (
               <Callout.Root color="green">
                 <Flex direction="column" gap={space.inline} style={{ width: "100%" }}>
@@ -265,32 +304,42 @@ export function ImportsTab({ ws, importId, state }: { ws: string; importId?: str
             )}
             {d.kind !== "bids" && <SeriesTable ws={ws} detail={d} selected={row?.uid} onSelect={setUid} />}
 
-            {d.kind !== "bids" && (
-            <Flex direction="column" gap={space.group}>
-              <Button variant="ghost" size="1" style={{ alignSelf: "flex-start" }} onClick={() => setShowMore(!showMore)}>
-                {showMore ? "Hide advanced options" : "Advanced options"}
-              </Button>
-              {showMore && d.kind !== "nifti" && (
-                <Text as="label" size={type.help}>
-                  <Flex gap={space.inline} align="start">
-                    <Checkbox checked={removeDicom} onCheckedChange={(v) => setRemoveDicom(v === true)} />
-                    Remove MRForge's copy of the scanner files afterwards (only if you keep the originals elsewhere; it
-                    saves disk space)
+            {d.kind !== "bids" && d.organized === 0 && (
+              <Card
+                size="2"
+                style={{ position: "sticky", bottom: "var(--space-3)", zIndex: 5, boxShadow: "var(--shadow-4)" }}
+              >
+                <Flex direction="column" gap={space.inline}>
+                  <Flex gap={space.group} align="center" wrap="wrap">
+                    <Text size={type.help} color="gray">
+                      {d.to_import} of {d.n_series} series will be imported
+                      {d.needs_input > 0 ? `, ${d.needs_input} still need your decision` : ""}
+                    </Text>
+                    <span style={{ flex: 1 }} />
+                    <Button variant="ghost" size="1" color="gray" onClick={() => setShowMore(!showMore)}>
+                      {showMore ? "Hide advanced options" : "Advanced options"}
+                    </Button>
+                    <Button size="3" disabled={busy || run.isPending || d.to_import === 0} onClick={() => run.mutate()}>
+                      Convert and organise
+                    </Button>
                   </Flex>
-                </Text>
-              )}
-              <Flex gap={space.group} align="center" wrap="wrap">
-                <Button size="3" disabled={busy || run.isPending || d.to_import === 0} onClick={() => run.mutate()}>
-                  Import {d.to_import} {d.to_import === 1 ? "series" : "series"}
-                </Button>
-                {d.to_import === 0 && (
-                  <Text size={type.help} color="gray">
-                    Nothing is set to be imported yet.
-                  </Text>
-                )}
-              </Flex>
-              {run.error && <ErrorCallout error={(run.error as ApiError).body} />}
-            </Flex>
+                  {showMore && d.kind !== "nifti" && (
+                    <Text as="label" size={type.help}>
+                      <Flex gap={space.inline} align="start">
+                        <Checkbox checked={removeDicom} onCheckedChange={(v) => setRemoveDicom(v === true)} />
+                        Remove MRForge's copy of the scanner files afterwards (only if you keep the originals
+                        elsewhere; it saves disk space)
+                      </Flex>
+                    </Text>
+                  )}
+                  {d.to_import === 0 && (
+                    <Text size={type.help} color="gray">
+                      Nothing is set to be imported yet.
+                    </Text>
+                  )}
+                  {run.error && <ErrorCallout error={(run.error as ApiError).body} />}
+                </Flex>
+              </Card>
             )}
 
             {justImported && (

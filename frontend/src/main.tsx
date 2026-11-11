@@ -4,12 +4,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode, Suspense, lazy, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { useRoute } from "./lib/router";
-import { AnatomicalPage } from "./pages/AnatomicalPage";
 import { Dashboard } from "./pages/Dashboard";
 import { DesignSystem } from "./pages/DesignSystem";
 import { DataPage } from "./pages/DataPage";
+import { ImportPage } from "./pages/ImportPage";
 import { JobsPage } from "./pages/JobsPage";
 import { ProcessPage } from "./pages/ProcessPage";
+import { QualityPage } from "./pages/QualityPage";
+import { ResultsPage } from "./pages/ResultsPage";
 import { SubjectPage } from "./pages/SubjectPage";
 import { Settings } from "./pages/Settings";
 import { SystemPage } from "./pages/SystemPage";
@@ -29,8 +31,10 @@ const queryClient = new QueryClient({
 function WorkspacePage({ page, extra, extra2 }: { page: string; extra?: string; extra2?: string }) {
   const { ws, state } = useWorkspace();
   switch (page) {
+    case "import":
+      return <ImportPage ws={ws} extra={extra} state={state} />;
     case "data":
-      return <DataPage ws={ws} extra={extra} state={state} />;
+      return <DataPage ws={ws} />;
     case "process":
       return <ProcessPage ws={ws} tab={extra} state={state} />;
     case "subject":
@@ -43,8 +47,10 @@ function WorkspacePage({ page, extra, extra2 }: { page: string; extra?: string; 
       );
     case "jobs":
       return <JobsPage ws={ws} state={state} />;
-    case "anatomical":
-      return <AnatomicalPage ws={ws} state={state} />;
+    case "quality":
+      return <QualityPage ws={ws} tab={extra} />;
+    case "results":
+      return <ResultsPage ws={ws} tab={extra} />;
     default:
       return <Dashboard ws={ws} state={state} />;
   }
