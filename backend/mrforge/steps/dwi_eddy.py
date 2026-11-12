@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 from pathlib import Path
 from typing import cast
 
@@ -66,6 +67,18 @@ class DwiEddyOutput(BaseModel):
     movement_rms: str | None = None
     restricted_rms: str | None = None
     outlier_report: str | None = None
+
+
+def _has_nthr_option(program: Path, env: dict[str, str] | None) -> bool:
+    """Whether this eddy build accepts --nthr (FSL 6.0.7+); older builds do not."""
+    try:
+        proc = subprocess.run(
+            [str(program), "--help"], capture_output=True, text=True, env=env or os.environ.copy(),
+            timeout=60, check=False,
+        )  # fmt: skip
+    except (OSError, subprocess.SubprocessError):
+        return True  # cannot tell: keep the previous behaviour
+    return "--nthr" in proc.stdout + proc.stderr
 
 
 def _n_volumes(path: Path) -> int:
@@ -217,7 +230,13 @@ class DwiEddyStep(Step[DwiEddyInput, DwiEddyParams, DwiEddyOutput]):
             argv.append(f"--out={prefix}")
             n_threads = p.threads or int(os.environ.get("OMP_NUM_THREADS", "1") or 1)
             if n_threads > 1 and not p.program.startswith("eddy_cuda"):
-                argv.append(f"--nthr={n_threads}")
+                if _has_nthr_option(self._program(ctx), ctx.env):
+                    argv.append(f"--nthr={n_threads}")
+                else:
+                    # FSL 6.0.6 and older: eddy_cpu / eddy_openmp have no --nthr and take the
+                    # thread count from OMP_NUM_THREADS. The command log header shows it.
+                    ctx.env = {**(ctx.env or os.environ), "OMP_NUM_THREADS": str(n_threads)}
+                    ctx.run_command(["echo", f"eddy has no --nthr; OMP_NUM_THREADS={n_threads}"])
             ctx.run_command(argv)
             rotated = work / "eddy_corrected_data.eddy_rotated_bvecs"
 
